@@ -1,0 +1,134 @@
+# ==================================================================================================
+# Build System
+# ==================================================================================================
+
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+
+# ==================================================================================================
+# Project Metadata
+# ==================================================================================================
+
+[project]
+name = "bayes-cep"
+version = "0.1.0"
+description = "Non-parametric Bayesian Inference of Myocardial Fiber Orientations from Electrical Activation Data"
+authors = [{ name = "Max Kruse", email = "maxkruse1604@gmail.com" }]
+maintainers = [{ name = "Max Kruse", email = "maxkruse1604@gmail.com" }]
+requires-python = ">= 3.14"
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+]
+dependencies = []
+
+
+# ==================================================================================================
+# Pixi (Environment Management)
+# ==================================================================================================
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+# --- Base dependencies ----------------------------------------------------------------------------
+
+[tool.pixi.dependencies]
+beartype = ">=0.22.9,<0.23"
+numpy = ">=2.5.3,<3"
+scipy = ">=1.18.1,<2"
+fenics-dolfinx = ">=0.11.0,<0.12"
+scifem = ">=0.22.1,<0.23"
+jax = ">=0.7.2,<0.8"
+pyvista = ">=0.48.4,<0.49"
+meshio = ">=5.3.5,<6"
+
+[tool.pixi.pypi-dependencies]
+bayes_cep = { path = ".", editable = true }
+ls_bayesian = { path = "../ls-bayesian", editable = true }
+eikonax = { path = "../eikonax", editable = true }
+
+# --- Features -------------------------------------------------------------------------------------
+
+[tool.pixi.feature.dev.dependencies]
+ruff = ">=0.16.7,<0.17"
+pre-commit = ">=4.6.2,<5"
+jupyter = ">=1.1.1,<2"
+pandas = ">=3.0.5,<4"
+matplotlib = ">=3.11.2,<4"
+seaborn = ">=0.13.2,<0.14"
+trame = ">=4.0.0,<5"
+trame-vtk = ">=2.11.16,<3"
+trame-vuetify = ">=3.2.6,<4"
+
+[tool.pixi.feature.dev.pypi-dependencies]
+libigl = ">=2.6.2,<3"
+
+[tool.pixi.feature.test.dependencies]
+pytest = ">=9.1.1,<10"
+pytest-cov = ">=7.1.0,<8"
+pytest-xdist = ">=3.8.0,<4"
+pytest-mock = ">=3.15.1,<4"
+nbclient = ">=0.11.0,<0.12"
+nbformat = ">=5.11.1,<6"
+
+# --- Environments -----------------------------------------------------------------------------
+
+[tool.pixi.environments]
+default = { solve-group = "default" }
+dev = { features = ["dev"], solve-group = "default" }
+test = { features = ["dev", "test"], solve-group = "default" }
+
+# --- Tasks ----------------------------------------------------------------------------------------
+
+[tool.pixi.tasks]
+
+
+# ==================================================================================================
+# Ruff (Linting & Formatting)
+# ==================================================================================================
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+  "E",      # pycodestyle errors
+  "W",      # pycodestyle warnings
+  "F",      # Pyflakes
+  "I",      # isort
+  "UP",     # pyupgrade
+  "B",      # flake8-bugbear
+  "SIM",    # flake8-simplify
+  "TID252", # flake8-tidy-imports: relative imports
+]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+
+# ==================================================================================================
+# Pytest
+# ==================================================================================================
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = [
+  "-v",
+  "--import-mode=importlib",
+]
+markers = [
+  "unit: unit tests",
+  "integration: integration tests",
+  "slow: tests with long runtime",
+]

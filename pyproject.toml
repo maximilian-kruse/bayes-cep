@@ -52,6 +52,12 @@ meshio = ">=5.3.5,<6"
 bayes_cep = { path = ".", editable = true }
 ls_bayesian = { path = "../ls-bayesian", editable = true }
 eikonax = { path = "../eikonax", editable = true }
+tyro = ">=1.0.16,<2"
+
+# --- Tasks ------------------------------------------------------------------------------------
+
+[tool.pixi.tasks]
+preprocess = "python scripts/preprocess_data.py"
 
 # --- Features -------------------------------------------------------------------------------------
 
@@ -83,11 +89,6 @@ nbformat = ">=5.11.1,<6"
 default = { solve-group = "default" }
 dev = { features = ["dev"], solve-group = "default" }
 test = { features = ["dev", "test"], solve-group = "default" }
-
-# --- Tasks ----------------------------------------------------------------------------------------
-
-[tool.pixi.tasks]
-
 
 # ==================================================================================================
 # Ruff (Linting & Formatting)

@@ -314,8 +314,10 @@ environments:
       - pypi: ../eikonax
       - pypi: ../ls-bayesian
       - pypi: ./
+      - pypi: https://files.pythonhosted.org/packages/23/d9/ea12ca0392c9eaeff7421efcc665f350dbc2ef30a113ee13c7afea21cf37/tyro-1.0.16-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8b/38/c66bbdc5047f4776c2bd3e47e5295a350e3fa44d5b8942105e71c2a876a0/jaxtyping-0.3.11-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8d/96/04e7b441807b26b794da5b11e59ed7f83b2cf8af202bd7eba8ad2fa6046e/wadler_lindig-0.1.7-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/8f/eb/461d5f167b6f5c7d97696f397c82f82e3480e003fce3f0a1cd1dd26e2eb2/typeguard-4.6.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ae/d6/69a76c8ccdef14af687c497040292a46e59fc7a0ab24724b60e50ca61030/equinox-0.13.8-py3-none-any.whl
   dev:
     channels:
@@ -745,8 +747,10 @@ environments:
       - pypi: ../eikonax
       - pypi: ../ls-bayesian
       - pypi: ./
+      - pypi: https://files.pythonhosted.org/packages/23/d9/ea12ca0392c9eaeff7421efcc665f350dbc2ef30a113ee13c7afea21cf37/tyro-1.0.16-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8b/38/c66bbdc5047f4776c2bd3e47e5295a350e3fa44d5b8942105e71c2a876a0/jaxtyping-0.3.11-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8d/96/04e7b441807b26b794da5b11e59ed7f83b2cf8af202bd7eba8ad2fa6046e/wadler_lindig-0.1.7-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/8f/eb/461d5f167b6f5c7d97696f397c82f82e3480e003fce3f0a1cd1dd26e2eb2/typeguard-4.6.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ae/d6/69a76c8ccdef14af687c497040292a46e59fc7a0ab24724b60e50ca61030/equinox-0.13.8-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/f6/c2/8641402402fbfa553c51615825434802de9c3b60b2580acdaad5312af396/libigl-2.6.3-cp312-abi3-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
   test:
@@ -1187,8 +1191,10 @@ environments:
       - pypi: ../eikonax
       - pypi: ../ls-bayesian
       - pypi: ./
+      - pypi: https://files.pythonhosted.org/packages/23/d9/ea12ca0392c9eaeff7421efcc665f350dbc2ef30a113ee13c7afea21cf37/tyro-1.0.16-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8b/38/c66bbdc5047f4776c2bd3e47e5295a350e3fa44d5b8942105e71c2a876a0/jaxtyping-0.3.11-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8d/96/04e7b441807b26b794da5b11e59ed7f83b2cf8af202bd7eba8ad2fa6046e/wadler_lindig-0.1.7-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/8f/eb/461d5f167b6f5c7d97696f397c82f82e3480e003fce3f0a1cd1dd26e2eb2/typeguard-4.6.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ae/d6/69a76c8ccdef14af687c497040292a46e59fc7a0ab24724b60e50ca61030/equinox-0.13.8-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/f6/c2/8641402402fbfa553c51615825434802de9c3b60b2580acdaad5312af396/libigl-2.6.3-cp312-abi3-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
 packages:
@@ -8158,6 +8164,51 @@ packages:
 - pypi: ./
   name: bayes-cep
   requires_python: '>=3.14'
+- pypi: https://files.pythonhosted.org/packages/23/d9/ea12ca0392c9eaeff7421efcc665f350dbc2ef30a113ee13c7afea21cf37/tyro-1.0.16-py3-none-any.whl
+  name: tyro
+  version: 1.0.16
+  sha256: 2f9087196113699647190459a12b6b4f2784dd0703c50ab1f7bf0f85a3a794ea
+  requires_dist:
+  - docstring-parser>=0.16
+  - eval-type-backport>=0.1.3 ; python_full_version < '3.10'
+  - typeguard>=4.0.0
+  - typing-extensions>=4.13.0
+  - attrs>=21.4.0 ; extra == 'dev'
+  - coverage[toml]>=6.5.0 ; extra == 'dev'
+  - eval-type-backport>=0.1.3 ; extra == 'dev'
+  - ml-collections>=0.1.0 ; extra == 'dev'
+  - msgspec>=0.18.6 ; extra == 'dev'
+  - mypy>=1.4.1 ; extra == 'dev'
+  - omegaconf>=2.2.2 ; extra == 'dev'
+  - pydantic>=2.5.2,!=2.10.0 ; extra == 'dev'
+  - pyright>=1.1.349,!=1.1.379 ; extra == 'dev'
+  - pytest-cov>=3.0.0 ; extra == 'dev'
+  - pytest-xdist>=3.5.0 ; extra == 'dev'
+  - pytest>=7.1.2 ; extra == 'dev'
+  - pyyaml>=6.0 ; extra == 'dev'
+  - shtab>=1.5.6 ; extra == 'dev'
+  - ty>=0.0.33 ; extra == 'dev'
+  - universal-pathlib>=0.2.0 ; extra == 'dev'
+  - attrs>=21.4.0 ; extra == 'dev-nn'
+  - coverage[toml]>=6.5.0 ; extra == 'dev-nn'
+  - eval-type-backport>=0.1.3 ; extra == 'dev-nn'
+  - flax>=0.6.9 ; python_full_version >= '3.10' and python_full_version < '3.14' and extra == 'dev-nn'
+  - ml-collections>=0.1.0 ; extra == 'dev-nn'
+  - msgspec>=0.18.6 ; extra == 'dev-nn'
+  - mypy>=1.4.1 ; extra == 'dev-nn'
+  - numpy>=1.20.0 ; extra == 'dev-nn'
+  - omegaconf>=2.2.2 ; extra == 'dev-nn'
+  - pydantic>=2.5.2,!=2.10.0 ; extra == 'dev-nn'
+  - pyright>=1.1.349,!=1.1.379 ; extra == 'dev-nn'
+  - pytest-cov>=3.0.0 ; extra == 'dev-nn'
+  - pytest-xdist>=3.5.0 ; extra == 'dev-nn'
+  - pytest>=7.1.2 ; extra == 'dev-nn'
+  - pyyaml>=6.0 ; extra == 'dev-nn'
+  - shtab>=1.5.6 ; extra == 'dev-nn'
+  - torch>=1.10.0 ; python_full_version >= '3.9' and python_full_version < '3.14' and extra == 'dev-nn'
+  - ty>=0.0.33 ; extra == 'dev-nn'
+  - universal-pathlib>=0.2.0 ; extra == 'dev-nn'
+  requires_python: '>=3.8'
 - pypi: https://files.pythonhosted.org/packages/8b/38/c66bbdc5047f4776c2bd3e47e5295a350e3fa44d5b8942105e71c2a876a0/jaxtyping-0.3.11-py3-none-any.whl
   name: jaxtyping
   version: 0.3.11
@@ -8180,6 +8231,13 @@ packages:
   - mkdocs==1.6.1 ; extra == 'docs'
   - mkdocstrings[python]==0.28.3 ; extra == 'docs'
   - pymdown-extensions==10.14.3 ; extra == 'docs'
+  requires_python: '>=3.10'
+- pypi: https://files.pythonhosted.org/packages/8f/eb/461d5f167b6f5c7d97696f397c82f82e3480e003fce3f0a1cd1dd26e2eb2/typeguard-4.6.0-py3-none-any.whl
+  name: typeguard
+  version: 4.6.0
+  sha256: 79878165bb86f2cf5d41d159a0ff1792a796cf496882d2fe1b1c6c7049b9cdd7
+  requires_dist:
+  - typing-extensions>=4.14.0
   requires_python: '>=3.10'
 - pypi: https://files.pythonhosted.org/packages/ae/d6/69a76c8ccdef14af687c497040292a46e59fc7a0ab24724b60e50ca61030/equinox-0.13.8-py3-none-any.whl
   name: equinox

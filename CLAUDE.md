@@ -21,8 +21,10 @@ change → run checks → review diff.
 - No `tests/` directory exists yet, though `pyproject.toml` already points `testpaths` at it —
   create it following `ls_bayesian`'s layout (`unit/`, `integration/`, `helpers.py`, `conftest.py`)
   for the first tests.
-- `data/` (untracked) holds precomputed `.npy`/`.vtu` inputs (mesh, fiber fields, ground truth) for
-  local experimentation; not part of the package.
+- `example_data/` (git-tracked) holds one small reference patient's data: `raw/` (mesh, fiber field,
+  basis vectors) and `preprocessing/` (derived preprocessing outputs); not part of the installable
+  package, just a fixed example. `working_data/` (gitignored) is where simulation-study sweep outputs
+  go — one parameter-hash-named folder per run, each with its own metadata file.
 
 ## Architecture
 Builds one `ls_bayesian.posterior.posterior.LogPosterior` by supplying `ls_bayesian`'s three

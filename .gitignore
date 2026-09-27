@@ -219,3 +219,6 @@ __marimo__/
 # pixi environments
 .pixi/*
 !.pixi/config.toml
+
+# Local simulation-study data (see example_data/ for the tracked reference example)
+working_data/

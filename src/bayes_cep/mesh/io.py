@@ -50,4 +50,4 @@ def create_dolfinx_mesh(pv_mesh: pv.UnstructuredGrid) -> dlx.mesh.Mesh:
     points = pv_mesh.points
     cells = pv_mesh.cells.reshape(-1, 4)[:, 1:]
     ufl_cell_type = ufl.Mesh(basix.ufl.element("Lagrange", "triangle", 1, shape=(3,)))
-    return dlx.mesh.create_mesh(MPI.COMM_WORLD, cells, points, ufl_cell_type)
+    return dlx.mesh.create_mesh(MPI.COMM_WORLD, cells, ufl_cell_type, points)

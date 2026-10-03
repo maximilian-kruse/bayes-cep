@@ -1,0 +1,34 @@
+Run started 2026-10-03T23:08:38+02:00
+Command: scripts/run_map.py --data-dir example_data
+Log file: example_data/logs/run_map.log
+
+MAP estimation settings
+  data directory : example_data
+  prior          : InferencePriorSettings(kappa=0.05, tau=10.0, seed=0)
+  noise variance : 0.001
+  interpolation  : NearestNeighborInterpolationStrategy()
+  eikonal solver : EikonalSolverSettings(initial_site_ind=12650, longitudinal_velocity=1.5, transversal_velocity=1.0, solver_tolerance=1e-06, max_num_iterations=1000, max_value=1000.0, use_soft_update=True, softminmax_order=20, softminmax_cutoff=0.01)
+  optimizer      : CustomLBFGSStrategy(lbfgs_settings=CustomLBFGSSettings(memory_size=10, maximum_num_iterations=1000, gradient_norm_tolerance=100.0), line_search_settings=ArmijoBacktrackingLineSearchSettings(initial_step_size=1.0, sufficient_decrease_constant=0.0001, backtracking_factor=2.0, max_backtracking_steps=50), cautious_update_settings=CautiousUpdateSettings(epsilon=1e-06, alpha=1.0), seed_scaling_settings=BarzilaiBorweinSeedScalingSettings(gamma_min=1e-10, gamma_max=100.0, fallback_value=1e-06))
+
+[1/5] Loading raw and preprocessed data from example_data ...
+      done in 0.04 s
+      mesh: 15820 vertices, 31375 triangles
+      observed 1000 of 15820 vertices
+      observed activation times: shape (1000,), min 1.084, max 42.19, mean 22.29
+[2/5] Building the posterior (SPDE prior, NearestNeighborInterpolationStrategy forward map) ...
+      done in 1.84 s
+[3/5] Building the optimizer (CustomLBFGSStrategy) ...
+      done in 0.00 s
+[4/5] Running MAP estimation (iteration table: console and optimizer log) ...
+      done in 1966.89 s
+      MAP estimation converged after 851 iterations
+      status: Converged: gradient norm 9.601e+01 <= tolerance 1.000e+02.
+      loss: 8.508175e+05 -> 4.909815e+02
+      gradient norm: 6.472795e+05 -> 9.600666e+01
+      MAP estimate [rad]: shape (15820,), min -1.337, max 0.5883, mean -0.3379
+[5/5] Writing outputs to example_data/map ...
+      done in 0.00 s
+      map_estimate.npy (15820,) float64
+      map_loss_history.npy (851,) float64
+      map_gradient_norm_history.npy (851,) float64
+MAP estimation finished.

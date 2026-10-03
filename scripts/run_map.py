@@ -74,8 +74,8 @@ REFERENCE_PRIOR_KAPPA = 0.05
 REFERENCE_PRIOR_TAU = 10.0
 REFERENCE_PRIOR_SEED = 0
 REFERENCE_NOISE_VARIANCE = 1e-3
-REFERENCE_GRADIENT_NORM_TOLERANCE = 1.0
-REFERENCE_MAX_NUM_ITERATIONS = 2000
+REFERENCE_GRADIENT_NORM_TOLERANCE = 100.0
+REFERENCE_MAX_NUM_ITERATIONS = 1000
 
 
 # ==================================================================================================
@@ -134,10 +134,10 @@ class RunMAPSettings:
         optimizer (CustomLBFGSStrategy | ScipyLBFGSBStrategy): Strategy selecting and configuring
             the optimizer backend and its matching `OptimizationModel` geometry; defaults to the
             metric-consistent `CustomLBFGSStrategy`, which converges once the Cameron-Martin
-            gradient norm is at most `1.0` (`gradient_norm_tolerance`), far looser than the
+            gradient norm is at most `100.0` (`gradient_norm_tolerance`), far looser than the
             library default of `1e-6`, so runs stop earlier; tighten it via
-            `--optimizer.lbfgs-settings.gradient-norm-tolerance`. The iteration cap is `2000`
-            (library default `1000`), adjustable via
+            `--optimizer.lbfgs-settings.gradient-norm-tolerance`. The iteration cap is `1000`, the
+            library default, adjustable via
             `--optimizer.lbfgs-settings.maximum-num-iterations`. The strategy's default seed
             scaling is tuned to this problem (`gamma_min=1e-10`, first-iteration
             `fallback_value=1e-6`; see `bayes_cep.optimization.strategies`). Selected on the

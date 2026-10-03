@@ -47,6 +47,15 @@ from ls_bayesian.posterior.posterior import LogPosterior
 
 from bayes_cep.optimization.model import CameronMartinPosteriorModel, EuclideanPosteriorModel
 
+# Barzilai-Borwein seed-scaling defaults. `ls_bayesian`'s defaults (clamp `[1e-2, 1e2]`, fallback
+# `1.0`) assume a Hessian of order one in the Cameron-Martin metric, i.e. a prior-dominated problem.
+# Here the data (many observations, tiny noise variance, broad prior) dominate and the scaling
+# wants values of about `1e-7`. Clamping it to `1e-2` costs about a dozen backtracking forward
+# solves per iteration, and the neutral fallback `1.0` for the very first iteration (no correction
+# pair yet to estimate the scale from) costs about 20 more.
+SEED_SCALING_GAMMA_MIN = 1e-10
+SEED_SCALING_FALLBACK_VALUE = 1e-6
+
 
 # ==================================================================================================
 class OptimizerStrategy(ABC):
@@ -131,7 +140,10 @@ class CustomLBFGSStrategy(OptimizerStrategy):
         cautious_update_settings (CautiousUpdateSettings): Cautious correction-pair acceptance
             settings.
         seed_scaling_settings (BarzilaiBorweinSeedScalingSettings): Barzilai-Borwein-style
-            seed-scaling clamp bounds (`gamma_min`/`gamma_max`).
+            seed-scaling clamp bounds (`gamma_min`/`gamma_max`) and first-iteration
+            `fallback_value`. Defaults to `gamma_min=1e-10` and `fallback_value=1e-6` (see
+            `SEED_SCALING_GAMMA_MIN`/`SEED_SCALING_FALLBACK_VALUE`) and the library's
+            `gamma_max`.
     """
 
     lbfgs_settings: CustomLBFGSSettings = field(default_factory=CustomLBFGSSettings)
@@ -140,7 +152,9 @@ class CustomLBFGSStrategy(OptimizerStrategy):
     )
     cautious_update_settings: CautiousUpdateSettings = field(default_factory=CautiousUpdateSettings)
     seed_scaling_settings: BarzilaiBorweinSeedScalingSettings = field(
-        default_factory=BarzilaiBorweinSeedScalingSettings
+        default_factory=lambda: BarzilaiBorweinSeedScalingSettings(
+            gamma_min=SEED_SCALING_GAMMA_MIN, fallback_value=SEED_SCALING_FALLBACK_VALUE
+        )
     )
 
     # ----------------------------------------------------------------------------------------------

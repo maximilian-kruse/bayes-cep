@@ -17,6 +17,10 @@ angle field onto simplices via exactly one `InterpolationStrategy`, chosen via `
 triangle's centroid) or `linear-interpolation-strategy` (averages a triangle's three vertex
 values); see `mesh.interpolation`'s docstring.
 
+Everything the script reports (start time, command line, settings, progress steps, summaries) is
+also logged to `--run-logfile-path` (default `<data_dir>/logs/preprocess_data.log`, overwritten on
+every run), so the settings are stored with the run.
+
 To regenerate `example_data/preprocessing/` from
 `example_data/raw/{mesh.vtu,fiber_field.npy,basis_vecs.npy}` with the reference settings below:
 
@@ -28,6 +32,7 @@ from pathlib import Path
 
 import numpy as np
 import tyro
+from ls_bayesian.common.logging import BaseLogger
 
 from bayes_cep.mesh.interpolation import (
     LinearInterpolationStrategy,
@@ -44,7 +49,12 @@ from bayes_cep.preprocessing.synthetic_observations import (
     ObservationSamplingSettings,
     generate_synthetic_observations,
 )
-from bayes_cep.reporting.console import describe_array, report_step
+from bayes_cep.reporting.console import (
+    describe_array,
+    report_step,
+    resolve_logfile_path,
+    run_logger,
+)
 
 # Reference settings, reproduced from the legacy single-patient MAP study (`application/map.ipynb`/
 # `application/prior.ipynb` in the cardiac-electrophysiology repo). Used only as
@@ -80,6 +90,10 @@ class PreprocessingSettings:
             interpolating the vertex-based angle field onto simplices for the eikonal forward map
             used to generate synthetic observations; defaults to nearest-neighbor interpolation.
             Selected on the command line via `--interpolation:<strategy-name>`.
+        run_logfile_path (Path | None): File the script's output (settings, progress, summaries) is
+            logged to in addition to the console, so the settings are stored with the run. A
+            relative path is resolved against `data_dir`; defaults to `logs/preprocess_data.log`.
+            Overwritten on every run; pass `None` to disable.
     """
 
     data_dir: Path
@@ -103,41 +117,52 @@ class PreprocessingSettings:
     interpolation: LinearInterpolationStrategy | NearestNeighborInterpolationStrategy = field(
         default_factory=NearestNeighborInterpolationStrategy
     )
+    run_logfile_path: Path | None = Path("logs/preprocess_data.log")
 
 
 # ==================================================================================================
 def main(settings: PreprocessingSettings) -> None:
+    """Run the preprocessing pipeline, logging its output to `settings.run_logfile_path`."""
+    with run_logger(resolve_logfile_path(settings.data_dir, settings.run_logfile_path)) as logger:
+        _run(settings, logger)
+
+
+# ==================================================================================================
+def _run(settings: PreprocessingSettings, logger: BaseLogger) -> None:
     """Build the ground truth, prior mean, and observations, cache to `<data_dir>/preprocessing`."""
     raw_dir = settings.data_dir / "raw"
     preprocessing_dir = settings.data_dir / "preprocessing"
     num_steps = 5
 
-    print("Preprocessing settings")
-    print(f"  data directory : {settings.data_dir}")
-    print(f"  ground truth   : {settings.ground_truth}")
-    print(f"  interpolation  : {settings.interpolation}")
-    print(f"  eikonal solver : {settings.eikonal}")
-    print(f"  observations   : {settings.observations}")
-    print()
+    logger.info("Preprocessing settings")
+    logger.info(f"  data directory : {settings.data_dir}")
+    logger.info(f"  ground truth   : {settings.ground_truth}")
+    logger.info(f"  interpolation  : {settings.interpolation}")
+    logger.info(f"  eikonal solver : {settings.eikonal}")
+    logger.info(f"  observations   : {settings.observations}")
+    logger.info("")
 
-    with report_step(1, num_steps, f"Loading raw data from {raw_dir}"):
+    with report_step(logger, 1, num_steps, f"Loading raw data from {raw_dir}"):
         mesh = load_pyvista_mesh(raw_dir / "mesh.vtu")
         fiber_field = np.load(raw_dir / "fiber_field.npy")
         basis_vectors = np.load(raw_dir / "basis_vecs.npy")
-    print(f"      mesh: {mesh.n_points} vertices, {mesh.n_cells} triangles")
+    logger.info(f"      mesh: {mesh.n_points} vertices, {mesh.n_cells} triangles")
 
     strategy_name = type(settings.ground_truth).__name__
-    with report_step(2, num_steps, f"Building ground-truth angle field ({strategy_name})"):
+    with report_step(logger, 2, num_steps, f"Building ground-truth angle field ({strategy_name})"):
         ground_truth_angle_field = settings.ground_truth.build(mesh, fiber_field, basis_vectors)
-    print(f"      {describe_array('ground truth [rad]', ground_truth_angle_field)}")
+    logger.info(f"      {describe_array('ground truth [rad]', ground_truth_angle_field)}")
 
-    with report_step(3, num_steps, "Computing constant prior mean from the ground truth"):
+    with report_step(logger, 3, num_steps, "Computing constant prior mean from the ground truth"):
         prior_mean_angle_field = build_constant_prior_mean(ground_truth_angle_field)
-    print(f"      prior mean angle: {prior_mean_angle_field[0]:.4f} rad")
+    logger.info(f"      prior mean angle: {prior_mean_angle_field[0]:.4f} rad")
 
     interpolation_name = type(settings.interpolation).__name__
     with report_step(
-        4, num_steps, f"Generating synthetic observations ({interpolation_name} forward map)"
+        logger,
+        4,
+        num_steps,
+        f"Generating synthetic observations ({interpolation_name} forward map)",
     ):
         forward_map = EikonalParameterToSolutionMap(
             mesh, basis_vectors, settings.eikonal, settings.interpolation
@@ -145,8 +170,8 @@ def main(settings: PreprocessingSettings) -> None:
         observed_vertex_indices, observed_activation_times = generate_synthetic_observations(
             forward_map, ground_truth_angle_field, settings.observations
         )
-    print(f"      observed {observed_vertex_indices.shape[0]} of {mesh.n_points} vertices")
-    print(f"      {describe_array('noisy activation times', observed_activation_times)}")
+    logger.info(f"      observed {observed_vertex_indices.shape[0]} of {mesh.n_points} vertices")
+    logger.info(f"      {describe_array('noisy activation times', observed_activation_times)}")
 
     outputs = {
         "ground_truth_angle_field.npy": ground_truth_angle_field,
@@ -154,13 +179,13 @@ def main(settings: PreprocessingSettings) -> None:
         "observed_vertex_indices.npy": observed_vertex_indices,
         "observed_activation_times.npy": observed_activation_times,
     }
-    with report_step(5, num_steps, f"Writing outputs to {preprocessing_dir}"):
+    with report_step(logger, 5, num_steps, f"Writing outputs to {preprocessing_dir}"):
         preprocessing_dir.mkdir(exist_ok=True)
         for filename, array in outputs.items():
             np.save(preprocessing_dir / filename, array)
     for filename, array in outputs.items():
-        print(f"      {filename} {array.shape} {array.dtype}")
-    print("Preprocessing finished.")
+        logger.info(f"      {filename} {array.shape} {array.dtype}")
+    logger.info("Preprocessing finished.")
 
 
 if __name__ == "__main__":

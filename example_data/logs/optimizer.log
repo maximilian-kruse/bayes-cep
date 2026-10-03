@@ -1,0 +1,31 @@
+[MAP]  Iteration     Time [s]           Loss     Grad. norm
+[MAP] -----------------------------------------------------
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 4.941425e+11).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 1.235378e+11).
+[MAP][DEBUG] Backtracking step 2: step size 2.500e-01 rejected (loss 3.088677e+10).
+[MAP][DEBUG] Backtracking step 3: step size 1.250e-01 rejected (loss 7.724360e+09).
+[MAP][DEBUG] Backtracking step 4: step size 6.250e-02 rejected (loss 1.933338e+09).
+[MAP][DEBUG] Backtracking step 5: step size 3.125e-02 rejected (loss 4.857101e+08).
+[MAP][DEBUG] Backtracking step 6: step size 1.562e-02 rejected (loss 1.238383e+08).
+[MAP][DEBUG] Backtracking step 7: step size 7.812e-03 rejected (loss 3.351167e+07).
+[MAP][DEBUG] Backtracking step 8: step size 3.906e-03 rejected (loss 1.069720e+07).
+[MAP][DEBUG] Backtracking step 9: step size 1.953e-03 rejected (loss 4.775425e+06).
+[MAP][DEBUG] Backtracking step 10: step size 9.766e-04 rejected (loss 3.618875e+06).
+[MAP][DEBUG] Backtracking step 11: step size 4.883e-04 rejected (loss 3.433679e+06).
+[MAP][DEBUG] Backtracking step 12: step size 2.441e-04 rejected (loss 2.993437e+06).
+[MAP][DEBUG] Backtracking step 13: step size 1.221e-04 rejected (loss 3.599926e+06).
+[MAP][DEBUG] Backtracking step 14: step size 6.104e-05 rejected (loss 3.189259e+06).
+[MAP][DEBUG] Backtracking step 15: step size 3.052e-05 rejected (loss 3.880000e+06).
+[MAP][DEBUG] Backtracking step 16: step size 1.526e-05 rejected (loss 1.580673e+06).
+[MAP][DEBUG] Backtracking step 17: step size 7.629e-06 rejected (loss 1.930256e+06).
+[MAP][DEBUG] Backtracking step 18: step size 3.815e-06 rejected (loss 6.125200e+06).
+[MAP][DEBUG] Backtracking step 19: step size 1.907e-06 rejected (loss 3.967646e+06).
+[MAP][DEBUG] Backtracking step 20: step size 9.537e-07 rejected (loss 1.779781e+06).
+[MAP][DEBUG] Backtracking step 21: step size 4.768e-07 rejected (loss 9.900096e+05).
+[MAP][DEBUG] Iteration 1: step size 2.384e-07, correction pair accepted.
+[MAP]          1       25.372   8.496452e+05   6.064034e+05
+[MAP][DEBUG] Seed-scaling factor gamma=1.737e-07 clamped to 1.000e-02 (bounds [1.000e-02, 1.000e+02]).
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 2.819320e+07).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 9.462842e+06).
+[MAP][DEBUG] Backtracking step 2: step size 2.500e-01 rejected (loss 4.535933e+06).
+[MAP][DEBUG] Backtracking step 3: step size 1.250e-01 rejected (loss 3.478839e+06).

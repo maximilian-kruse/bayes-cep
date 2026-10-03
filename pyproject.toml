@@ -58,6 +58,7 @@ tyro = ">=1.0.16,<2"
 
 [tool.pixi.tasks]
 preprocess = "python scripts/preprocess_data.py"
+map = "python scripts/run_map.py"
 
 # --- Features -------------------------------------------------------------------------------------
 

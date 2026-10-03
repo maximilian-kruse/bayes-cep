@@ -13,6 +13,7 @@ from typing import override
 
 import dolfinx as dlx
 import numpy as np
+from ls_bayesian.common.logging import BaseLogger
 from ls_bayesian.posterior import interfaces
 from ls_bayesian.spde_prior import builder, spde_prior, strategies
 
@@ -54,6 +55,12 @@ class FiberAnglePrior(interfaces.GaussianPrior):
     @override
     def random_vector_size(self) -> int:
         return self._prior.random_vector_size
+
+    # ----------------------------------------------------------------------------------------------
+    @property
+    @override
+    def mean_vector(self) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
+        return self._prior.mean_vector
 
     # ----------------------------------------------------------------------------------------------
     @override
@@ -104,13 +111,18 @@ class FiberAnglePrior(interfaces.GaussianPrior):
 
 
 # ==================================================================================================
-def build_fiber_angle_prior(dlx_mesh: dlx.mesh.Mesh, settings: PriorSettings) -> FiberAnglePrior:
+def build_fiber_angle_prior(
+    dlx_mesh: dlx.mesh.Mesh, settings: PriorSettings, logger: BaseLogger | None = None
+) -> FiberAnglePrior:
     """Build a `FiberAnglePrior` (Bilaplacian SPDE) on the given dolfinx mesh.
 
     Args:
         dlx_mesh (dlx.mesh.Mesh): Dolfinx mesh to build the prior on, e.g. via
             `bayes_cep.mesh.io.create_dolfinx_mesh`.
         settings (PriorSettings): Prior hyperparameters.
+        logger (BaseLogger | None, optional): Logger for the prior's evaluation diagnostics
+            (`evaluate_cost`/`evaluate_gradient`/`evaluate_hessian_vector_product`). Nothing is
+            logged if `None`. Defaults to `None`.
 
     Returns:
         FiberAnglePrior: The assembled fiber-angle prior.
@@ -123,6 +135,6 @@ def build_fiber_angle_prior(dlx_mesh: dlx.mesh.Mesh, settings: PriorSettings) ->
         seed=settings.seed,
     )
     prior_builder = builder.SPDEPriorBuilder(
-        prior_settings, strategies.BilaplacianComponentStrategy()
+        prior_settings, strategies.BilaplacianComponentStrategy(), logger=logger
     )
     return FiberAnglePrior(prior_builder.build())

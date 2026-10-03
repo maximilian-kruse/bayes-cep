@@ -10,6 +10,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import pyvista as pv
+from ls_bayesian.common.logging import BaseLogger
 from ls_bayesian.posterior import interfaces, posterior
 
 from bayes_cep.mesh.interpolation import InterpolationStrategy
@@ -68,17 +69,27 @@ class PosteriorBuilder:
         self,
         settings: PosteriorSettings,
         interpolation_strategy: InterpolationStrategy | None = None,
+        prior_logger: BaseLogger | None = None,
+        posterior_logger: BaseLogger | None = None,
     ) -> None:
-        """Store the settings and interpolation strategy for `build`.
+        """Store the settings, interpolation strategy, and loggers for `build`.
 
         Args:
             settings (PosteriorSettings): Mesh, prior, eikonal solver, and likelihood settings.
             interpolation_strategy (InterpolationStrategy | None, optional): Strategy for
                 interpolating the vertex-based parameter onto simplices for the forward map.
-                Defaults to `LinearInterpolationStrategy` if `None`.
+                Defaults to `NearestNeighborInterpolationStrategy` if `None`.
+            prior_logger (BaseLogger | None, optional): Logger for the prior's evaluation
+                diagnostics, passed to `build_fiber_angle_prior`. Nothing is logged if `None`.
+                Defaults to `None`.
+            posterior_logger (BaseLogger | None, optional): Logger for the composed
+                `LogPosterior`'s evaluation diagnostics. Nothing is logged if `None`. Defaults to
+                `None`.
         """
         self._settings = settings
         self._interpolation_strategy = interpolation_strategy
+        self._prior_logger = prior_logger
+        self._posterior_logger = posterior_logger
 
     # ----------------------------------------------------------------------------------------------
     def build(self) -> posterior.LogPosterior:
@@ -90,7 +101,7 @@ class PosteriorBuilder:
         self.pv_mesh: pv.UnstructuredGrid = self._settings.mesh
         dlx_mesh = create_dolfinx_mesh(self.pv_mesh)
         self.prior: FiberAnglePrior = build_fiber_angle_prior(
-            dlx_mesh, self._settings.prior_settings
+            dlx_mesh, self._settings.prior_settings, logger=self._prior_logger
         )
         self.forward_map: EikonalParameterToSolutionMap = EikonalParameterToSolutionMap(
             self.pv_mesh,
@@ -101,4 +112,6 @@ class PosteriorBuilder:
         self.likelihood: interfaces.Likelihood = build_activation_time_likelihood(
             self._settings.likelihood_settings
         )
-        return posterior.LogPosterior(self.likelihood, self.forward_map, self.prior)
+        return posterior.LogPosterior(
+            self.likelihood, self.forward_map, self.prior, logger=self._posterior_logger
+        )

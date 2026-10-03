@@ -5,9 +5,15 @@ Classes:
     LinearInterpolationStrategy: Average a triangle's three vertex values.
     NearestNeighborInterpolationStrategy: Take the value of the vertex closest to each triangle's
         centroid.
+
+Note:
+    The concrete strategies are (stateless) dataclasses on purpose: `tyro` only exposes a class as
+    a selectable subcommand (e.g. `--interpolation:linear-interpolation-strategy`) in the scripts'
+    CLIs if it is a dataclass; otherwise it freezes the argument to the default instance.
 """
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
 import numpy as np
 import scipy.sparse as sp
@@ -45,6 +51,7 @@ class InterpolationStrategy(ABC):
 
 
 # ==================================================================================================
+@dataclass(frozen=True)
 class LinearInterpolationStrategy(InterpolationStrategy):
     """Average a triangle's three vertex values.
 
@@ -68,6 +75,7 @@ class LinearInterpolationStrategy(InterpolationStrategy):
 
 
 # ==================================================================================================
+@dataclass(frozen=True)
 class NearestNeighborInterpolationStrategy(InterpolationStrategy):
     """Take the value of the vertex closest to each triangle's centroid."""
 

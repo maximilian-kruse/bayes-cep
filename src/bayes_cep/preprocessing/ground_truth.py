@@ -15,6 +15,12 @@ Classes:
 
 Functions:
     build_synthetic_ground_truth: Sample a synthetic ground truth from the Bilaplacian SPDE prior.
+
+Note:
+    The concrete strategies and their settings are dataclasses on purpose: `tyro` only exposes a
+    class as a selectable subcommand (e.g. `--ground-truth:synthetic-ground-truth-strategy`) in
+    `scripts/preprocess_data.py`'s CLI if it is a dataclass; otherwise it freezes the argument to
+    the default instance.
 """
 
 from abc import ABC, abstractmethod
@@ -36,16 +42,15 @@ class SyntheticGroundTruthSettings:
     r"""SPDE prior parameters for the synthetic ground truth.
 
     Attributes:
-        kappa (float): SPDE parameter $\kappa > 0$, controlling correlation length. Defaults to the
-            legacy reference value `5.0`.
-        tau (float): SPDE parameter $\tau > 0$, controlling marginal variance. Defaults to the
-            legacy reference value `0.01`.
-        seed (int): Random seed for prior sampling. Defaults to `0`.
+        kappa (float): SPDE parameter $\kappa > 0$, controlling correlation length. Defaults to
+            `5.0`.
+        tau (float): SPDE parameter $\tau > 0$, controlling marginal variance. Defaults to `0.01`.
+        seed (int): Random seed for prior sampling. Defaults to `2`.
     """
 
-    kappa: float = 5.0
-    tau: float = 0.01
-    seed: int = 0
+    kappa: float = 0.05
+    tau: float = 10.0
+    seed: int = 2
 
 
 # ==================================================================================================

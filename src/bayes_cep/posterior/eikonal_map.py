@@ -14,7 +14,10 @@ import scipy.sparse as sp
 from eikonax import derivator, linalg, preprocessing, solver, tensorfield
 from ls_bayesian.posterior import interfaces
 
-from bayes_cep.mesh.interpolation import InterpolationStrategy, LinearInterpolationStrategy
+from bayes_cep.mesh.interpolation import (
+    InterpolationStrategy,
+    NearestNeighborInterpolationStrategy,
+)
 from bayes_cep.posterior.fiber_tensor import FiberTensor, FiberTensorSettings
 
 
@@ -111,11 +114,11 @@ class EikonalParameterToSolutionMap(interfaces.ParameterToSolutionMap):
             settings (EikonalSolverSettings): Forward solver and tensor field settings.
             interpolation_strategy (InterpolationStrategy | None, optional): Strategy for
                 interpolating the vertex-based parameter onto simplices. Defaults to
-                `LinearInterpolationStrategy` if `None`.
+                `NearestNeighborInterpolationStrategy` if `None`.
         """
         vertices = pv_mesh.points
         simplices = pv_mesh.cells.reshape(-1, 4)[:, 1:]
-        interpolation_strategy = interpolation_strategy or LinearInterpolationStrategy()
+        interpolation_strategy = interpolation_strategy or NearestNeighborInterpolationStrategy()
         self._vertex_to_simplex_matrix = interpolation_strategy.assemble_matrix(vertices, simplices)
 
         num_simplices = simplices.shape[0]
@@ -160,7 +163,7 @@ class EikonalParameterToSolutionMap(interfaces.ParameterToSolutionMap):
         """Solve the eikonal equation for the activation-time field $u = F(m)$."""
         tensor_field_instance = self._assemble_tensor_field(parameter_vector)
         solution = self._solver.run(tensor_field_instance)
-        return np.array(solution.values)
+        return np.asarray(solution.values, dtype=np.float64)
 
     # ----------------------------------------------------------------------------------------------
     @override

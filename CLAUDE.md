@@ -50,6 +50,15 @@ parameter $m$ is a fiber-orientation angle per mesh vertex.
 - `posterior/builder.py`: `PosteriorBuilder` wires the above from a `PosteriorSettings` dataclass.
   Prior, forward map, and likelihood are all built in `build()`, never `__init__` — a `LogPosterior`
   is tied to one dataset, so there's no cheaper partial rebuild for a different one.
+- `optimization/`: MAP estimation, via `ls_bayesian.optimization`. `model.py` adapts a
+  `LogPosterior` to `OptimizationModel` in two geometries — `CameronMartinPosteriorModel` (the
+  metric-consistent choice: `LogPosterior.evaluate_gradient` is a "dual" vector, and applying the
+  prior's covariance operator to it gives exactly the Cameron-Martin representer) and
+  `EuclideanPosteriorModel` (the unmodified gradient, for Euclidean-only backends).
+  `strategies.py`'s `OptimizerStrategy` (`CustomLBFGSStrategy`/`ScipyLBFGSBStrategy`) builds each
+  optimizer backend together with its matching model as one pair — never mix the two models and
+  backends across strategies. `builder.py`'s `MAPEstimationBuilder` mirrors `PosteriorBuilder`,
+  delegating to the chosen strategy in `build()`.
 
 ## Design & style
 - Priorities: numerical correctness > reproducibility > clear APIs > performance > convenience.

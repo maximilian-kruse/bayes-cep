@@ -24,9 +24,9 @@ values); see `mesh.interpolation`'s docstring.
 
 The optimizer's `logger_settings` prints to the console and, by default, also to
 `<data_dir>/logs/optimizer.log` (relative `--*-logfile-path` values are resolved against
-`data_dir`). The prior and the posterior get their own loggers (`--prior-logfile-path`,
-`--posterior-logfile-path`), file-only by default (`<data_dir>/logs/{prior,posterior}.log`): pass
-`None` to any of the three `--*-logfile-path` options to disable that file. In addition,
+`data_dir`; pass `None` to disable that file). The prior and the posterior can get their own
+file-only loggers, which are off by default: enable them with `--prior-logfile-path <file>` and
+`--posterior-logfile-path <file>`, e.g. `logs/prior.log` and `logs/posterior.log`. In addition,
 `--run-logfile-path` (default `<data_dir>/logs/run_map.log`, overwritten on every run) receives the
 script's own output -- start time, command line, settings, progress steps, and summaries -- so the
 settings are stored with the run. The optimizer's iteration table is deliberately not part of it:
@@ -149,10 +149,10 @@ class RunMAPSettings:
             `data_dir`; pass `--logger-settings.logfile-path None` to disable the file).
         prior_logfile_path (Path | None): File the prior's evaluation diagnostics are logged to,
             resolved against `data_dir` if relative; never printed to the console. Defaults to
-            `logs/prior.log`. `None` disables prior logging entirely.
+            `None`, which disables prior logging entirely.
         posterior_logfile_path (Path | None): File the composed `LogPosterior`'s evaluation
             diagnostics are logged to, resolved against `data_dir` if relative; never printed to
-            the console. Defaults to `logs/posterior.log`. `None` disables posterior logging
+            the console. Defaults to `None`, which disables posterior logging
             entirely.
         run_logfile_path (Path | None): File the script's own output (settings, progress,
             summaries; not the optimizer's iteration table, which goes to `logger_settings`' log
@@ -185,8 +185,8 @@ class RunMAPSettings:
     logger_settings: LoggerSettings = field(
         default_factory=lambda: LoggerSettings(logfile_path=Path("logs/optimizer.log"))
     )
-    prior_logfile_path: Path | None = Path("logs/prior.log")
-    posterior_logfile_path: Path | None = Path("logs/posterior.log")
+    prior_logfile_path: Path | None = None
+    posterior_logfile_path: Path | None = None
     run_logfile_path: Path | None = Path("logs/run_map.log")
 
 

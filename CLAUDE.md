@@ -57,8 +57,8 @@ parameter $m$ is a fiber-orientation angle per mesh vertex.
   `EuclideanPosteriorModel` (the unmodified gradient, for Euclidean-only backends).
   `strategies.py`'s `OptimizerStrategy` (`CustomLBFGSStrategy`/`ScipyLBFGSBStrategy`) builds each
   optimizer backend together with its matching model as one pair — never mix the two models and
-  backends across strategies. `builder.py`'s `MAPEstimationBuilder` mirrors `PosteriorBuilder`,
-  delegating to the chosen strategy in `build()`.
+  backends across strategies. There is deliberately no builder/settings wrapper on top: callers use
+  `strategy.build(log_posterior, prior, logger)` directly.
 
 ## Design & style
 - Priorities: numerical correctness > reproducibility > clear APIs > performance > convenience.

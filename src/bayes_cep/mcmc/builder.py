@@ -29,8 +29,11 @@ from bayes_cep.mcmc.measures import LikelihoodTargetMeasure, PriorGaussianMeasur
 
 # Default proposal step width for both samplers. Far smaller than the usual `O(0.1)` choices: the
 # data (many observations, tiny noise variance) make the likelihood potential very sharp relative
-# to the broad prior, so larger steps are practically never accepted.
-DEFAULT_STEP_WIDTH = 1e-7
+# to the broad prior, so larger steps are practically never accepted. For pCN on the example
+# patient, started at the MAP estimate, short chains gave an acceptance rate of about 90% at `1e-4`
+# and about 15% at `1e-3`. The problem is highly nonlinear, so acceptance falls further once the
+# chain leaves the MAP's neighborhood; this is a conservative starting point, not a tuned value.
+DEFAULT_STEP_WIDTH = 1e-4
 
 
 # ==================================================================================================

@@ -225,3 +225,6 @@ __marimo__/
 
 # Local simulation-study data (see example_data/ for the tracked reference example)
 working_data/
+
+# MCMC sample stores (large; regenerate via notebooks/mcmc.ipynb)
+example_data/mcmc/

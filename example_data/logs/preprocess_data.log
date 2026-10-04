@@ -1,27 +1,27 @@
-Run started 2026-10-03T21:21:39+02:00
+Run started 2026-10-04T15:25:37+02:00
 Command: scripts/preprocess_data.py --data-dir example_data
 Log file: example_data/logs/preprocess_data.log
 
 Preprocessing settings
   data directory : example_data
-  ground truth   : SyntheticGroundTruthStrategy(settings=SyntheticGroundTruthSettings(kappa=0.05, tau=10.0, seed=2))
+  ground truth   : SyntheticGroundTruthStrategy(settings=SyntheticGroundTruthSettings(kappa=0.05, tau=10.0, seed=0))
   interpolation  : NearestNeighborInterpolationStrategy()
   eikonal solver : EikonalSolverSettings(initial_site_ind=12650, longitudinal_velocity=1.5, transversal_velocity=1.0, solver_tolerance=1e-06, max_num_iterations=1000, max_value=1000.0, use_soft_update=True, softminmax_order=20, softminmax_cutoff=0.01)
   observations   : ObservationSamplingSettings(num_observations=1000, noise_variance=0.001, seed=0)
 
 [1/5] Loading raw data from example_data/raw ...
-      done in 0.09 s
+      done in 0.04 s
       mesh: 15820 vertices, 31375 triangles
 [2/5] Building ground-truth angle field (SyntheticGroundTruthStrategy) ...
-      done in 0.75 s
-      ground truth [rad]: shape (15820,), min -1.358, max 0.6821, mean -0.3421
+      done in 0.71 s
+      ground truth [rad]: shape (15820,), min -1.681, max 1.459, mean -0.05676
 [3/5] Computing constant prior mean from the ground truth ...
       done in 0.00 s
-      prior mean angle: -0.3334 rad
+      prior mean angle: -0.1117 rad
 [4/5] Generating synthetic observations (NearestNeighborInterpolationStrategy forward map) ...
-      done in 2.62 s
+      done in 2.51 s
       observed 1000 of 15820 vertices
-      noisy activation times: shape (1000,), min 1.084, max 42.19, mean 22.29
+      noisy activation times: shape (1000,), min 1.154, max 42.11, mean 22.47
 [5/5] Writing outputs to example_data/preprocessing ...
       done in 0.00 s
       ground_truth_angle_field.npy (15820,) float64

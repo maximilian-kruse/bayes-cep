@@ -11,7 +11,7 @@ import numpy as np
 import pyvista as pv
 import scipy.sparse as sp
 
-from bayes_cep.preprocessing.axial_statistics import shift_angles_to_minimize_axial_variance
+from bayes_cep.statistics.axial_statistics import shift_angles_to_minimize_axial_variance
 
 
 # ==================================================================================================

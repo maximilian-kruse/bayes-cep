@@ -6,7 +6,7 @@ Functions:
 
 import numpy as np
 
-from bayes_cep.preprocessing.axial_statistics import compute_axial_mean_and_variance
+from bayes_cep.statistics.axial_statistics import compute_axial_mean_and_variance
 
 
 # ==================================================================================================

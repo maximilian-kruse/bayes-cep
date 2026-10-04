@@ -33,7 +33,7 @@ import pyvista as pv
 from bayes_cep.mesh.io import create_dolfinx_mesh
 from bayes_cep.posterior.prior import PriorSettings, build_fiber_angle_prior
 from bayes_cep.preprocessing.angle_field import build_angle_field_from_fiber_field
-from bayes_cep.preprocessing.axial_statistics import shift_angles_to_minimize_axial_variance
+from bayes_cep.statistics.axial_statistics import shift_angles_to_minimize_axial_variance
 
 
 # ==================================================================================================

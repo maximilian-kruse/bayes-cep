@@ -28,5 +28,5 @@ def build_constant_prior_mean(
     Returns:
         np.ndarray: Constant prior-mean field, shape `(num_vertices,)`.
     """
-    axial_mean, _ = compute_axial_mean_and_variance(ground_truth_angle_field)
+    axial_mean, _ = compute_axial_mean_and_variance(ground_truth_angle_field[:, np.newaxis])
     return axial_mean * np.ones_like(ground_truth_angle_field)

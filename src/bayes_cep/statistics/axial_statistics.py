@@ -9,65 +9,43 @@ angle (halved) is the axial mean, already on the principal branch $(-\pi/2, \pi/
 magnitude measures concentration (`1`: all samples identical, `0`: uniformly spread).
 
 Functions:
-    compute_axial_mean_and_variance: Axial mean and variance of angle samples along an axis.
-    compute_axial_mean_and_variance_blockwise: The same, reading samples block by block.
+    compute_axial_mean_and_variance: Axial mean and variance of angle samples, read block by block.
     shift_angles_to_minimize_axial_variance: Re-branch an angle field around its own axial mean.
     compute_axial_data_diff: Signed axial angle difference between two fields.
 """
 
-from typing import Protocol
-
 import numpy as np
 
-
-# ==================================================================================================
-class SampleStore(Protocol):
-    """Sample array read in slices along its first axis, e.g. a `numpy` or `zarr` array."""
-
-    @property
-    def shape(self) -> tuple[int, ...]:
-        """Shape `(num_samples, num_components)`."""
-        ...
-
-    def __getitem__(self, key: slice, /) -> np.ndarray:
-        """Return the samples in `key`."""
-        ...
-
-
-# --------------------------------------------------------------------------------------------------
-def validate_block_reading(num_samples: int, burn_in: int, block_size: int) -> None:
-    """Validate the parameters for reading samples block by block.
-
-    Raises:
-        ValueError: If `burn_in` is negative or leaves no samples, or `block_size` is not positive.
-    """
-    if not 0 <= burn_in < num_samples:
-        raise ValueError(f"burn_in must be in [0, {num_samples}), got {burn_in}.")
-    if block_size <= 0:
-        raise ValueError(f"block_size must be positive, got {block_size}.")
+from bayes_cep.statistics.sample_blocks import SampleStore, iterate_sample_blocks
 
 
 # ==================================================================================================
 def compute_axial_mean_and_variance(
-    angle_samples: np.ndarray[tuple[int, int], np.dtype[np.float64]], axis: int = 1
+    samples: SampleStore, burn_in: int = 0, block_size: int = 100
 ) -> tuple[
     np.ndarray[tuple[int], np.dtype[np.float64]], np.ndarray[tuple[int], np.dtype[np.float64]]
 ]:
-    r"""Compute the axial (mod-$\pi$) mean and variance of angle samples, reduced over `axis`.
+    r"""Compute the pointwise axial (mod-$\pi$) mean and variance of angle samples.
+
+    Reads the samples block by block, so e.g. a Zarr store never has to fit in memory; an in-memory
+    array works as well.
 
     Args:
-        angle_samples (np.ndarray): Angle samples in radians, at least 2D.
-        axis (int): Axis to reduce over. Defaults to `1`.
+        samples (SampleStore): Angle samples in radians, shape `(num_samples, num_components)`,
+            e.g. a `numpy` or `zarr` array. Reduced over the first axis.
+        burn_in (int): Number of leading samples to discard. Defaults to `0`.
+        block_size (int): Number of samples read at once. Defaults to `100`.
 
     Returns:
         tuple[np.ndarray, np.ndarray]: Axial mean (in $(-\pi/2, \pi/2]$) and axial variance
-            $-\tfrac{1}{2}\ln R$, where $R$ is the mean resultant length of the doubled angles.
+            $-\tfrac{1}{2}\ln R$, where $R$ is the length of the mean resultant of the doubled
+            angles, each of shape `(num_components,)`.
     """
-    angle_samples = np.atleast_2d(angle_samples)
-    mean_resultant = np.mean(np.exp(2j * angle_samples), axis=axis, keepdims=False)
-    axial_mean = np.angle(mean_resultant) / 2
-    axial_variance = -0.5 * np.log(np.abs(mean_resultant))
-    return axial_mean, axial_variance
+    resultant_sum = np.zeros(samples.shape[1], dtype=np.complex128)
+    for block in iterate_sample_blocks(samples, burn_in, block_size):
+        resultant_sum += np.exp(2j * block).sum(axis=0)
+    mean_resultant = resultant_sum / (samples.shape[0] - burn_in)
+    return np.angle(mean_resultant) / 2, -0.5 * np.log(np.abs(mean_resultant))
 
 
 # --------------------------------------------------------------------------------------------------
@@ -107,38 +85,3 @@ def compute_axial_data_diff(
     """
     raw_diff = angle_field_one - angle_field_two
     return np.angle(np.exp(2j * raw_diff)) / 2
-
-
-# --------------------------------------------------------------------------------------------------
-def compute_axial_mean_and_variance_blockwise(
-    samples: SampleStore, burn_in: int = 0, block_size: int = 100
-) -> tuple[
-    np.ndarray[tuple[int], np.dtype[np.float64]], np.ndarray[tuple[int], np.dtype[np.float64]]
-]:
-    r"""Compute the pointwise axial mean and variance of samples, reading them block by block.
-
-    Same quantities as
-    [`compute_axial_mean_and_variance`][bayes_cep.statistics.axial_statistics.compute_axial_mean_and_variance],
-    but accumulated over blocks of samples, so e.g. a Zarr store never has to fit in memory.
-
-    Args:
-        samples (SampleStore): Angle samples in radians, shape `(num_samples, num_components)`,
-            e.g. a `numpy` or `zarr` array.
-        burn_in (int): Number of leading samples to discard. Defaults to `0`.
-        block_size (int): Number of samples read at once. Defaults to `100`.
-
-    Raises:
-        ValueError: If `burn_in` leaves no samples, or `block_size` is not positive.
-
-    Returns:
-        tuple[np.ndarray, np.ndarray]: Axial mean (in $(-\pi/2, \pi/2]$) and axial variance
-            $-\tfrac{1}{2}\ln R$, each of shape `(num_components,)`.
-    """
-    num_samples, num_components = samples.shape
-    validate_block_reading(num_samples, burn_in, block_size)
-    resultant_sum = np.zeros(num_components, dtype=np.complex128)
-    for start in range(burn_in, num_samples, block_size):
-        block = np.asarray(samples[start : min(start + block_size, num_samples)])
-        resultant_sum += np.exp(2j * block).sum(axis=0)
-    mean_resultant = resultant_sum / (num_samples - burn_in)
-    return np.angle(mean_resultant) / 2, -0.5 * np.log(np.abs(mean_resultant))

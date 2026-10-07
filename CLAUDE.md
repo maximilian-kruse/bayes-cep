@@ -15,16 +15,18 @@ change → run checks → review diff.
 ## Environment (pixi)
 - NEVER bare `python`/`pip`/`conda`/`uv`; always `pixi run ...`. Ask before adding deps. Never
   hand-edit `pixi.lock`; commit it with `pyproject.toml` (holds all pixi config; no `pixi.toml`).
-- Envs: `default` (numpy/scipy/beartype/dolfinx/scifem/jax/pyvista/meshio), `dev` (+ruff,
+- Envs: `default` (numpy/scipy/pandas/pyarrow/submitit/beartype/dolfinx/scifem/jax/pyvista/meshio), `dev` (+ruff,
   pre-commit, jupyter, plotting), `test` (+pytest, pytest-xdist, pytest-mock, nbclient). Tools need
   `-e`: `pixi run -e dev ruff check src` / `ruff format src`; `pixi run -e test pytest`.
 - No `tests/` directory exists yet, though `pyproject.toml` already points `testpaths` at it —
   create it following `ls_bayesian`'s layout (`unit/`, `integration/`, `helpers.py`, `conftest.py`)
   for the first tests.
 - `example_data/` (git-tracked) holds one small reference patient's data: `raw/` (mesh, fiber field,
-  basis vectors) and `preprocessing/` (derived preprocessing outputs); not part of the installable
-  package, just a fixed example. `working_data/` (gitignored) is where simulation-study sweep outputs
-  go — one parameter-hash-named folder per run, each with its own metadata file.
+  basis vectors) and `reference/` (the run directory of the reference MAP run, regenerate with
+  `pixi run example config:example-synthetic`); not part of the installable package, just a fixed
+  example. `working_data/` (gitignored) is where study directories go (see "Runs and studies").
+- Pixi tasks: `single` (one run, `scripts/run.py`), `study` (`scripts/study.py`), `example`. Run
+  them from the repository root; relative paths in configs resolve against it.
 
 ## Architecture
 Builds one `ls_bayesian.posterior.posterior.LogPosterior` by supplying `ls_bayesian`'s three
@@ -59,6 +61,26 @@ parameter $m$ is a fiber-orientation angle per mesh vertex.
   optimizer backend together with its matching model as one pair — never mix the two models and
   backends across strategies. There is deliberately no builder/settings wrapper on top: callers use
   `strategy.build(log_posterior, prior, logger)` directly.
+
+## Runs and studies
+A **run** is a pure function of one frozen config, identified by an 8-hex content hash of its
+canonical JSON; a **study** is a fixed list of runs from a base config plus sweeps.
+- `run/config.py`: `RunConfig = PriorRunConfig | MapRunConfig` (paths and settings only, no arrays).
+  The MAP run's ground truth and observation settings have no defaults on purpose: studies vary
+  them. `run/execute.py` dispatches on the kind (`prior_run.py`, `map_run.py`) and
+  `run_in_directory` writes the run directory: `config.json`, `provenance.json`, `status.json`
+  (`running`/`done`/`failed`; no directory = pending), `run.log`, `metrics.json`, `results/`.
+  Plots are a separate local step (`run/report.py`, needs the dev env), so cluster runs stay
+  headless.
+- `study/`: `definition.py` (`Study`, nestable `Axis`/`Zip`/`Product` sweeps over dotted config
+  paths), `layout.py` (`create_study` writes `study/`: description, run index, environment, archived
+  definition), `execute.py` (serial, `--jobs N` pool, or `run_index_task` as a cluster task;
+  finished runs are skipped), `submit.py` (`submitit` job array, one task per unfinished run,
+  `cluster="local"` to try it without SLURM), `collect.py` (Parquet run table). Workers re-load the
+  archived definition and verify the run ids against the recorded index; nothing is deserialized
+  from `config.json`.
+- `studies/*.py` define `STUDY`; they must be self-contained apart from `bayes_cep` (they are
+  archived with the study). `statistics/` holds the sample statistics used by the runs.
 
 ## Design & style
 - Priorities: numerical correctness > reproducibility > clear APIs > performance > convenience.

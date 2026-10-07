@@ -22,11 +22,13 @@ change → run checks → review diff.
   create it following `ls_bayesian`'s layout (`unit/`, `integration/`, `helpers.py`, `conftest.py`)
   for the first tests.
 - `example_data/` (git-tracked) holds one small reference patient's data: `raw/` (mesh, fiber field,
-  basis vectors) and `reference/` (the run directory of the reference MAP run, regenerate with
-  `pixi run example config:example-synthetic`); not part of the installable package, just a fixed
+  basis vectors) and the output of the reference MAP run — `preprocessing/` (ground truth, prior mean,
+  observations), `map/` (MAP estimate, histories), `mcmc/` (chain, gitignored), `logs/`, no JSON records (regenerate with
+  `pixi run example config:example-synthetic`; `--example-layout` of `scripts/run.py`); not part of the installable package, just a fixed
   example. `working_data/` (gitignored) is where study directories go (see "Runs and studies").
-- Pixi tasks: `single` (one run, `scripts/run.py`), `study` (`scripts/study.py`), `example`. Run
-  them from the repository root; relative paths in configs resolve against it.
+- Pixi tasks: `single` (one run, `scripts/run.py`), `study` (`run/cli.py`, generic), `example` (all
+  example data) and `example-preprocessing`/`-map`/`-mcmc` (one stage each; later stages read the
+  data of earlier ones). Run them from the repository root; relative paths in configs resolve against it.
 
 ## Architecture
 Builds one `ls_bayesian.posterior.posterior.LogPosterior` by supplying `ls_bayesian`'s three
@@ -64,21 +66,26 @@ parameter $m$ is a fiber-orientation angle per mesh vertex.
 
 ## Runs and studies
 A **run** is a pure function of one frozen config, identified by an 8-hex content hash of its
-canonical JSON; a **study** is a fixed list of runs from a base config plus sweeps.
-- `run/config.py`: `RunConfig = PriorRunConfig | MapRunConfig` (paths and settings only, no arrays).
-  The MAP run's ground truth and observation settings have no defaults on purpose: studies vary
-  them. `run/execute.py` dispatches on the kind (`prior_run.py`, `map_run.py`) and
-  `run_in_directory` writes the run directory: `config.json`, `provenance.json`, `status.json`
-  (`running`/`done`/`failed`; no directory = pending), `run.log`, `metrics.json`, `results/`.
-  Plots are a separate local step (`run/report.py`, needs the dev env), so cluster runs stay
-  headless.
-- `study/`: `definition.py` (`Study`, nestable `Axis`/`Zip`/`Product` sweeps over dotted config
-  paths), `layout.py` (`create_study` writes `study/`: description, run index, environment, archived
-  definition), `execute.py` (serial, `--jobs N` pool, or `run_index_task` as a cluster task;
-  finished runs are skipped), `submit.py` (`submitit` job array, one task per unfinished run,
-  `cluster="local"` to try it without SLURM), `collect.py` (Parquet run table). Workers re-load the
-  archived definition and verify the run ids against the recorded index; nothing is deserialized
-  from `config.json`.
+canonical JSON; a **study** is a fixed list of runs from a base config plus sweeps. `run/` is
+generic (no domain imports); the concrete runs live outside the package, in `single_runs/` (and the
+studies in `studies/`), found through `PYTHONPATH` set by the pixi activation.
+- `run/config.py`: `RunConfig` base (frozen dataclass; `to_dict`/`from_dict` JSON round trip driven
+  by type hints and `__type__` tags, `run_id`, `describe()`). `run/template.py`: `Run[ConfigT]` ABC;
+  `execute(run_dir)` is the wrapper (writes `config.json`, `metadata.json`, `status.json`
+  (`running`/`done`/`failed`; no directory = pending), `run.log`, `metrics.json`; records failures),
+  subclasses implement `_execute`, `report` (plots; separate local step, needs the dev env, so
+  cluster runs stay headless), `outputs`, and optionally `input_files`.
+- `single_runs/` (repository root): `config.py` (`PriorRunConfig`, `MapRunConfig`; the MAP ground truth and
+  observation settings have no defaults on purpose: studies vary them), `prior.py` (`PriorRun`),
+  `map.py` (`MapRun`), `plots.py`. A new run kind = config + `Run` subclass.
+- Study side, all in `run/`: `study.py` (nestable `Axis`/`Zip`/`Product` sweeps over dotted config
+  paths; `Study(run_type, base, sweep, collector)`; `create` writes `study/`: description,
+  `runs.json` with all configs, environment, archived definition; `load_resolved_runs` reads them
+  back and verifies the ids, so workers never import the definition), `executor.py` (`Executor`
+  over `submitit`: `debug` in process, `local`, `slurm`; one task per unfinished run),
+  `directories.py` (`RunDirectory`/`StudyDirectory`: on-disk layout, JSON records, run state),
+  `collector.py` (`Collector` ABC: run table in Parquet, then a study-specific `_analyze`),
+  `cli.py` (the `study` command).
 - `studies/*.py` define `STUDY`; they must be self-contained apart from `bayes_cep` (they are
   archived with the study). `statistics/` holds the sample statistics used by the runs.
 

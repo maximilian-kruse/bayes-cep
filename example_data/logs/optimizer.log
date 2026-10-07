@@ -1,0 +1,2202 @@
+[MAP]  Iteration     Time [s]           Loss     Grad. norm
+[MAP] -----------------------------------------------------
+[MAP][DEBUG] Iteration 1: step size 1.000e+00, correction pair accepted.
+[MAP]          1       14.908   5.896832e+05   4.770043e+05
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 1.239314e+06).
+[MAP][DEBUG] Iteration 2: step size 5.000e-01, correction pair accepted.
+[MAP]          2       18.456   4.614905e+05   1.311930e+06
+[MAP][DEBUG] Iteration 3: step size 1.000e+00, correction pair accepted.
+[MAP]          3       20.398   2.428905e+05   2.540482e+05
+[MAP][DEBUG] Iteration 4: step size 1.000e+00, correction pair accepted.
+[MAP]          4       22.362   2.020119e+05   1.416856e+05
+[MAP][DEBUG] Iteration 5: step size 1.000e+00, correction pair accepted.
+[MAP]          5       23.982   1.710746e+05   1.110126e+05
+[MAP][DEBUG] Iteration 6: step size 1.000e+00, correction pair accepted.
+[MAP]          6       25.695   1.502834e+05   1.039601e+05
+[MAP][DEBUG] Iteration 7: step size 1.000e+00, correction pair accepted.
+[MAP]          7       27.473   1.145640e+05   1.263692e+05
+[MAP][DEBUG] Iteration 8: step size 1.000e+00, correction pair accepted.
+[MAP]          8       29.099   6.925706e+04   9.031189e+04
+[MAP][DEBUG] Iteration 9: step size 1.000e+00, correction pair accepted.
+[MAP]          9       30.819   4.534514e+04   6.894963e+04
+[MAP][DEBUG] Iteration 10: step size 1.000e+00, correction pair accepted.
+[MAP]         10       32.421   3.577938e+04   5.496063e+04
+[MAP][DEBUG] Iteration 11: step size 1.000e+00, correction pair accepted.
+[MAP]         11       34.101   3.341880e+04   2.256100e+04
+[MAP][DEBUG] Iteration 12: step size 1.000e+00, correction pair accepted.
+[MAP]         12       35.876   3.246505e+04   2.673842e+04
+[MAP][DEBUG] Iteration 13: step size 1.000e+00, correction pair accepted.
+[MAP]         13       37.635   2.990482e+04   3.481538e+04
+[MAP][DEBUG] Iteration 14: step size 1.000e+00, correction pair accepted.
+[MAP]         14       39.358   2.543091e+04   2.982392e+04
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 2.553422e+04).
+[MAP][DEBUG] Iteration 15: step size 5.000e-01, correction pair accepted.
+[MAP]         15       42.346   2.430710e+04   5.812718e+04
+[MAP][DEBUG] Iteration 16: step size 1.000e+00, correction pair accepted.
+[MAP]         16       44.026   2.238508e+04   3.419376e+04
+[MAP][DEBUG] Iteration 17: step size 1.000e+00, correction pair accepted.
+[MAP]         17       45.738   2.066280e+04   2.108212e+04
+[MAP][DEBUG] Iteration 18: step size 1.000e+00, correction pair accepted.
+[MAP]         18       47.428   1.933229e+04   3.021618e+04
+[MAP][DEBUG] Iteration 19: step size 1.000e+00, correction pair accepted.
+[MAP]         19       49.137   1.712324e+04   2.851799e+04
+[MAP][DEBUG] Iteration 20: step size 1.000e+00, correction pair accepted.
+[MAP]         20       50.977   1.624427e+04   5.367861e+04
+[MAP][DEBUG] Iteration 21: step size 1.000e+00, correction pair accepted.
+[MAP]         21       52.619   1.514968e+04   1.192288e+04
+[MAP][DEBUG] Iteration 22: step size 1.000e+00, correction pair accepted.
+[MAP]         22       54.480   1.496660e+04   1.659402e+04
+[MAP][DEBUG] Iteration 23: step size 1.000e+00, correction pair accepted.
+[MAP]         23       56.419   1.463651e+04   1.782213e+04
+[MAP][DEBUG] Iteration 24: step size 1.000e+00, correction pair accepted.
+[MAP]         24       58.157   1.316043e+04   1.951206e+04
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 1.487771e+04).
+[MAP][DEBUG] Iteration 25: step size 5.000e-01, correction pair accepted.
+[MAP]         25       61.580   1.270483e+04   3.718289e+04
+[MAP][DEBUG] Iteration 26: step size 1.000e+00, correction pair accepted.
+[MAP]         26       63.482   1.234606e+04   2.119986e+04
+[MAP][DEBUG] Iteration 27: step size 1.000e+00, correction pair accepted.
+[MAP]         27       65.082   1.216181e+04   9.449104e+03
+[MAP][DEBUG] Iteration 28: step size 1.000e+00, correction pair accepted.
+[MAP]         28       66.874   1.196783e+04   1.613591e+04
+[MAP][DEBUG] Iteration 29: step size 1.000e+00, correction pair accepted.
+[MAP]         29       68.689   1.154904e+04   3.080130e+04
+[MAP][DEBUG] Iteration 30: step size 1.000e+00, correction pair accepted.
+[MAP]         30       70.431   1.112401e+04   3.344424e+04
+[MAP][DEBUG] Iteration 31: step size 1.000e+00, correction pair accepted.
+[MAP]         31       72.387   1.015224e+04   2.493274e+04
+[MAP][DEBUG] Iteration 32: step size 1.000e+00, correction pair accepted.
+[MAP]         32       74.619   9.312001e+03   7.549541e+03
+[MAP][DEBUG] Iteration 33: step size 1.000e+00, correction pair accepted.
+[MAP]         33       76.480   9.126260e+03   1.960529e+04
+[MAP][DEBUG] Iteration 34: step size 1.000e+00, correction pair accepted.
+[MAP]         34       78.469   8.950523e+03   1.534108e+04
+[MAP][DEBUG] Iteration 35: step size 1.000e+00, correction pair accepted.
+[MAP]         35       80.250   8.619668e+03   8.075815e+03
+[MAP][DEBUG] Iteration 36: step size 1.000e+00, correction pair accepted.
+[MAP]         36       82.139   8.249787e+03   1.027165e+04
+[MAP][DEBUG] Iteration 37: step size 1.000e+00, correction pair accepted.
+[MAP]         37       83.998   7.839060e+03   1.188528e+04
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 2.628986e+04).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 1.218551e+04).
+[MAP][DEBUG] Backtracking step 2: step size 2.500e-01 rejected (loss 8.589906e+03).
+[MAP][DEBUG] Iteration 38: step size 1.250e-01, correction pair accepted.
+[MAP]         38       90.282   7.820470e+03   5.490997e+04
+[MAP][DEBUG] Iteration 39: step size 1.000e+00, correction pair accepted.
+[MAP]         39       91.872   7.351780e+03   2.310664e+04
+[MAP][DEBUG] Iteration 40: step size 1.000e+00, correction pair accepted.
+[MAP]         40       93.460   7.085514e+03   1.002468e+04
+[MAP][DEBUG] Iteration 41: step size 1.000e+00, correction pair accepted.
+[MAP]         41       95.110   6.909574e+03   1.260678e+04
+[MAP][DEBUG] Iteration 42: step size 1.000e+00, correction pair accepted.
+[MAP]         42       96.758   6.709221e+03   1.302668e+04
+[MAP][DEBUG] Iteration 43: step size 1.000e+00, correction pair accepted.
+[MAP]         43       98.373   6.122545e+03   9.788183e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 1.424010e+04).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 7.676180e+03).
+[MAP][DEBUG] Backtracking step 2: step size 2.500e-01 rejected (loss 6.287249e+03).
+[MAP][DEBUG] Iteration 44: step size 1.250e-01, correction pair accepted.
+[MAP]         44      104.264   6.052780e+03   1.989642e+04
+[MAP][DEBUG] Iteration 45: step size 1.000e+00, correction pair accepted.
+[MAP]         45      106.064   5.887229e+03   9.513893e+03
+[MAP][DEBUG] Iteration 46: step size 1.000e+00, correction pair accepted.
+[MAP]         46      107.861   5.759848e+03   7.394008e+03
+[MAP][DEBUG] Iteration 47: step size 1.000e+00, correction pair accepted.
+[MAP]         47      109.768   5.699454e+03   9.035946e+03
+[MAP][DEBUG] Iteration 48: step size 1.000e+00, correction pair accepted.
+[MAP]         48      111.442   5.547944e+03   1.008262e+04
+[MAP][DEBUG] Iteration 49: step size 1.000e+00, correction pair accepted.
+[MAP]         49      113.300   5.531100e+03   2.134864e+04
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.708744e+03).
+[MAP][DEBUG] Iteration 50: step size 5.000e-01, correction pair accepted.
+[MAP]         50      116.712   5.381100e+03   1.883083e+04
+[MAP][DEBUG] Iteration 51: step size 1.000e+00, correction pair accepted.
+[MAP]         51      118.430   5.259955e+03   8.439572e+03
+[MAP][DEBUG] Iteration 52: step size 1.000e+00, correction pair accepted.
+[MAP]         52      120.689   5.195524e+03   6.684475e+03
+[MAP][DEBUG] Iteration 53: step size 1.000e+00, correction pair accepted.
+[MAP]         53      122.921   5.067580e+03   5.735802e+03
+[MAP][DEBUG] Iteration 54: step size 1.000e+00, correction pair accepted.
+[MAP]         54      125.099   4.858476e+03   6.655604e+03
+[MAP][DEBUG] Iteration 55: step size 1.000e+00, correction pair accepted.
+[MAP]         55      127.252   4.692772e+03   9.791173e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.196073e+03).
+[MAP][DEBUG] Iteration 56: step size 5.000e-01, correction pair accepted.
+[MAP]         56      131.186   4.649471e+03   1.926783e+04
+[MAP][DEBUG] Iteration 57: step size 1.000e+00, correction pair accepted.
+[MAP]         57      133.201   4.518178e+03   6.762254e+03
+[MAP][DEBUG] Iteration 58: step size 1.000e+00, correction pair accepted.
+[MAP]         58      135.290   4.462005e+03   3.914408e+03
+[MAP][DEBUG] Iteration 59: step size 1.000e+00, correction pair accepted.
+[MAP]         59      137.315   4.415887e+03   6.325494e+03
+[MAP][DEBUG] Iteration 60: step size 1.000e+00, correction pair accepted.
+[MAP]         60      139.456   4.343936e+03   7.474556e+03
+[MAP][DEBUG] Iteration 61: step size 1.000e+00, correction pair accepted.
+[MAP]         61      141.616   4.231676e+03   8.967350e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 4.771826e+03).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 4.242120e+03).
+[MAP][DEBUG] Iteration 62: step size 2.500e-01, correction pair accepted.
+[MAP]         62      147.368   4.173508e+03   1.169146e+04
+[MAP][DEBUG] Iteration 63: step size 1.000e+00, correction pair accepted.
+[MAP]         63      149.484   4.128470e+03   8.197080e+03
+[MAP][DEBUG] Iteration 64: step size 1.000e+00, correction pair accepted.
+[MAP]         64      151.645   4.076473e+03   3.809408e+03
+[MAP][DEBUG] Iteration 65: step size 1.000e+00, correction pair accepted.
+[MAP]         65      153.840   4.038167e+03   5.953867e+03
+[MAP][DEBUG] Iteration 66: step size 1.000e+00, correction pair accepted.
+[MAP]         66      155.913   3.953047e+03   1.006737e+04
+[MAP][DEBUG] Iteration 67: step size 1.000e+00, correction pair accepted.
+[MAP]         67      158.178   3.806592e+03   1.249872e+04
+[MAP][DEBUG] Iteration 68: step size 1.000e+00, correction pair accepted.
+[MAP]         68      160.506   3.655572e+03   1.884780e+04
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 3.728081e+03).
+[MAP][DEBUG] Iteration 69: step size 5.000e-01, correction pair accepted.
+[MAP]         69      164.719   3.574382e+03   4.334538e+03
+[MAP][DEBUG] Iteration 70: step size 1.000e+00, correction pair accepted.
+[MAP]         70      166.912   3.538900e+03   2.955275e+03
+[MAP][DEBUG] Iteration 71: step size 1.000e+00, correction pair accepted.
+[MAP]         71      169.119   3.499165e+03   3.352131e+03
+[MAP][DEBUG] Iteration 72: step size 1.000e+00, correction pair accepted.
+[MAP]         72      171.231   3.433565e+03   6.758062e+03
+[MAP][DEBUG] Iteration 73: step size 1.000e+00, correction pair accepted.
+[MAP]         73      173.539   3.356488e+03   4.988332e+03
+[MAP][DEBUG] Iteration 74: step size 1.000e+00, correction pair accepted.
+[MAP]         74      175.690   3.347196e+03   2.706683e+04
+[MAP][DEBUG] Iteration 75: step size 1.000e+00, correction pair accepted.
+[MAP]         75      177.847   3.198896e+03   8.704393e+03
+[MAP][DEBUG] Iteration 76: step size 1.000e+00, correction pair accepted.
+[MAP]         76      180.121   3.141392e+03   3.658020e+03
+[MAP][DEBUG] Iteration 77: step size 1.000e+00, correction pair accepted.
+[MAP]         77      182.220   3.105601e+03   5.365558e+03
+[MAP][DEBUG] Iteration 78: step size 1.000e+00, correction pair accepted.
+[MAP]         78      184.276   3.064165e+03   4.461972e+03
+[MAP][DEBUG] Iteration 79: step size 1.000e+00, correction pair accepted.
+[MAP]         79      186.427   2.991866e+03   9.368213e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 3.164479e+03).
+[MAP][DEBUG] Iteration 80: step size 5.000e-01, correction pair accepted.
+[MAP]         80      189.502   2.966632e+03   1.186458e+04
+[MAP][DEBUG] Iteration 81: step size 1.000e+00, correction pair accepted.
+[MAP]         81      191.218   2.924747e+03   6.305969e+03
+[MAP][DEBUG] Iteration 82: step size 1.000e+00, correction pair accepted.
+[MAP]         82      193.048   2.895903e+03   4.949265e+03
+[MAP][DEBUG] Iteration 83: step size 1.000e+00, correction pair accepted.
+[MAP]         83      195.278   2.858468e+03   2.768267e+03
+[MAP][DEBUG] Iteration 84: step size 1.000e+00, correction pair accepted.
+[MAP]         84      197.002   2.831084e+03   1.707804e+03
+[MAP][DEBUG] Iteration 85: step size 1.000e+00, correction pair accepted.
+[MAP]         85      198.671   2.796698e+03   4.085923e+03
+[MAP][DEBUG] Iteration 86: step size 1.000e+00, correction pair accepted.
+[MAP]         86      200.910   2.774183e+03   1.160737e+04
+[MAP][DEBUG] Iteration 87: step size 1.000e+00, correction pair accepted.
+[MAP]         87      202.598   2.744122e+03   4.538959e+03
+[MAP][DEBUG] Iteration 88: step size 1.000e+00, correction pair accepted.
+[MAP]         88      204.219   2.726695e+03   2.667449e+03
+[MAP][DEBUG] Iteration 89: step size 1.000e+00, correction pair accepted.
+[MAP]         89      205.853   2.712999e+03   3.586178e+03
+[MAP][DEBUG] Iteration 90: step size 1.000e+00, correction pair accepted.
+[MAP]         90      207.471   2.683863e+03   4.527844e+03
+[MAP][DEBUG] Iteration 91: step size 1.000e+00, correction pair accepted.
+[MAP]         91      209.278   2.670389e+03   9.739993e+03
+[MAP][DEBUG] Iteration 92: step size 1.000e+00, correction pair accepted.
+[MAP]         92      211.014   2.598780e+03   4.641043e+03
+[MAP][DEBUG] Iteration 93: step size 1.000e+00, correction pair accepted.
+[MAP]         93      213.324   2.575672e+03   2.015043e+03
+[MAP][DEBUG] Iteration 94: step size 1.000e+00, correction pair accepted.
+[MAP]         94      215.190   2.553831e+03   2.358117e+03
+[MAP][DEBUG] Iteration 95: step size 1.000e+00, correction pair accepted.
+[MAP]         95      217.443   2.532806e+03   2.292054e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 2.592656e+03).
+[MAP][DEBUG] Iteration 96: step size 5.000e-01, correction pair accepted.
+[MAP]         96      221.972   2.513666e+03   7.639382e+03
+[MAP][DEBUG] Iteration 97: step size 1.000e+00, correction pair accepted.
+[MAP]         97      224.298   2.466105e+03   3.203773e+03
+[MAP][DEBUG] Iteration 98: step size 1.000e+00, correction pair accepted.
+[MAP]         98      226.692   2.441589e+03   2.367085e+03
+[MAP][DEBUG] Iteration 99: step size 1.000e+00, correction pair accepted.
+[MAP]         99      229.061   2.437361e+03   1.159796e+04
+[MAP][DEBUG] Iteration 100: step size 1.000e+00, correction pair accepted.
+[MAP]        100      231.218   2.400641e+03   3.653371e+03
+[MAP][DEBUG] Iteration 101: step size 1.000e+00, correction pair accepted.
+[MAP]        101      233.312   2.375696e+03   4.566101e+03
+[MAP][DEBUG] Iteration 102: step size 1.000e+00, correction pair accepted.
+[MAP]        102      235.099   2.332413e+03   8.782342e+03
+[MAP][DEBUG] Iteration 103: step size 1.000e+00, correction pair accepted.
+[MAP]        103      237.179   2.304525e+03   7.126924e+03
+[MAP][DEBUG] Iteration 104: step size 1.000e+00, correction pair accepted.
+[MAP]        104      239.437   2.289980e+03   3.800237e+03
+[MAP][DEBUG] Iteration 105: step size 1.000e+00, correction pair accepted.
+[MAP]        105      241.615   2.271418e+03   4.232207e+03
+[MAP][DEBUG] Iteration 106: step size 1.000e+00, correction pair accepted.
+[MAP]        106      243.764   2.243506e+03   6.114956e+03
+[MAP][DEBUG] Iteration 107: step size 1.000e+00, correction pair accepted.
+[MAP]        107      245.946   2.200829e+03   4.567607e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 2.212416e+03).
+[MAP][DEBUG] Iteration 108: step size 5.000e-01, correction pair accepted.
+[MAP]        108      250.018   2.188179e+03   3.022796e+03
+[MAP][DEBUG] Iteration 109: step size 1.000e+00, correction pair accepted.
+[MAP]        109      252.249   2.169608e+03   2.263107e+03
+[MAP][DEBUG] Iteration 110: step size 1.000e+00, correction pair accepted.
+[MAP]        110      254.387   2.155182e+03   1.843106e+03
+[MAP][DEBUG] Iteration 111: step size 1.000e+00, correction pair accepted.
+[MAP]        111      256.105   2.142615e+03   6.495135e+03
+[MAP][DEBUG] Iteration 112: step size 1.000e+00, correction pair accepted.
+[MAP]        112      258.348   2.117368e+03   3.552332e+03
+[MAP][DEBUG] Iteration 113: step size 1.000e+00, correction pair accepted.
+[MAP]        113      260.299   2.076680e+03   2.498714e+03
+[MAP][DEBUG] Iteration 114: step size 1.000e+00, correction pair accepted.
+[MAP]        114      262.352   2.050699e+03   2.790015e+03
+[MAP][DEBUG] Iteration 115: step size 1.000e+00, correction pair accepted.
+[MAP]        115      264.208   2.018585e+03   7.730343e+03
+[MAP][DEBUG] Iteration 116: step size 1.000e+00, correction pair accepted.
+[MAP]        116      266.327   1.992243e+03   3.086173e+03
+[MAP][DEBUG] Iteration 117: step size 1.000e+00, correction pair accepted.
+[MAP]        117      268.523   1.973098e+03   2.273081e+03
+[MAP][DEBUG] Iteration 118: step size 1.000e+00, correction pair accepted.
+[MAP]        118      270.773   1.939927e+03   1.894379e+03
+[MAP][DEBUG] Iteration 119: step size 1.000e+00, correction pair accepted.
+[MAP]        119      272.916   1.903259e+03   1.979986e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 2.024490e+03).
+[MAP][DEBUG] Iteration 120: step size 5.000e-01, correction pair accepted.
+[MAP]        120      276.947   1.901780e+03   7.949924e+03
+[MAP][DEBUG] Iteration 121: step size 1.000e+00, correction pair accepted.
+[MAP]        121      279.120   1.853879e+03   2.006144e+03
+[MAP][DEBUG] Iteration 122: step size 1.000e+00, correction pair accepted.
+[MAP]        122      281.360   1.838213e+03   2.277014e+03
+[MAP][DEBUG] Iteration 123: step size 1.000e+00, correction pair accepted.
+[MAP]        123      283.567   1.829388e+03   2.152411e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 1.852528e+03).
+[MAP][DEBUG] Iteration 124: step size 5.000e-01, correction pair accepted.
+[MAP]        124      287.589   1.828383e+03   5.177696e+03
+[MAP][DEBUG] Iteration 125: step size 1.000e+00, correction pair accepted.
+[MAP]        125      289.882   1.817475e+03   2.352573e+03
+[MAP][DEBUG] Iteration 126: step size 1.000e+00, correction pair accepted.
+[MAP]        126      292.104   1.807228e+03   3.644141e+03
+[MAP][DEBUG] Iteration 127: step size 1.000e+00, correction pair accepted.
+[MAP]        127      294.230   1.801082e+03   3.059043e+03
+[MAP][DEBUG] Iteration 128: step size 1.000e+00, correction pair accepted.
+[MAP]        128      296.442   1.788950e+03   2.088597e+03
+[MAP][DEBUG] Iteration 129: step size 1.000e+00, correction pair accepted.
+[MAP]        129      298.637   1.775762e+03   2.449762e+03
+[MAP][DEBUG] Iteration 130: step size 1.000e+00, correction pair accepted.
+[MAP]        130      300.883   1.759769e+03   4.425590e+03
+[MAP][DEBUG] Iteration 131: step size 1.000e+00, correction pair accepted.
+[MAP]        131      303.008   1.748212e+03   6.698908e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 1.762968e+03).
+[MAP][DEBUG] Iteration 132: step size 5.000e-01, correction pair accepted.
+[MAP]        132      307.104   1.738440e+03   2.339196e+03
+[MAP][DEBUG] Iteration 133: step size 1.000e+00, correction pair accepted.
+[MAP]        133      309.265   1.726004e+03   2.213153e+03
+[MAP][DEBUG] Iteration 134: step size 1.000e+00, correction pair accepted.
+[MAP]        134      311.415   1.715058e+03   2.139228e+03
+[MAP][DEBUG] Iteration 135: step size 1.000e+00, correction pair accepted.
+[MAP]        135      313.700   1.692146e+03   3.169653e+03
+[MAP][DEBUG] Iteration 136: step size 1.000e+00, correction pair accepted.
+[MAP]        136      315.955   1.671308e+03   1.991715e+03
+[MAP][DEBUG] Iteration 137: step size 1.000e+00, correction pair accepted.
+[MAP]        137      318.134   1.657407e+03   3.868237e+03
+[MAP][DEBUG] Iteration 138: step size 1.000e+00, correction pair accepted.
+[MAP]        138      320.266   1.648292e+03   2.426668e+03
+[MAP][DEBUG] Iteration 139: step size 1.000e+00, correction pair accepted.
+[MAP]        139      322.472   1.638078e+03   6.882172e+03
+[MAP][DEBUG] Iteration 140: step size 1.000e+00, correction pair accepted.
+[MAP]        140      324.620   1.624282e+03   6.614008e+03
+[MAP][DEBUG] Iteration 141: step size 1.000e+00, correction pair accepted.
+[MAP]        141      326.814   1.593119e+03   2.441321e+03
+[MAP][DEBUG] Iteration 142: step size 1.000e+00, correction pair accepted.
+[MAP]        142      329.032   1.582369e+03   3.241671e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 1.588147e+03).
+[MAP][DEBUG] Iteration 143: step size 5.000e-01, correction pair accepted.
+[MAP]        143      333.015   1.577288e+03   2.435049e+03
+[MAP][DEBUG] Iteration 144: step size 1.000e+00, correction pair accepted.
+[MAP]        144      335.221   1.571885e+03   1.884550e+03
+[MAP][DEBUG] Iteration 145: step size 1.000e+00, correction pair accepted.
+[MAP]        145      337.361   1.562206e+03   1.397338e+03
+[MAP][DEBUG] Iteration 146: step size 1.000e+00, correction pair accepted.
+[MAP]        146      339.626   1.554134e+03   1.487261e+03
+[MAP][DEBUG] Iteration 147: step size 1.000e+00, correction pair accepted.
+[MAP]        147      341.885   1.547381e+03   2.958550e+03
+[MAP][DEBUG] Iteration 148: step size 1.000e+00, correction pair accepted.
+[MAP]        148      344.157   1.543955e+03   2.647270e+03
+[MAP][DEBUG] Iteration 149: step size 1.000e+00, correction pair accepted.
+[MAP]        149      346.306   1.540868e+03   5.340219e+03
+[MAP][DEBUG] Iteration 150: step size 1.000e+00, correction pair accepted.
+[MAP]        150      348.494   1.524474e+03   1.556206e+03
+[MAP][DEBUG] Iteration 151: step size 1.000e+00, correction pair accepted.
+[MAP]        151      350.674   1.519773e+03   1.219360e+03
+[MAP][DEBUG] Iteration 152: step size 1.000e+00, correction pair accepted.
+[MAP]        152      352.821   1.515477e+03   1.552424e+03
+[MAP][DEBUG] Iteration 153: step size 1.000e+00, correction pair accepted.
+[MAP]        153      355.068   1.508027e+03   1.829193e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 1.510632e+03).
+[MAP][DEBUG] Iteration 154: step size 5.000e-01, correction pair accepted.
+[MAP]        154      359.057   1.502777e+03   3.289307e+03
+[MAP][DEBUG] Iteration 155: step size 1.000e+00, correction pair accepted.
+[MAP]        155      361.265   1.492633e+03   2.106011e+03
+[MAP][DEBUG] Iteration 156: step size 1.000e+00, correction pair accepted.
+[MAP]        156      363.404   1.481118e+03   1.381824e+03
+[MAP][DEBUG] Iteration 157: step size 1.000e+00, correction pair accepted.
+[MAP]        157      365.540   1.468935e+03   1.513134e+03
+[MAP][DEBUG] Iteration 158: step size 1.000e+00, correction pair accepted.
+[MAP]        158      367.726   1.454347e+03   1.760125e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 1.456667e+03).
+[MAP][DEBUG] Iteration 159: step size 5.000e-01, correction pair accepted.
+[MAP]        159      371.805   1.443903e+03   3.345508e+03
+[MAP][DEBUG] Iteration 160: step size 1.000e+00, correction pair accepted.
+[MAP]        160      373.912   1.442625e+03   4.834888e+03
+[MAP][DEBUG] Iteration 161: step size 1.000e+00, correction pair accepted.
+[MAP]        161      376.120   1.433770e+03   1.266793e+03
+[MAP][DEBUG] Iteration 162: step size 1.000e+00, correction pair accepted.
+[MAP]        162      378.314   1.432201e+03   1.431977e+03
+[MAP][DEBUG] Iteration 163: step size 1.000e+00, correction pair accepted.
+[MAP]        163      380.459   1.426784e+03   1.082397e+03
+[MAP][DEBUG] Iteration 164: step size 1.000e+00, correction pair accepted.
+[MAP]        164      382.592   1.421382e+03   2.693229e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 1.437373e+03).
+[MAP][DEBUG] Iteration 165: step size 5.000e-01, correction pair accepted.
+[MAP]        165      386.501   1.417501e+03   4.559627e+03
+[MAP][DEBUG] Iteration 166: step size 1.000e+00, correction pair accepted.
+[MAP]        166      388.703   1.408152e+03   1.745559e+03
+[MAP][DEBUG] Iteration 167: step size 1.000e+00, correction pair accepted.
+[MAP]        167      390.943   1.402359e+03   1.197581e+03
+[MAP][DEBUG] Iteration 168: step size 1.000e+00, correction pair accepted.
+[MAP]        168      393.104   1.396178e+03   1.273669e+03
+[MAP][DEBUG] Iteration 169: step size 1.000e+00, correction pair accepted.
+[MAP]        169      395.239   1.375797e+03   1.720386e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 1.652082e+03).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 1.424363e+03).
+[MAP][DEBUG] Backtracking step 2: step size 2.500e-01 rejected (loss 1.377930e+03).
+[MAP][DEBUG] Iteration 170: step size 1.250e-01, correction pair accepted.
+[MAP]        170      403.002   1.371282e+03   2.427097e+03
+[MAP][DEBUG] Iteration 171: step size 1.000e+00, correction pair accepted.
+[MAP]        171      405.254   1.350912e+03   1.862318e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 1.355011e+03).
+[MAP][DEBUG] Iteration 172: step size 5.000e-01, correction pair accepted.
+[MAP]        172      409.271   1.348561e+03   2.462618e+03
+[MAP][DEBUG] Iteration 173: step size 1.000e+00, correction pair accepted.
+[MAP]        173      411.503   1.343717e+03   1.234702e+03
+[MAP][DEBUG] Iteration 174: step size 1.000e+00, correction pair accepted.
+[MAP]        174      413.712   1.340483e+03   9.839480e+02
+[MAP][DEBUG] Iteration 175: step size 1.000e+00, correction pair accepted.
+[MAP]        175      415.874   1.335066e+03   1.209247e+03
+[MAP][DEBUG] Iteration 176: step size 1.000e+00, correction pair accepted.
+[MAP]        176      418.001   1.329369e+03   3.560861e+03
+[MAP][DEBUG] Iteration 177: step size 1.000e+00, correction pair accepted.
+[MAP]        177      420.223   1.324575e+03   1.336597e+03
+[MAP][DEBUG] Iteration 178: step size 1.000e+00, correction pair accepted.
+[MAP]        178      422.469   1.321402e+03   1.505906e+03
+[MAP][DEBUG] Iteration 179: step size 1.000e+00, correction pair accepted.
+[MAP]        179      424.631   1.314994e+03   1.353701e+03
+[MAP][DEBUG] Iteration 180: step size 1.000e+00, correction pair accepted.
+[MAP]        180      426.698   1.300537e+03   1.518025e+03
+[MAP][DEBUG] Iteration 181: step size 1.000e+00, correction pair accepted.
+[MAP]        181      428.865   1.285908e+03   6.401350e+03
+[MAP][DEBUG] Iteration 182: step size 1.000e+00, correction pair accepted.
+[MAP]        182      431.008   1.265675e+03   9.624454e+02
+[MAP][DEBUG] Iteration 183: step size 1.000e+00, correction pair accepted.
+[MAP]        183      433.172   1.259727e+03   1.191326e+03
+[MAP][DEBUG] Iteration 184: step size 1.000e+00, correction pair accepted.
+[MAP]        184      435.361   1.252298e+03   2.358769e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 1.253109e+03).
+[MAP][DEBUG] Iteration 185: step size 5.000e-01, correction pair accepted.
+[MAP]        185      439.772   1.247760e+03   1.931983e+03
+[MAP][DEBUG] Iteration 186: step size 1.000e+00, correction pair accepted.
+[MAP]        186      442.089   1.241953e+03   1.221359e+03
+[MAP][DEBUG] Iteration 187: step size 1.000e+00, correction pair accepted.
+[MAP]        187      444.280   1.233671e+03   1.818394e+03
+[MAP][DEBUG] Iteration 188: step size 1.000e+00, correction pair accepted.
+[MAP]        188      446.165   1.232769e+03   3.134558e+03
+[MAP][DEBUG] Iteration 189: step size 1.000e+00, correction pair accepted.
+[MAP]        189      448.240   1.228388e+03   1.467250e+03
+[MAP][DEBUG] Iteration 190: step size 1.000e+00, correction pair accepted.
+[MAP]        190      450.357   1.225739e+03   1.087816e+03
+[MAP][DEBUG] Iteration 191: step size 1.000e+00, correction pair accepted.
+[MAP]        191      452.488   1.220171e+03   1.224628e+03
+[MAP][DEBUG] Iteration 192: step size 1.000e+00, correction pair accepted.
+[MAP]        192      454.637   1.214009e+03   1.435067e+03
+[MAP][DEBUG] Iteration 193: step size 1.000e+00, correction pair accepted.
+[MAP]        193      456.702   1.209064e+03   3.909198e+03
+[MAP][DEBUG] Iteration 194: step size 1.000e+00, correction pair accepted.
+[MAP]        194      458.722   1.202031e+03   1.190425e+03
+[MAP][DEBUG] Iteration 195: step size 1.000e+00, correction pair accepted.
+[MAP]        195      460.711   1.198157e+03   1.044793e+03
+[MAP][DEBUG] Iteration 196: step size 1.000e+00, correction pair accepted.
+[MAP]        196      462.927   1.190962e+03   1.127534e+03
+[MAP][DEBUG] Iteration 197: step size 1.000e+00, correction pair accepted.
+[MAP]        197      465.076   1.183940e+03   3.640283e+03
+[MAP][DEBUG] Iteration 198: step size 1.000e+00, correction pair accepted.
+[MAP]        198      467.356   1.177613e+03   1.659296e+03
+[MAP][DEBUG] Iteration 199: step size 1.000e+00, correction pair accepted.
+[MAP]        199      469.712   1.174730e+03   8.434270e+02
+[MAP][DEBUG] Iteration 200: step size 1.000e+00, correction pair accepted.
+[MAP]        200      471.947   1.172860e+03   1.186930e+03
+[MAP][DEBUG] Iteration 201: step size 1.000e+00, correction pair accepted.
+[MAP]        201      474.172   1.170468e+03   1.233568e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 1.272284e+03).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 1.188988e+03).
+[MAP][DEBUG] Backtracking step 2: step size 2.500e-01 rejected (loss 1.171645e+03).
+[MAP][DEBUG] Iteration 202: step size 1.250e-01, correction pair accepted.
+[MAP]        202      481.927   1.169035e+03   3.763548e+03
+[MAP][DEBUG] Iteration 203: step size 1.000e+00, correction pair accepted.
+[MAP]        203      483.985   1.164094e+03   2.026943e+03
+[MAP][DEBUG] Iteration 204: step size 1.000e+00, correction pair accepted.
+[MAP]        204      486.050   1.159569e+03   9.995311e+02
+[MAP][DEBUG] Iteration 205: step size 1.000e+00, correction pair accepted.
+[MAP]        205      488.106   1.156508e+03   9.325864e+02
+[MAP][DEBUG] Iteration 206: step size 1.000e+00, correction pair accepted.
+[MAP]        206      490.147   1.155041e+03   1.025993e+03
+[MAP][DEBUG] Iteration 207: step size 1.000e+00, correction pair accepted.
+[MAP]        207      492.119   1.153258e+03   7.750714e+02
+[MAP][DEBUG] Iteration 208: step size 1.000e+00, correction pair accepted.
+[MAP]        208      494.145   1.149275e+03   8.772879e+02
+[MAP][DEBUG] Iteration 209: step size 1.000e+00, correction pair accepted.
+[MAP]        209      496.146   1.147557e+03   4.096083e+03
+[MAP][DEBUG] Iteration 210: step size 1.000e+00, correction pair accepted.
+[MAP]        210      498.179   1.141769e+03   1.295438e+03
+[MAP][DEBUG] Iteration 211: step size 1.000e+00, correction pair accepted.
+[MAP]        211      500.233   1.139634e+03   9.747205e+02
+[MAP][DEBUG] Iteration 212: step size 1.000e+00, correction pair accepted.
+[MAP]        212      502.224   1.137860e+03   8.386042e+02
+[MAP][DEBUG] Iteration 213: step size 1.000e+00, correction pair accepted.
+[MAP]        213      504.286   1.132800e+03   8.674074e+02
+[MAP][DEBUG] Iteration 214: step size 1.000e+00, correction pair accepted.
+[MAP]        214      506.309   1.120328e+03   1.806437e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 1.367782e+03).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 1.172733e+03).
+[MAP][DEBUG] Backtracking step 2: step size 2.500e-01 rejected (loss 1.128620e+03).
+[MAP][DEBUG] Iteration 215: step size 1.250e-01, correction pair accepted.
+[MAP]        215      513.481   1.119994e+03   3.233341e+03
+[MAP][DEBUG] Iteration 216: step size 1.000e+00, correction pair accepted.
+[MAP]        216      515.507   1.113653e+03   8.789008e+02
+[MAP][DEBUG] Iteration 217: step size 1.000e+00, correction pair accepted.
+[MAP]        217      517.523   1.110985e+03   9.949947e+02
+[MAP][DEBUG] Iteration 218: step size 1.000e+00, correction pair accepted.
+[MAP]        218      519.606   1.106919e+03   9.708107e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 1.147285e+03).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 1.108331e+03).
+[MAP][DEBUG] Iteration 219: step size 2.500e-01, correction pair accepted.
+[MAP]        219      524.941   1.102914e+03   2.102715e+03
+[MAP][DEBUG] Iteration 220: step size 1.000e+00, correction pair accepted.
+[MAP]        220      526.950   1.093464e+03   1.426084e+03
+[MAP][DEBUG] Iteration 221: step size 1.000e+00, correction pair accepted.
+[MAP]        221      528.965   1.085745e+03   1.994495e+03
+[MAP][DEBUG] Iteration 222: step size 1.000e+00, correction pair accepted.
+[MAP]        222      530.966   1.078237e+03   1.608976e+03
+[MAP][DEBUG] Iteration 223: step size 1.000e+00, correction pair accepted.
+[MAP]        223      532.983   1.072967e+03   1.601050e+03
+[MAP][DEBUG] Iteration 224: step size 1.000e+00, correction pair accepted.
+[MAP]        224      535.046   1.064058e+03   1.412312e+03
+[MAP][DEBUG] Iteration 225: step size 1.000e+00, correction pair accepted.
+[MAP]        225      537.064   1.056988e+03   1.879162e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 1.068590e+03).
+[MAP][DEBUG] Iteration 226: step size 5.000e-01, correction pair accepted.
+[MAP]        226      540.744   1.053614e+03   5.501516e+03
+[MAP][DEBUG] Iteration 227: step size 1.000e+00, correction pair accepted.
+[MAP]        227      542.801   1.049023e+03   2.135209e+03
+[MAP][DEBUG] Iteration 228: step size 1.000e+00, correction pair accepted.
+[MAP]        228      544.866   1.047380e+03   9.356654e+02
+[MAP][DEBUG] Iteration 229: step size 1.000e+00, correction pair accepted.
+[MAP]        229      546.927   1.046859e+03   9.297570e+02
+[MAP][DEBUG] Iteration 230: step size 1.000e+00, correction pair accepted.
+[MAP]        230      548.957   1.040783e+03   3.509169e+03
+[MAP][DEBUG] Iteration 231: step size 1.000e+00, correction pair accepted.
+[MAP]        231      550.966   1.035058e+03   2.689200e+03
+[MAP][DEBUG] Iteration 232: step size 1.000e+00, correction pair accepted.
+[MAP]        232      552.976   1.027745e+03   1.120116e+03
+[MAP][DEBUG] Iteration 233: step size 1.000e+00, correction pair accepted.
+[MAP]        233      555.000   1.026225e+03   1.237819e+03
+[MAP][DEBUG] Iteration 234: step size 1.000e+00, correction pair accepted.
+[MAP]        234      557.131   1.023397e+03   2.502863e+03
+[MAP][DEBUG] Iteration 235: step size 1.000e+00, correction pair accepted.
+[MAP]        235      559.185   1.019030e+03   1.559925e+03
+[MAP][DEBUG] Iteration 236: step size 1.000e+00, correction pair accepted.
+[MAP]        236      561.225   1.015062e+03   1.064468e+03
+[MAP][DEBUG] Iteration 237: step size 1.000e+00, correction pair accepted.
+[MAP]        237      563.275   1.012683e+03   2.466221e+03
+[MAP][DEBUG] Iteration 238: step size 1.000e+00, correction pair accepted.
+[MAP]        238      565.308   1.010979e+03   1.707422e+03
+[MAP][DEBUG] Iteration 239: step size 1.000e+00, correction pair accepted.
+[MAP]        239      567.372   1.006971e+03   1.185865e+03
+[MAP][DEBUG] Iteration 240: step size 1.000e+00, correction pair accepted.
+[MAP]        240      569.407   1.004103e+03   1.832361e+03
+[MAP][DEBUG] Iteration 241: step size 1.000e+00, correction pair accepted.
+[MAP]        241      571.506   1.000436e+03   1.718172e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 1.039805e+03).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 1.006197e+03).
+[MAP][DEBUG] Iteration 242: step size 2.500e-01, correction pair accepted.
+[MAP]        242      576.944   9.998433e+02   3.068777e+03
+[MAP][DEBUG] Iteration 243: step size 1.000e+00, correction pair accepted.
+[MAP]        243      578.950   9.951646e+02   1.399409e+03
+[MAP][DEBUG] Iteration 244: step size 1.000e+00, correction pair accepted.
+[MAP]        244      580.983   9.928699e+02   9.565591e+02
+[MAP][DEBUG] Iteration 245: step size 1.000e+00, correction pair accepted.
+[MAP]        245      583.054   9.911793e+02   1.824809e+03
+[MAP][DEBUG] Iteration 246: step size 1.000e+00, correction pair accepted.
+[MAP]        246      585.081   9.889524e+02   2.143050e+03
+[MAP][DEBUG] Iteration 247: step size 1.000e+00, correction pair accepted.
+[MAP]        247      587.122   9.836783e+02   1.845396e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 1.029393e+03).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 9.920357e+02).
+[MAP][DEBUG] Backtracking step 2: step size 2.500e-01 rejected (loss 9.842224e+02).
+[MAP][DEBUG] Iteration 248: step size 1.250e-01, correction pair accepted.
+[MAP]        248      594.235   9.830360e+02   9.716167e+02
+[MAP][DEBUG] Iteration 249: step size 1.000e+00, correction pair accepted.
+[MAP]        249      596.238   9.807790e+02   9.752255e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 9.816502e+02).
+[MAP][DEBUG] Iteration 250: step size 5.000e-01, correction pair accepted.
+[MAP]        250      599.877   9.793605e+02   1.335857e+03
+[MAP][DEBUG] Iteration 251: step size 1.000e+00, correction pair accepted.
+[MAP]        251      601.891   9.770055e+02   7.075510e+02
+[MAP][DEBUG] Iteration 252: step size 1.000e+00, correction pair accepted.
+[MAP]        252      603.958   9.750112e+02   6.019694e+02
+[MAP][DEBUG] Iteration 253: step size 1.000e+00, correction pair accepted.
+[MAP]        253      605.993   9.724279e+02   6.021233e+02
+[MAP][DEBUG] Iteration 254: step size 1.000e+00, correction pair accepted.
+[MAP]        254      608.017   9.707987e+02   1.183155e+03
+[MAP][DEBUG] Iteration 255: step size 1.000e+00, correction pair accepted.
+[MAP]        255      610.060   9.696782e+02   7.165856e+02
+[MAP][DEBUG] Iteration 256: step size 1.000e+00, correction pair accepted.
+[MAP]        256      612.179   9.689052e+02   6.117252e+02
+[MAP][DEBUG] Iteration 257: step size 1.000e+00, correction pair accepted.
+[MAP]        257      614.202   9.667243e+02   5.991432e+02
+[MAP][DEBUG] Iteration 258: step size 1.000e+00, correction pair accepted.
+[MAP]        258      616.285   9.616123e+02   6.998982e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 1.724702e+03).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 1.143531e+03).
+[MAP][DEBUG] Backtracking step 2: step size 2.500e-01 rejected (loss 1.002152e+03).
+[MAP][DEBUG] Backtracking step 3: step size 1.250e-01 rejected (loss 9.693564e+02).
+[MAP][DEBUG] Backtracking step 4: step size 6.250e-02 rejected (loss 9.623594e+02).
+[MAP][DEBUG] Iteration 259: step size 3.125e-02, correction pair accepted.
+[MAP]        259      626.747   9.612128e+02   1.800726e+03
+[MAP][DEBUG] Iteration 260: step size 1.000e+00, correction pair accepted.
+[MAP]        260      628.839   9.568498e+02   1.188322e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 9.612478e+02).
+[MAP][DEBUG] Iteration 261: step size 5.000e-01, correction pair accepted.
+[MAP]        261      632.870   9.558539e+02   2.065660e+03
+[MAP][DEBUG] Iteration 262: step size 1.000e+00, correction pair accepted.
+[MAP]        262      634.988   9.517749e+02   1.307894e+03
+[MAP][DEBUG] Iteration 263: step size 1.000e+00, correction pair accepted.
+[MAP]        263      637.234   9.466725e+02   8.403698e+02
+[MAP][DEBUG] Iteration 264: step size 1.000e+00, correction pair accepted.
+[MAP]        264      639.658   9.393522e+02   9.476221e+02
+[MAP][DEBUG] Iteration 265: step size 1.000e+00, correction pair accepted.
+[MAP]        265      641.797   9.311680e+02   1.399786e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 9.571755e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 9.326999e+02).
+[MAP][DEBUG] Iteration 266: step size 2.500e-01, correction pair accepted.
+[MAP]        266      647.118   9.290672e+02   2.020805e+03
+[MAP][DEBUG] Iteration 267: step size 1.000e+00, correction pair accepted.
+[MAP]        267      649.278   9.239681e+02   1.257385e+03
+[MAP][DEBUG] Iteration 268: step size 1.000e+00, correction pair accepted.
+[MAP]        268      651.447   9.197212e+02   7.135496e+02
+[MAP][DEBUG] Iteration 269: step size 1.000e+00, correction pair accepted.
+[MAP]        269      653.475   9.159024e+02   9.548711e+02
+[MAP][DEBUG] Iteration 270: step size 1.000e+00, correction pair accepted.
+[MAP]        270      655.594   9.114025e+02   1.888887e+03
+[MAP][DEBUG] Iteration 271: step size 1.000e+00, correction pair accepted.
+[MAP]        271      657.688   9.084110e+02   3.724088e+03
+[MAP][DEBUG] Iteration 272: step size 1.000e+00, correction pair accepted.
+[MAP]        272      659.793   9.031926e+02   1.036769e+03
+[MAP][DEBUG] Iteration 273: step size 1.000e+00, correction pair accepted.
+[MAP]        273      661.911   9.018053e+02   1.265185e+03
+[MAP][DEBUG] Iteration 274: step size 1.000e+00, correction pair accepted.
+[MAP]        274      664.346   8.999825e+02   7.872074e+02
+[MAP][DEBUG] Iteration 275: step size 1.000e+00, correction pair accepted.
+[MAP]        275      666.509   8.974812e+02   1.073751e+03
+[MAP][DEBUG] Iteration 276: step size 1.000e+00, correction pair accepted.
+[MAP]        276      668.906   8.922049e+02   8.531636e+02
+[MAP][DEBUG] Iteration 277: step size 1.000e+00, correction pair accepted.
+[MAP]        277      671.183   8.831806e+02   1.344914e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 8.854201e+02).
+[MAP][DEBUG] Iteration 278: step size 5.000e-01, correction pair accepted.
+[MAP]        278      675.261   8.821861e+02   2.018139e+03
+[MAP][DEBUG] Iteration 279: step size 1.000e+00, correction pair accepted.
+[MAP]        279      677.452   8.800066e+02   1.576677e+03
+[MAP][DEBUG] Iteration 280: step size 1.000e+00, correction pair accepted.
+[MAP]        280      679.789   8.739177e+02   8.515029e+02
+[MAP][DEBUG] Iteration 281: step size 1.000e+00, correction pair accepted.
+[MAP]        281      682.082   8.702207e+02   9.020970e+02
+[MAP][DEBUG] Iteration 282: step size 1.000e+00, correction pair accepted.
+[MAP]        282      684.365   8.678056e+02   9.913489e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 1.086784e+03).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 9.155950e+02).
+[MAP][DEBUG] Backtracking step 2: step size 2.500e-01 rejected (loss 8.762162e+02).
+[MAP][DEBUG] Backtracking step 3: step size 1.250e-01 rejected (loss 8.681264e+02).
+[MAP][DEBUG] Iteration 283: step size 6.250e-02, correction pair accepted.
+[MAP]        283      693.927   8.669968e+02   1.830571e+03
+[MAP][DEBUG] Iteration 284: step size 1.000e+00, correction pair accepted.
+[MAP]        284      696.111   8.654924e+02   6.913966e+02
+[MAP][DEBUG] Iteration 285: step size 1.000e+00, correction pair accepted.
+[MAP]        285      698.303   8.644188e+02   5.575340e+02
+[MAP][DEBUG] Iteration 286: step size 1.000e+00, correction pair accepted.
+[MAP]        286      700.521   8.629832e+02   7.670119e+02
+[MAP][DEBUG] Iteration 287: step size 1.000e+00, correction pair accepted.
+[MAP]        287      702.659   8.606694e+02   1.001492e+03
+[MAP][DEBUG] Iteration 288: step size 1.000e+00, correction pair accepted.
+[MAP]        288      704.867   8.566310e+02   9.896189e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 8.795238e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 8.585715e+02).
+[MAP][DEBUG] Iteration 289: step size 2.500e-01, correction pair accepted.
+[MAP]        289      710.618   8.552104e+02   3.137842e+03
+[MAP][DEBUG] Iteration 290: step size 1.000e+00, correction pair accepted.
+[MAP]        290      712.862   8.504965e+02   1.239180e+03
+[MAP][DEBUG] Iteration 291: step size 1.000e+00, correction pair accepted.
+[MAP]        291      715.118   8.477890e+02   9.434184e+02
+[MAP][DEBUG] Iteration 292: step size 1.000e+00, correction pair accepted.
+[MAP]        292      717.371   8.462437e+02   1.173670e+03
+[MAP][DEBUG] Iteration 293: step size 1.000e+00, correction pair accepted.
+[MAP]        293      719.608   8.432352e+02   1.194115e+03
+[MAP][DEBUG] Iteration 294: step size 1.000e+00, correction pair accepted.
+[MAP]        294      721.824   8.421610e+02   2.935850e+03
+[MAP][DEBUG] Iteration 295: step size 1.000e+00, correction pair accepted.
+[MAP]        295      724.056   8.360694e+02   1.375001e+03
+[MAP][DEBUG] Iteration 296: step size 1.000e+00, correction pair accepted.
+[MAP]        296      726.222   8.344028e+02   8.251541e+02
+[MAP][DEBUG] Iteration 297: step size 1.000e+00, correction pair accepted.
+[MAP]        297      728.394   8.325301e+02   8.358786e+02
+[MAP][DEBUG] Iteration 298: step size 1.000e+00, correction pair accepted.
+[MAP]        298      730.650   8.306025e+02   9.213876e+02
+[MAP][DEBUG] Iteration 299: step size 1.000e+00, correction pair accepted.
+[MAP]        299      732.934   8.264520e+02   9.110684e+02
+[MAP][DEBUG] Iteration 300: step size 1.000e+00, correction pair accepted.
+[MAP]        300      735.077   8.211586e+02   1.897752e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 8.270209e+02).
+[MAP][DEBUG] Iteration 301: step size 5.000e-01, correction pair accepted.
+[MAP]        301      739.076   8.200568e+02   2.517642e+03
+[MAP][DEBUG] Iteration 302: step size 1.000e+00, correction pair accepted.
+[MAP]        302      741.284   8.162879e+02   1.144680e+03
+[MAP][DEBUG] Iteration 303: step size 1.000e+00, correction pair accepted.
+[MAP]        303      743.495   8.137782e+02   6.842643e+02
+[MAP][DEBUG] Iteration 304: step size 1.000e+00, correction pair accepted.
+[MAP]        304      745.631   8.122875e+02   7.087275e+02
+[MAP][DEBUG] Iteration 305: step size 1.000e+00, correction pair accepted.
+[MAP]        305      747.828   8.085916e+02   7.248653e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 1.054110e+03).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 8.645950e+02).
+[MAP][DEBUG] Backtracking step 2: step size 2.500e-01 rejected (loss 8.199870e+02).
+[MAP][DEBUG] Backtracking step 3: step size 1.250e-01 rejected (loss 8.101401e+02).
+[MAP][DEBUG] Iteration 306: step size 6.250e-02, correction pair accepted.
+[MAP]        306      757.323   8.083304e+02   2.123855e+03
+[MAP][DEBUG] Iteration 307: step size 1.000e+00, correction pair accepted.
+[MAP]        307      759.362   8.053142e+02   1.492636e+03
+[MAP][DEBUG] Iteration 308: step size 1.000e+00, correction pair accepted.
+[MAP]        308      761.526   8.000526e+02   6.750939e+02
+[MAP][DEBUG] Iteration 309: step size 1.000e+00, correction pair accepted.
+[MAP]        309      763.778   7.959623e+02   1.264694e+03
+[MAP][DEBUG] Iteration 310: step size 1.000e+00, correction pair accepted.
+[MAP]        310      765.935   7.938295e+02   1.101120e+03
+[MAP][DEBUG] Iteration 311: step size 1.000e+00, correction pair accepted.
+[MAP]        311      768.022   7.911578e+02   6.618833e+02
+[MAP][DEBUG] Iteration 312: step size 1.000e+00, correction pair accepted.
+[MAP]        312      770.244   7.896729e+02   6.126067e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 7.955794e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 7.897849e+02).
+[MAP][DEBUG] Iteration 313: step size 2.500e-01, correction pair accepted.
+[MAP]        313      776.172   7.890123e+02   1.843569e+03
+[MAP][DEBUG] Iteration 314: step size 1.000e+00, correction pair accepted.
+[MAP]        314      778.338   7.875177e+02   9.435079e+02
+[MAP][DEBUG] Iteration 315: step size 1.000e+00, correction pair accepted.
+[MAP]        315      780.616   7.865594e+02   5.253018e+02
+[MAP][DEBUG] Iteration 316: step size 1.000e+00, correction pair accepted.
+[MAP]        316      782.754   7.851320e+02   8.994943e+02
+[MAP][DEBUG] Iteration 317: step size 1.000e+00, correction pair accepted.
+[MAP]        317      784.933   7.841498e+02   9.136320e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 8.128293e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 7.895140e+02).
+[MAP][DEBUG] Backtracking step 2: step size 2.500e-01 rejected (loss 7.845854e+02).
+[MAP][DEBUG] Iteration 318: step size 1.250e-01, correction pair accepted.
+[MAP]        318      792.556   7.838007e+02   2.231465e+03
+[MAP][DEBUG] Iteration 319: step size 1.000e+00, correction pair accepted.
+[MAP]        319      794.747   7.828106e+02   1.351436e+03
+[MAP][DEBUG] Iteration 320: step size 1.000e+00, correction pair accepted.
+[MAP]        320      796.899   7.821216e+02   5.964909e+02
+[MAP][DEBUG] Iteration 321: step size 1.000e+00, correction pair accepted.
+[MAP]        321      799.113   7.816607e+02   7.412069e+02
+[MAP][DEBUG] Iteration 322: step size 1.000e+00, correction pair accepted.
+[MAP]        322      801.292   7.810553e+02   9.694387e+02
+[MAP][DEBUG] Iteration 323: step size 1.000e+00, correction pair accepted.
+[MAP]        323      803.582   7.794760e+02   1.246062e+03
+[MAP][DEBUG] Iteration 324: step size 1.000e+00, correction pair accepted.
+[MAP]        324      805.763   7.766609e+02   9.641689e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 7.787825e+02).
+[MAP][DEBUG] Iteration 325: step size 5.000e-01, correction pair accepted.
+[MAP]        325      809.887   7.753880e+02   2.257414e+03
+[MAP][DEBUG] Iteration 326: step size 1.000e+00, correction pair accepted.
+[MAP]        326      812.181   7.730507e+02   1.428372e+03
+[MAP][DEBUG] Iteration 327: step size 1.000e+00, correction pair accepted.
+[MAP]        327      814.549   7.716753e+02   1.007564e+03
+[MAP][DEBUG] Iteration 328: step size 1.000e+00, correction pair accepted.
+[MAP]        328      816.760   7.700334e+02   7.103386e+02
+[MAP][DEBUG] Iteration 329: step size 1.000e+00, correction pair accepted.
+[MAP]        329      819.085   7.684300e+02   5.477307e+02
+[MAP][DEBUG] Iteration 330: step size 1.000e+00, correction pair accepted.
+[MAP]        330      821.430   7.679898e+02   2.609261e+03
+[MAP][DEBUG] Iteration 331: step size 1.000e+00, correction pair accepted.
+[MAP]        331      823.758   7.659199e+02   1.158055e+03
+[MAP][DEBUG] Iteration 332: step size 1.000e+00, correction pair accepted.
+[MAP]        332      826.094   7.643258e+02   6.670284e+02
+[MAP][DEBUG] Iteration 333: step size 1.000e+00, correction pair accepted.
+[MAP]        333      828.365   7.634297e+02   9.643698e+02
+[MAP][DEBUG] Iteration 334: step size 1.000e+00, correction pair accepted.
+[MAP]        334      830.689   7.617085e+02   1.172050e+03
+[MAP][DEBUG] Iteration 335: step size 1.000e+00, correction pair accepted.
+[MAP]        335      833.040   7.608452e+02   9.505725e+02
+[MAP][DEBUG] Iteration 336: step size 1.000e+00, correction pair accepted.
+[MAP]        336      835.357   7.593635e+02   9.460797e+02
+[MAP][DEBUG] Iteration 337: step size 1.000e+00, correction pair accepted.
+[MAP]        337      837.747   7.580091e+02   2.485975e+03
+[MAP][DEBUG] Iteration 338: step size 1.000e+00, correction pair accepted.
+[MAP]        338      840.057   7.569349e+02   1.092991e+03
+[MAP][DEBUG] Iteration 339: step size 1.000e+00, correction pair accepted.
+[MAP]        339      842.330   7.563383e+02   5.719637e+02
+[MAP][DEBUG] Iteration 340: step size 1.000e+00, correction pair accepted.
+[MAP]        340      844.732   7.555917e+02   5.440134e+02
+[MAP][DEBUG] Iteration 341: step size 1.000e+00, correction pair accepted.
+[MAP]        341      846.762   7.549087e+02   8.420126e+02
+[MAP][DEBUG] Iteration 342: step size 1.000e+00, correction pair accepted.
+[MAP]        342      848.859   7.543213e+02   8.308918e+02
+[MAP][DEBUG] Iteration 343: step size 1.000e+00, correction pair accepted.
+[MAP]        343      851.120   7.535383e+02   2.288132e+03
+[MAP][DEBUG] Iteration 344: step size 1.000e+00, correction pair accepted.
+[MAP]        344      853.377   7.515512e+02   8.265557e+02
+[MAP][DEBUG] Iteration 345: step size 1.000e+00, correction pair accepted.
+[MAP]        345      855.671   7.503945e+02   7.798085e+02
+[MAP][DEBUG] Iteration 346: step size 1.000e+00, correction pair accepted.
+[MAP]        346      858.013   7.494589e+02   1.018118e+03
+[MAP][DEBUG] Iteration 347: step size 1.000e+00, correction pair accepted.
+[MAP]        347      860.258   7.477475e+02   1.079617e+03
+[MAP][DEBUG] Iteration 348: step size 1.000e+00, correction pair accepted.
+[MAP]        348      862.564   7.454612e+02   1.549280e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 7.792943e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 7.509897e+02).
+[MAP][DEBUG] Iteration 349: step size 2.500e-01, correction pair accepted.
+[MAP]        349      868.482   7.453482e+02   2.560516e+03
+[MAP][DEBUG] Iteration 350: step size 1.000e+00, correction pair accepted.
+[MAP]        350      870.777   7.428699e+02   9.948196e+02
+[MAP][DEBUG] Iteration 351: step size 1.000e+00, correction pair accepted.
+[MAP]        351      872.995   7.415954e+02   5.091171e+02
+[MAP][DEBUG] Iteration 352: step size 1.000e+00, correction pair accepted.
+[MAP]        352      875.087   7.408149e+02   4.716769e+02
+[MAP][DEBUG] Iteration 353: step size 1.000e+00, correction pair accepted.
+[MAP]        353      877.285   7.394553e+02   5.598172e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 7.411570e+02).
+[MAP][DEBUG] Iteration 354: step size 5.000e-01, correction pair accepted.
+[MAP]        354      881.252   7.393500e+02   1.157073e+03
+[MAP][DEBUG] Iteration 355: step size 1.000e+00, correction pair accepted.
+[MAP]        355      883.386   7.381322e+02   5.411214e+02
+[MAP][DEBUG] Iteration 356: step size 1.000e+00, correction pair accepted.
+[MAP]        356      885.580   7.378041e+02   4.186799e+02
+[MAP][DEBUG] Iteration 357: step size 1.000e+00, correction pair accepted.
+[MAP]        357      887.837   7.372343e+02   5.762950e+02
+[MAP][DEBUG] Iteration 358: step size 1.000e+00, correction pair accepted.
+[MAP]        358      889.993   7.365227e+02   6.800095e+02
+[MAP][DEBUG] Iteration 359: step size 1.000e+00, correction pair accepted.
+[MAP]        359      892.276   7.354712e+02   6.972512e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 7.393122e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 7.359364e+02).
+[MAP][DEBUG] Iteration 360: step size 2.500e-01, correction pair accepted.
+[MAP]        360      898.131   7.353405e+02   1.457267e+03
+[MAP][DEBUG] Iteration 361: step size 1.000e+00, correction pair accepted.
+[MAP]        361      900.273   7.344996e+02   9.669894e+02
+[MAP][DEBUG] Iteration 362: step size 1.000e+00, correction pair accepted.
+[MAP]        362      902.486   7.336814e+02   4.996285e+02
+[MAP][DEBUG] Iteration 363: step size 1.000e+00, correction pair accepted.
+[MAP]        363      904.699   7.327959e+02   5.045709e+02
+[MAP][DEBUG] Iteration 364: step size 1.000e+00, correction pair accepted.
+[MAP]        364      906.834   7.314258e+02   4.918067e+02
+[MAP][DEBUG] Iteration 365: step size 1.000e+00, correction pair accepted.
+[MAP]        365      909.073   7.287262e+02   5.985567e+02
+[MAP][DEBUG] Iteration 366: step size 1.000e+00, correction pair accepted.
+[MAP]        366      911.266   7.273349e+02   8.628874e+02
+[MAP][DEBUG] Iteration 367: step size 1.000e+00, correction pair accepted.
+[MAP]        367      913.438   7.260932e+02   1.344351e+03
+[MAP][DEBUG] Iteration 368: step size 1.000e+00, correction pair accepted.
+[MAP]        368      915.579   7.253829e+02   4.358979e+02
+[MAP][DEBUG] Iteration 369: step size 1.000e+00, correction pair accepted.
+[MAP]        369      917.814   7.250272e+02   4.056293e+02
+[MAP][DEBUG] Iteration 370: step size 1.000e+00, correction pair accepted.
+[MAP]        370      920.034   7.238267e+02   6.928124e+02
+[MAP][DEBUG] Iteration 371: step size 1.000e+00, correction pair accepted.
+[MAP]        371      922.239   7.224212e+02   7.465721e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 7.231333e+02).
+[MAP][DEBUG] Iteration 372: step size 5.000e-01, correction pair accepted.
+[MAP]        372      926.304   7.215193e+02   1.240484e+03
+[MAP][DEBUG] Iteration 373: step size 1.000e+00, correction pair accepted.
+[MAP]        373      928.482   7.208045e+02   3.346711e+02
+[MAP][DEBUG] Iteration 374: step size 1.000e+00, correction pair accepted.
+[MAP]        374      930.753   7.205357e+02   4.507391e+02
+[MAP][DEBUG] Iteration 375: step size 1.000e+00, correction pair accepted.
+[MAP]        375      933.004   7.203158e+02   3.716004e+02
+[MAP][DEBUG] Iteration 376: step size 1.000e+00, correction pair accepted.
+[MAP]        376      935.266   7.195848e+02   4.696223e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 7.195947e+02).
+[MAP][DEBUG] Iteration 377: step size 5.000e-01, correction pair accepted.
+[MAP]        377      939.264   7.190163e+02   5.214719e+02
+[MAP][DEBUG] Iteration 378: step size 1.000e+00, correction pair accepted.
+[MAP]        378      941.468   7.184110e+02   3.348579e+02
+[MAP][DEBUG] Iteration 379: step size 1.000e+00, correction pair accepted.
+[MAP]        379      943.708   7.182233e+02   6.743063e+02
+[MAP][DEBUG] Iteration 380: step size 1.000e+00, correction pair accepted.
+[MAP]        380      945.833   7.178766e+02   3.098641e+02
+[MAP][DEBUG] Iteration 381: step size 1.000e+00, correction pair accepted.
+[MAP]        381      947.968   7.175188e+02   3.653475e+02
+[MAP][DEBUG] Iteration 382: step size 1.000e+00, correction pair accepted.
+[MAP]        382      950.180   7.165597e+02   4.930361e+02
+[MAP][DEBUG] Iteration 383: step size 1.000e+00, correction pair accepted.
+[MAP]        383      952.340   7.154168e+02   1.807975e+03
+[MAP][DEBUG] Iteration 384: step size 1.000e+00, correction pair accepted.
+[MAP]        384      954.523   7.142172e+02   9.494033e+02
+[MAP][DEBUG] Iteration 385: step size 1.000e+00, correction pair accepted.
+[MAP]        385      956.703   7.136791e+02   5.285098e+02
+[MAP][DEBUG] Iteration 386: step size 1.000e+00, correction pair accepted.
+[MAP]        386      958.877   7.131884e+02   4.679489e+02
+[MAP][DEBUG] Iteration 387: step size 1.000e+00, correction pair accepted.
+[MAP]        387      961.135   7.126558e+02   6.121623e+02
+[MAP][DEBUG] Iteration 388: step size 1.000e+00, correction pair accepted.
+[MAP]        388      963.410   7.113016e+02   9.027946e+02
+[MAP][DEBUG] Iteration 389: step size 1.000e+00, correction pair accepted.
+[MAP]        389      965.648   7.102160e+02   1.625763e+03
+[MAP][DEBUG] Iteration 390: step size 1.000e+00, correction pair accepted.
+[MAP]        390      967.898   7.099653e+02   9.535791e+02
+[MAP][DEBUG] Iteration 391: step size 1.000e+00, correction pair accepted.
+[MAP]        391      970.184   7.087569e+02   4.242872e+02
+[MAP][DEBUG] Iteration 392: step size 1.000e+00, correction pair accepted.
+[MAP]        392      972.356   7.083354e+02   4.014324e+02
+[MAP][DEBUG] Iteration 393: step size 1.000e+00, correction pair accepted.
+[MAP]        393      974.553   7.076678e+02   5.012113e+02
+[MAP][DEBUG] Iteration 394: step size 1.000e+00, correction pair accepted.
+[MAP]        394      976.742   7.065195e+02   5.818058e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 7.093182e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 7.068167e+02).
+[MAP][DEBUG] Iteration 395: step size 2.500e-01, correction pair accepted.
+[MAP]        395      982.887   7.063921e+02   1.151019e+03
+[MAP][DEBUG] Iteration 396: step size 1.000e+00, correction pair accepted.
+[MAP]        396      985.270   7.055647e+02   7.407190e+02
+[MAP][DEBUG] Iteration 397: step size 1.000e+00, correction pair accepted.
+[MAP]        397      987.620   7.043149e+02   3.821116e+02
+[MAP][DEBUG] Iteration 398: step size 1.000e+00, correction pair accepted.
+[MAP]        398      989.695   7.030332e+02   5.906653e+02
+[MAP][DEBUG] Iteration 399: step size 1.000e+00, correction pair accepted.
+[MAP]        399      991.755   7.021665e+02   5.155494e+02
+[MAP][DEBUG] Iteration 400: step size 1.000e+00, correction pair accepted.
+[MAP]        400      993.850   7.009192e+02   1.346378e+03
+[MAP][DEBUG] Iteration 401: step size 1.000e+00, correction pair accepted.
+[MAP]        401      996.035   7.000134e+02   1.456439e+03
+[MAP][DEBUG] Iteration 402: step size 1.000e+00, correction pair accepted.
+[MAP]        402      998.160   6.992681e+02   6.841357e+02
+[MAP][DEBUG] Iteration 403: step size 1.000e+00, correction pair accepted.
+[MAP]        403     1000.248   6.987709e+02   3.732961e+02
+[MAP][DEBUG] Iteration 404: step size 1.000e+00, correction pair accepted.
+[MAP]        404     1002.328   6.981551e+02   4.270406e+02
+[MAP][DEBUG] Iteration 405: step size 1.000e+00, correction pair accepted.
+[MAP]        405     1004.318   6.975167e+02   3.822880e+02
+[MAP][DEBUG] Iteration 406: step size 1.000e+00, correction pair accepted.
+[MAP]        406     1006.432   6.970365e+02   8.080273e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 7.002777e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 6.972755e+02).
+[MAP][DEBUG] Iteration 407: step size 2.500e-01, correction pair accepted.
+[MAP]        407     1011.982   6.968084e+02   8.426232e+02
+[MAP][DEBUG] Iteration 408: step size 1.000e+00, correction pair accepted.
+[MAP]        408     1014.061   6.964969e+02   5.794903e+02
+[MAP][DEBUG] Iteration 409: step size 1.000e+00, correction pair accepted.
+[MAP]        409     1016.391   6.959570e+02   3.977044e+02
+[MAP][DEBUG] Iteration 410: step size 1.000e+00, correction pair accepted.
+[MAP]        410     1018.417   6.956721e+02   5.081738e+02
+[MAP][DEBUG] Iteration 411: step size 1.000e+00, correction pair accepted.
+[MAP]        411     1020.614   6.949725e+02   5.836263e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 6.958950e+02).
+[MAP][DEBUG] Iteration 412: step size 5.000e-01, correction pair accepted.
+[MAP]        412     1024.491   6.946958e+02   1.729341e+03
+[MAP][DEBUG] Iteration 413: step size 1.000e+00, correction pair accepted.
+[MAP]        413     1026.603   6.932741e+02   9.584233e+02
+[MAP][DEBUG] Iteration 414: step size 1.000e+00, correction pair accepted.
+[MAP]        414     1028.718   6.917287e+02   3.794971e+02
+[MAP][DEBUG] Iteration 415: step size 1.000e+00, correction pair accepted.
+[MAP]        415     1030.790   6.912149e+02   5.123430e+02
+[MAP][DEBUG] Iteration 416: step size 1.000e+00, correction pair accepted.
+[MAP]        416     1032.857   6.904141e+02   7.071847e+02
+[MAP][DEBUG] Iteration 417: step size 1.000e+00, correction pair accepted.
+[MAP]        417     1034.970   6.884324e+02   7.283007e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 6.925967e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 6.884739e+02).
+[MAP][DEBUG] Iteration 418: step size 2.500e-01, correction pair accepted.
+[MAP]        418     1040.578   6.879432e+02   2.017171e+03
+[MAP][DEBUG] Iteration 419: step size 1.000e+00, correction pair accepted.
+[MAP]        419     1042.641   6.866999e+02   9.700310e+02
+[MAP][DEBUG] Iteration 420: step size 1.000e+00, correction pair accepted.
+[MAP]        420     1044.784   6.861181e+02   4.137605e+02
+[MAP][DEBUG] Iteration 421: step size 1.000e+00, correction pair accepted.
+[MAP]        421     1046.966   6.858245e+02   5.262740e+02
+[MAP][DEBUG] Iteration 422: step size 1.000e+00, correction pair accepted.
+[MAP]        422     1048.983   6.853471e+02   6.168793e+02
+[MAP][DEBUG] Iteration 423: step size 1.000e+00, correction pair accepted.
+[MAP]        423     1051.035   6.842821e+02   1.079819e+03
+[MAP][DEBUG] Iteration 424: step size 1.000e+00, correction pair accepted.
+[MAP]        424     1053.180   6.842718e+02   1.596376e+03
+[MAP][DEBUG] Iteration 425: step size 1.000e+00, correction pair accepted.
+[MAP]        425     1055.229   6.827096e+02   4.257180e+02
+[MAP][DEBUG] Iteration 426: step size 1.000e+00, correction pair accepted.
+[MAP]        426     1057.309   6.823305e+02   3.863576e+02
+[MAP][DEBUG] Iteration 427: step size 1.000e+00, correction pair accepted.
+[MAP]        427     1059.450   6.812040e+02   4.623209e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 6.815697e+02).
+[MAP][DEBUG] Iteration 428: step size 5.000e-01, correction pair accepted.
+[MAP]        428     1063.385   6.804889e+02   6.464552e+02
+[MAP][DEBUG] Iteration 429: step size 1.000e+00, correction pair accepted.
+[MAP]        429     1065.537   6.797981e+02   1.258808e+03
+[MAP][DEBUG] Iteration 430: step size 1.000e+00, correction pair accepted.
+[MAP]        430     1067.635   6.784575e+02   5.812001e+02
+[MAP][DEBUG] Iteration 431: step size 1.000e+00, correction pair accepted.
+[MAP]        431     1069.722   6.776060e+02   5.589846e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 6.826025e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 6.779326e+02).
+[MAP][DEBUG] Iteration 432: step size 2.500e-01, correction pair accepted.
+[MAP]        432     1075.215   6.772274e+02   1.259685e+03
+[MAP][DEBUG] Iteration 433: step size 1.000e+00, correction pair accepted.
+[MAP]        433     1077.299   6.766549e+02   5.351162e+02
+[MAP][DEBUG] Iteration 434: step size 1.000e+00, correction pair accepted.
+[MAP]        434     1079.371   6.763700e+02   3.953662e+02
+[MAP][DEBUG] Iteration 435: step size 1.000e+00, correction pair accepted.
+[MAP]        435     1081.468   6.759175e+02   7.309954e+02
+[MAP][DEBUG] Iteration 436: step size 1.000e+00, correction pair accepted.
+[MAP]        436     1083.702   6.752747e+02   1.009769e+03
+[MAP][DEBUG] Iteration 437: step size 1.000e+00, correction pair accepted.
+[MAP]        437     1085.805   6.739661e+02   1.259924e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 6.745241e+02).
+[MAP][DEBUG] Iteration 438: step size 5.000e-01, correction pair accepted.
+[MAP]        438     1089.545   6.733096e+02   5.142212e+02
+[MAP][DEBUG] Iteration 439: step size 1.000e+00, correction pair accepted.
+[MAP]        439     1091.556   6.717584e+02   5.240767e+02
+[MAP][DEBUG] Iteration 440: step size 1.000e+00, correction pair accepted.
+[MAP]        440     1093.604   6.703998e+02   1.606843e+03
+[MAP][DEBUG] Iteration 441: step size 1.000e+00, correction pair accepted.
+[MAP]        441     1095.684   6.692546e+02   1.415607e+03
+[MAP][DEBUG] Iteration 442: step size 1.000e+00, correction pair accepted.
+[MAP]        442     1097.798   6.685766e+02   9.867795e+02
+[MAP][DEBUG] Iteration 443: step size 1.000e+00, correction pair accepted.
+[MAP]        443     1099.905   6.673717e+02   5.118550e+02
+[MAP][DEBUG] Iteration 444: step size 1.000e+00, correction pair accepted.
+[MAP]        444     1101.953   6.663221e+02   4.729347e+02
+[MAP][DEBUG] Iteration 445: step size 1.000e+00, correction pair accepted.
+[MAP]        445     1103.954   6.654096e+02   8.970779e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 6.654678e+02).
+[MAP][DEBUG] Iteration 446: step size 5.000e-01, correction pair accepted.
+[MAP]        446     1108.005   6.645670e+02   9.311902e+02
+[MAP][DEBUG] Iteration 447: step size 1.000e+00, correction pair accepted.
+[MAP]        447     1110.000   6.637262e+02   6.781456e+02
+[MAP][DEBUG] Iteration 448: step size 1.000e+00, correction pair accepted.
+[MAP]        448     1112.044   6.613526e+02   6.873419e+02
+[MAP][DEBUG] Iteration 449: step size 1.000e+00, correction pair accepted.
+[MAP]        449     1114.036   6.607042e+02   7.922367e+02
+[MAP][DEBUG] Iteration 450: step size 1.000e+00, correction pair accepted.
+[MAP]        450     1116.111   6.605619e+02   1.878257e+03
+[MAP][DEBUG] Iteration 451: step size 1.000e+00, correction pair accepted.
+[MAP]        451     1118.130   6.599106e+02   2.902936e+02
+[MAP][DEBUG] Iteration 452: step size 1.000e+00, correction pair accepted.
+[MAP]        452     1120.236   6.598633e+02   2.568512e+02
+[MAP][DEBUG] Iteration 453: step size 1.000e+00, correction pair accepted.
+[MAP]        453     1122.297   6.595674e+02   2.954240e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 6.627042e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 6.598824e+02).
+[MAP][DEBUG] Iteration 454: step size 2.500e-01, correction pair accepted.
+[MAP]        454     1128.042   6.594133e+02   7.975190e+02
+[MAP][DEBUG] Iteration 455: step size 1.000e+00, correction pair accepted.
+[MAP]        455     1130.135   6.591170e+02   4.348089e+02
+[MAP][DEBUG] Iteration 456: step size 1.000e+00, correction pair accepted.
+[MAP]        456     1132.269   6.587011e+02   4.360741e+02
+[MAP][DEBUG] Iteration 457: step size 1.000e+00, correction pair accepted.
+[MAP]        457     1134.399   6.584149e+02   6.517118e+02
+[MAP][DEBUG] Iteration 458: step size 1.000e+00, correction pair accepted.
+[MAP]        458     1136.502   6.579187e+02   4.900152e+02
+[MAP][DEBUG] Iteration 459: step size 1.000e+00, correction pair accepted.
+[MAP]        459     1138.570   6.571734e+02   1.066341e+03
+[MAP][DEBUG] Iteration 460: step size 1.000e+00, correction pair accepted.
+[MAP]        460     1140.600   6.565061e+02   3.771042e+02
+[MAP][DEBUG] Iteration 461: step size 1.000e+00, correction pair accepted.
+[MAP]        461     1142.775   6.559143e+02   8.795373e+02
+[MAP][DEBUG] Iteration 462: step size 1.000e+00, correction pair accepted.
+[MAP]        462     1144.860   6.555698e+02   6.928381e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 6.556811e+02).
+[MAP][DEBUG] Iteration 463: step size 5.000e-01, correction pair accepted.
+[MAP]        463     1148.685   6.553442e+02   9.923298e+02
+[MAP][DEBUG] Iteration 464: step size 1.000e+00, correction pair accepted.
+[MAP]        464     1150.769   6.547554e+02   3.886421e+02
+[MAP][DEBUG] Iteration 465: step size 1.000e+00, correction pair accepted.
+[MAP]        465     1152.843   6.544722e+02   4.690953e+02
+[MAP][DEBUG] Iteration 466: step size 1.000e+00, correction pair accepted.
+[MAP]        466     1154.918   6.540685e+02   8.525209e+02
+[MAP][DEBUG] Iteration 467: step size 1.000e+00, correction pair accepted.
+[MAP]        467     1157.057   6.535529e+02   1.010332e+03
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 6.536142e+02).
+[MAP][DEBUG] Iteration 468: step size 5.000e-01, correction pair accepted.
+[MAP]        468     1160.884   6.531536e+02   1.801186e+03
+[MAP][DEBUG] Iteration 469: step size 1.000e+00, correction pair accepted.
+[MAP]        469     1162.990   6.522036e+02   6.579390e+02
+[MAP][DEBUG] Iteration 470: step size 1.000e+00, correction pair accepted.
+[MAP]        470     1165.140   6.517453e+02   4.560145e+02
+[MAP][DEBUG] Iteration 471: step size 1.000e+00, correction pair accepted.
+[MAP]        471     1167.396   6.511447e+02   9.101181e+02
+[MAP][DEBUG] Iteration 472: step size 1.000e+00, correction pair accepted.
+[MAP]        472     1169.455   6.508350e+02   5.613005e+02
+[MAP][DEBUG] Iteration 473: step size 1.000e+00, correction pair accepted.
+[MAP]        473     1171.511   6.504805e+02   5.222600e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 6.516264e+02).
+[MAP][DEBUG] Iteration 474: step size 5.000e-01, correction pair accepted.
+[MAP]        474     1175.326   6.503730e+02   1.053452e+03
+[MAP][DEBUG] Iteration 475: step size 1.000e+00, correction pair accepted.
+[MAP]        475     1177.391   6.500636e+02   3.937411e+02
+[MAP][DEBUG] Iteration 476: step size 1.000e+00, correction pair accepted.
+[MAP]        476     1179.488   6.499895e+02   2.993437e+02
+[MAP][DEBUG] Iteration 477: step size 1.000e+00, correction pair accepted.
+[MAP]        477     1181.545   6.497675e+02   3.115427e+02
+[MAP][DEBUG] Iteration 478: step size 1.000e+00, correction pair accepted.
+[MAP]        478     1183.887   6.493707e+02   4.912878e+02
+[MAP][DEBUG] Iteration 479: step size 1.000e+00, correction pair accepted.
+[MAP]        479     1185.991   6.487351e+02   5.191436e+02
+[MAP][DEBUG] Iteration 480: step size 1.000e+00, correction pair accepted.
+[MAP]        480     1188.041   6.487005e+02   2.019596e+03
+[MAP][DEBUG] Iteration 481: step size 1.000e+00, correction pair accepted.
+[MAP]        481     1190.161   6.471389e+02   6.268446e+02
+[MAP][DEBUG] Iteration 482: step size 1.000e+00, correction pair accepted.
+[MAP]        482     1192.241   6.464693e+02   3.449821e+02
+[MAP][DEBUG] Iteration 483: step size 1.000e+00, correction pair accepted.
+[MAP]        483     1194.348   6.458909e+02   4.986454e+02
+[MAP][DEBUG] Iteration 484: step size 1.000e+00, correction pair accepted.
+[MAP]        484     1196.436   6.453430e+02   6.977139e+02
+[MAP][DEBUG] Iteration 485: step size 1.000e+00, correction pair accepted.
+[MAP]        485     1198.533   6.453054e+02   2.115770e+03
+[MAP][DEBUG] Iteration 486: step size 1.000e+00, correction pair accepted.
+[MAP]        486     1200.605   6.442929e+02   4.282651e+02
+[MAP][DEBUG] Iteration 487: step size 1.000e+00, correction pair accepted.
+[MAP]        487     1202.884   6.441685e+02   4.810530e+02
+[MAP][DEBUG] Iteration 488: step size 1.000e+00, correction pair accepted.
+[MAP]        488     1205.017   6.439636e+02   3.335058e+02
+[MAP][DEBUG] Iteration 489: step size 1.000e+00, correction pair accepted.
+[MAP]        489     1207.068   6.437328e+02   7.047361e+02
+[MAP][DEBUG] Iteration 490: step size 1.000e+00, correction pair accepted.
+[MAP]        490     1209.131   6.431601e+02   4.850748e+02
+[MAP][DEBUG] Iteration 491: step size 1.000e+00, correction pair accepted.
+[MAP]        491     1211.206   6.426705e+02   6.257825e+02
+[MAP][DEBUG] Iteration 492: step size 1.000e+00, correction pair accepted.
+[MAP]        492     1213.294   6.417457e+02   7.524027e+02
+[MAP][DEBUG] Iteration 493: step size 1.000e+00, correction pair accepted.
+[MAP]        493     1215.387   6.408490e+02   9.334819e+02
+[MAP][DEBUG] Iteration 494: step size 1.000e+00, correction pair accepted.
+[MAP]        494     1217.483   6.399415e+02   4.127363e+02
+[MAP][DEBUG] Iteration 495: step size 1.000e+00, correction pair accepted.
+[MAP]        495     1219.542   6.393561e+02   4.123349e+02
+[MAP][DEBUG] Iteration 496: step size 1.000e+00, correction pair accepted.
+[MAP]        496     1221.588   6.383449e+02   4.193168e+02
+[MAP][DEBUG] Iteration 497: step size 1.000e+00, correction pair accepted.
+[MAP]        497     1223.647   6.369354e+02   7.725067e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 6.403959e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 6.369871e+02).
+[MAP][DEBUG] Iteration 498: step size 2.500e-01, correction pair accepted.
+[MAP]        498     1229.200   6.365309e+02   7.234484e+02
+[MAP][DEBUG] Iteration 499: step size 1.000e+00, correction pair accepted.
+[MAP]        499     1231.245   6.358415e+02   3.598083e+02
+[MAP][DEBUG] Iteration 500: step size 1.000e+00, correction pair accepted.
+[MAP]        500     1233.316   6.354673e+02   2.871235e+02
+[MAP][DEBUG] Iteration 501: step size 1.000e+00, correction pair accepted.
+[MAP]        501     1235.400   6.351210e+02   2.913394e+02
+[MAP][DEBUG] Iteration 502: step size 1.000e+00, correction pair accepted.
+[MAP]        502     1237.534   6.350719e+02   1.511181e+03
+[MAP][DEBUG] Iteration 503: step size 1.000e+00, correction pair accepted.
+[MAP]        503     1239.645   6.343918e+02   3.687936e+02
+[MAP][DEBUG] Iteration 504: step size 1.000e+00, correction pair accepted.
+[MAP]        504     1241.761   6.342495e+02   3.161381e+02
+[MAP][DEBUG] Iteration 505: step size 1.000e+00, correction pair accepted.
+[MAP]        505     1243.990   6.341727e+02   2.857015e+02
+[MAP][DEBUG] Iteration 506: step size 1.000e+00, correction pair accepted.
+[MAP]        506     1246.054   6.339498e+02   3.409212e+02
+[MAP][DEBUG] Iteration 507: step size 1.000e+00, correction pair accepted.
+[MAP]        507     1248.117   6.336202e+02   4.725299e+02
+[MAP][DEBUG] Iteration 508: step size 1.000e+00, correction pair accepted.
+[MAP]        508     1250.134   6.328733e+02   1.002505e+03
+[MAP][DEBUG] Iteration 509: step size 1.000e+00, correction pair accepted.
+[MAP]        509     1252.206   6.321996e+02   5.983963e+02
+[MAP][DEBUG] Iteration 510: step size 1.000e+00, correction pair accepted.
+[MAP]        510     1254.322   6.315568e+02   4.853248e+02
+[MAP][DEBUG] Iteration 511: step size 1.000e+00, correction pair accepted.
+[MAP]        511     1256.420   6.309274e+02   4.493314e+02
+[MAP][DEBUG] Iteration 512: step size 1.000e+00, correction pair accepted.
+[MAP]        512     1258.562   6.301657e+02   6.618783e+02
+[MAP][DEBUG] Iteration 513: step size 1.000e+00, correction pair accepted.
+[MAP]        513     1260.632   6.294018e+02   4.034489e+02
+[MAP][DEBUG] Iteration 514: step size 1.000e+00, correction pair accepted.
+[MAP]        514     1262.924   6.289969e+02   1.256564e+03
+[MAP][DEBUG] Iteration 515: step size 1.000e+00, correction pair accepted.
+[MAP]        515     1264.985   6.287350e+02   1.054217e+03
+[MAP][DEBUG] Iteration 516: step size 1.000e+00, correction pair accepted.
+[MAP]        516     1267.060   6.283582e+02   3.713265e+02
+[MAP][DEBUG] Iteration 517: step size 1.000e+00, correction pair accepted.
+[MAP]        517     1269.083   6.282083e+02   2.944627e+02
+[MAP][DEBUG] Iteration 518: step size 1.000e+00, correction pair accepted.
+[MAP]        518     1271.187   6.277489e+02   3.205191e+02
+[MAP][DEBUG] Iteration 519: step size 1.000e+00, correction pair accepted.
+[MAP]        519     1273.252   6.270466e+02   4.560135e+02
+[MAP][DEBUG] Iteration 520: step size 1.000e+00, correction pair accepted.
+[MAP]        520     1275.375   6.262487e+02   8.918383e+02
+[MAP][DEBUG] Iteration 521: step size 1.000e+00, correction pair accepted.
+[MAP]        521     1277.461   6.255003e+02   1.346262e+03
+[MAP][DEBUG] Iteration 522: step size 1.000e+00, correction pair accepted.
+[MAP]        522     1279.529   6.245973e+02   4.966855e+02
+[MAP][DEBUG] Iteration 523: step size 1.000e+00, correction pair accepted.
+[MAP]        523     1281.807   6.241691e+02   3.911024e+02
+[MAP][DEBUG] Iteration 524: step size 1.000e+00, correction pair accepted.
+[MAP]        524     1283.859   6.233419e+02   5.854286e+02
+[MAP][DEBUG] Iteration 525: step size 1.000e+00, correction pair accepted.
+[MAP]        525     1285.949   6.225444e+02   3.953398e+02
+[MAP][DEBUG] Iteration 526: step size 1.000e+00, correction pair accepted.
+[MAP]        526     1288.073   6.220305e+02   1.725315e+03
+[MAP][DEBUG] Iteration 527: step size 1.000e+00, correction pair accepted.
+[MAP]        527     1290.151   6.211916e+02   5.084304e+02
+[MAP][DEBUG] Iteration 528: step size 1.000e+00, correction pair accepted.
+[MAP]        528     1292.150   6.208727e+02   3.950129e+02
+[MAP][DEBUG] Iteration 529: step size 1.000e+00, correction pair accepted.
+[MAP]        529     1294.261   6.206832e+02   4.465524e+02
+[MAP][DEBUG] Iteration 530: step size 1.000e+00, correction pair accepted.
+[MAP]        530     1296.296   6.201079e+02   3.752566e+02
+[MAP][DEBUG] Iteration 531: step size 1.000e+00, correction pair accepted.
+[MAP]        531     1298.288   6.194497e+02   4.301448e+02
+[MAP][DEBUG] Iteration 532: step size 1.000e+00, correction pair accepted.
+[MAP]        532     1300.403   6.194192e+02   1.411425e+03
+[MAP][DEBUG] Iteration 533: step size 1.000e+00, correction pair accepted.
+[MAP]        533     1302.508   6.188914e+02   7.686506e+02
+[MAP][DEBUG] Iteration 534: step size 1.000e+00, correction pair accepted.
+[MAP]        534     1304.770   6.184034e+02   2.921371e+02
+[MAP][DEBUG] Iteration 535: step size 1.000e+00, correction pair accepted.
+[MAP]        535     1306.824   6.179879e+02   4.118551e+02
+[MAP][DEBUG] Iteration 536: step size 1.000e+00, correction pair accepted.
+[MAP]        536     1308.935   6.175410e+02   5.347520e+02
+[MAP][DEBUG] Iteration 537: step size 1.000e+00, correction pair accepted.
+[MAP]        537     1311.011   6.174213e+02   7.304840e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 6.188131e+02).
+[MAP][DEBUG] Iteration 538: step size 5.000e-01, correction pair accepted.
+[MAP]        538     1314.669   6.172972e+02   9.797656e+02
+[MAP][DEBUG] Iteration 539: step size 1.000e+00, correction pair accepted.
+[MAP]        539     1316.767   6.169937e+02   3.509020e+02
+[MAP][DEBUG] Iteration 540: step size 1.000e+00, correction pair accepted.
+[MAP]        540     1318.910   6.168595e+02   2.285756e+02
+[MAP][DEBUG] Iteration 541: step size 1.000e+00, correction pair accepted.
+[MAP]        541     1321.148   6.164905e+02   3.783601e+02
+[MAP][DEBUG] Iteration 542: step size 1.000e+00, correction pair accepted.
+[MAP]        542     1323.319   6.161743e+02   4.612088e+02
+[MAP][DEBUG] Iteration 543: step size 1.000e+00, correction pair accepted.
+[MAP]        543     1325.409   6.155568e+02   4.496216e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 6.170648e+02).
+[MAP][DEBUG] Iteration 544: step size 5.000e-01, correction pair accepted.
+[MAP]        544     1329.146   6.151651e+02   1.670872e+03
+[MAP][DEBUG] Iteration 545: step size 1.000e+00, correction pair accepted.
+[MAP]        545     1331.122   6.145268e+02   6.541917e+02
+[MAP][DEBUG] Iteration 546: step size 1.000e+00, correction pair accepted.
+[MAP]        546     1333.170   6.141687e+02   2.488378e+02
+[MAP][DEBUG] Iteration 547: step size 1.000e+00, correction pair accepted.
+[MAP]        547     1335.226   6.140009e+02   3.930100e+02
+[MAP][DEBUG] Iteration 548: step size 1.000e+00, correction pair accepted.
+[MAP]        548     1337.187   6.138349e+02   4.370377e+02
+[MAP][DEBUG] Iteration 549: step size 1.000e+00, correction pair accepted.
+[MAP]        549     1339.265   6.138323e+02   5.897075e+02
+[MAP][DEBUG] Iteration 550: step size 1.000e+00, correction pair accepted.
+[MAP]        550     1341.351   6.133076e+02   5.479799e+02
+[MAP][DEBUG] Iteration 551: step size 1.000e+00, correction pair accepted.
+[MAP]        551     1343.456   6.127518e+02   2.957899e+02
+[MAP][DEBUG] Iteration 552: step size 1.000e+00, correction pair accepted.
+[MAP]        552     1345.685   6.117801e+02   6.034737e+02
+[MAP][DEBUG] Iteration 553: step size 1.000e+00, correction pair accepted.
+[MAP]        553     1347.737   6.110284e+02   8.064700e+02
+[MAP][DEBUG] Iteration 554: step size 1.000e+00, correction pair accepted.
+[MAP]        554     1349.859   6.105467e+02   5.426949e+02
+[MAP][DEBUG] Iteration 555: step size 1.000e+00, correction pair accepted.
+[MAP]        555     1351.928   6.098665e+02   5.836509e+02
+[MAP][DEBUG] Iteration 556: step size 1.000e+00, correction pair accepted.
+[MAP]        556     1354.026   6.098025e+02   7.127467e+02
+[MAP][DEBUG] Iteration 557: step size 1.000e+00, correction pair accepted.
+[MAP]        557     1356.060   6.095711e+02   2.270605e+02
+[MAP][DEBUG] Iteration 558: step size 1.000e+00, correction pair accepted.
+[MAP]        558     1358.156   6.094565e+02   2.229720e+02
+[MAP][DEBUG] Iteration 559: step size 1.000e+00, correction pair accepted.
+[MAP]        559     1360.281   6.091676e+02   3.328335e+02
+[MAP][DEBUG] Iteration 560: step size 1.000e+00, correction pair accepted.
+[MAP]        560     1362.411   6.088605e+02   2.820976e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 6.094709e+02).
+[MAP][DEBUG] Iteration 561: step size 5.000e-01, correction pair accepted.
+[MAP]        561     1366.425   6.087140e+02   7.942625e+02
+[MAP][DEBUG] Iteration 562: step size 1.000e+00, correction pair accepted.
+[MAP]        562     1368.590   6.083936e+02   4.161407e+02
+[MAP][DEBUG] Iteration 563: step size 1.000e+00, correction pair accepted.
+[MAP]        563     1370.668   6.079790e+02   3.183138e+02
+[MAP][DEBUG] Iteration 564: step size 1.000e+00, correction pair accepted.
+[MAP]        564     1372.748   6.077333e+02   4.989826e+02
+[MAP][DEBUG] Iteration 565: step size 1.000e+00, correction pair accepted.
+[MAP]        565     1374.748   6.074130e+02   4.408273e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 6.095922e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 6.074305e+02).
+[MAP][DEBUG] Iteration 566: step size 2.500e-01, correction pair accepted.
+[MAP]        566     1380.391   6.071476e+02   8.484367e+02
+[MAP][DEBUG] Iteration 567: step size 1.000e+00, correction pair accepted.
+[MAP]        567     1382.579   6.067212e+02   7.711295e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 6.098612e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 6.068590e+02).
+[MAP][DEBUG] Iteration 568: step size 2.500e-01, correction pair accepted.
+[MAP]        568     1388.091   6.064344e+02   5.740025e+02
+[MAP][DEBUG] Iteration 569: step size 1.000e+00, correction pair accepted.
+[MAP]        569     1390.220   6.056599e+02   4.246013e+02
+[MAP][DEBUG] Iteration 570: step size 1.000e+00, correction pair accepted.
+[MAP]        570     1392.278   6.045740e+02   4.558766e+02
+[MAP][DEBUG] Iteration 571: step size 1.000e+00, correction pair accepted.
+[MAP]        571     1394.356   6.043776e+02   6.808892e+02
+[MAP][DEBUG] Iteration 572: step size 1.000e+00, correction pair accepted.
+[MAP]        572     1396.376   6.038192e+02   8.521527e+02
+[MAP][DEBUG] Iteration 573: step size 1.000e+00, correction pair accepted.
+[MAP]        573     1398.463   6.032258e+02   2.855268e+02
+[MAP][DEBUG] Iteration 574: step size 1.000e+00, correction pair accepted.
+[MAP]        574     1400.577   6.029961e+02   2.362126e+02
+[MAP][DEBUG] Iteration 575: step size 1.000e+00, correction pair accepted.
+[MAP]        575     1402.683   6.024215e+02   3.507298e+02
+[MAP][DEBUG] Iteration 576: step size 1.000e+00, correction pair accepted.
+[MAP]        576     1404.803   6.018060e+02   3.875699e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 6.086083e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 6.030086e+02).
+[MAP][DEBUG] Backtracking step 2: step size 2.500e-01 rejected (loss 6.018621e+02).
+[MAP][DEBUG] Iteration 577: step size 1.250e-01, correction pair accepted.
+[MAP]        577     1412.180   6.016943e+02   9.140929e+02
+[MAP][DEBUG] Iteration 578: step size 1.000e+00, correction pair accepted.
+[MAP]        578     1414.345   6.011724e+02   6.384041e+02
+[MAP][DEBUG] Iteration 579: step size 1.000e+00, correction pair accepted.
+[MAP]        579     1416.486   6.008243e+02   1.469326e+03
+[MAP][DEBUG] Iteration 580: step size 1.000e+00, correction pair accepted.
+[MAP]        580     1418.616   6.002015e+02   8.964283e+02
+[MAP][DEBUG] Iteration 581: step size 1.000e+00, correction pair accepted.
+[MAP]        581     1420.759   5.994857e+02   5.069710e+02
+[MAP][DEBUG] Iteration 582: step size 1.000e+00, correction pair accepted.
+[MAP]        582     1423.013   5.988083e+02   4.148099e+02
+[MAP][DEBUG] Iteration 583: step size 1.000e+00, correction pair accepted.
+[MAP]        583     1425.122   5.978987e+02   4.626511e+02
+[MAP][DEBUG] Iteration 584: step size 1.000e+00, correction pair accepted.
+[MAP]        584     1427.169   5.966963e+02   5.741935e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 6.068981e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 5.979040e+02).
+[MAP][DEBUG] Iteration 585: step size 2.500e-01, correction pair accepted.
+[MAP]        585     1432.698   5.963323e+02   8.835316e+02
+[MAP][DEBUG] Iteration 586: step size 1.000e+00, correction pair accepted.
+[MAP]        586     1434.767   5.953196e+02   4.314082e+02
+[MAP][DEBUG] Iteration 587: step size 1.000e+00, correction pair accepted.
+[MAP]        587     1436.868   5.946988e+02   2.693206e+02
+[MAP][DEBUG] Iteration 588: step size 1.000e+00, correction pair accepted.
+[MAP]        588     1439.013   5.944323e+02   3.529517e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.948771e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 5.944418e+02).
+[MAP][DEBUG] Iteration 589: step size 2.500e-01, correction pair accepted.
+[MAP]        589     1444.743   5.943865e+02   3.457525e+02
+[MAP][DEBUG] Iteration 590: step size 1.000e+00, correction pair accepted.
+[MAP]        590     1446.860   5.942725e+02   4.392272e+02
+[MAP][DEBUG] Iteration 591: step size 1.000e+00, correction pair accepted.
+[MAP]        591     1448.931   5.942519e+02   4.389742e+02
+[MAP][DEBUG] Iteration 592: step size 1.000e+00, correction pair accepted.
+[MAP]        592     1451.048   5.940934e+02   4.039465e+02
+[MAP][DEBUG] Iteration 593: step size 1.000e+00, correction pair accepted.
+[MAP]        593     1453.135   5.937316e+02   2.970756e+02
+[MAP][DEBUG] Iteration 594: step size 1.000e+00, correction pair accepted.
+[MAP]        594     1455.205   5.933027e+02   4.521902e+02
+[MAP][DEBUG] Iteration 595: step size 1.000e+00, correction pair accepted.
+[MAP]        595     1457.302   5.924121e+02   3.773123e+02
+[MAP][DEBUG] Iteration 596: step size 1.000e+00, correction pair accepted.
+[MAP]        596     1459.382   5.916008e+02   3.769796e+02
+[MAP][DEBUG] Iteration 597: step size 1.000e+00, correction pair accepted.
+[MAP]        597     1461.683   5.907575e+02   3.925325e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.914355e+02).
+[MAP][DEBUG] Iteration 598: step size 5.000e-01, correction pair accepted.
+[MAP]        598     1465.515   5.905680e+02   5.359686e+02
+[MAP][DEBUG] Iteration 599: step size 1.000e+00, correction pair accepted.
+[MAP]        599     1467.620   5.900832e+02   3.073091e+02
+[MAP][DEBUG] Iteration 600: step size 1.000e+00, correction pair accepted.
+[MAP]        600     1469.751   5.897690e+02   3.964543e+02
+[MAP][DEBUG] Iteration 601: step size 1.000e+00, correction pair accepted.
+[MAP]        601     1471.846   5.892817e+02   9.554233e+02
+[MAP][DEBUG] Iteration 602: step size 1.000e+00, correction pair accepted.
+[MAP]        602     1473.954   5.887850e+02   4.348530e+02
+[MAP][DEBUG] Iteration 603: step size 1.000e+00, correction pair accepted.
+[MAP]        603     1476.029   5.884227e+02   4.688515e+02
+[MAP][DEBUG] Iteration 604: step size 1.000e+00, correction pair accepted.
+[MAP]        604     1478.111   5.878083e+02   3.536291e+02
+[MAP][DEBUG] Iteration 605: step size 1.000e+00, correction pair accepted.
+[MAP]        605     1480.187   5.871823e+02   4.250092e+02
+[MAP][DEBUG] Iteration 606: step size 1.000e+00, correction pair accepted.
+[MAP]        606     1482.329   5.869458e+02   8.313526e+02
+[MAP][DEBUG] Iteration 607: step size 1.000e+00, correction pair accepted.
+[MAP]        607     1484.436   5.860457e+02   3.133906e+02
+[MAP][DEBUG] Iteration 608: step size 1.000e+00, correction pair accepted.
+[MAP]        608     1486.599   5.855261e+02   3.157788e+02
+[MAP][DEBUG] Iteration 609: step size 1.000e+00, correction pair accepted.
+[MAP]        609     1488.702   5.851436e+02   4.175012e+02
+[MAP][DEBUG] Iteration 610: step size 1.000e+00, correction pair accepted.
+[MAP]        610     1490.705   5.845662e+02   4.348829e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.865504e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 5.846887e+02).
+[MAP][DEBUG] Iteration 611: step size 2.500e-01, correction pair accepted.
+[MAP]        611     1496.314   5.844127e+02   4.760695e+02
+[MAP][DEBUG] Iteration 612: step size 1.000e+00, correction pair accepted.
+[MAP]        612     1498.384   5.840725e+02   2.511237e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.844602e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 5.841460e+02).
+[MAP][DEBUG] Backtracking step 2: step size 2.500e-01 rejected (loss 5.840734e+02).
+[MAP][DEBUG] Iteration 613: step size 1.250e-01, correction pair accepted.
+[MAP]        613     1505.760   5.840686e+02   2.332964e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.840701e+02).
+[MAP][DEBUG] Iteration 614: step size 5.000e-01, correction pair accepted.
+[MAP]        614     1509.581   5.840564e+02   2.898873e+02
+[MAP][DEBUG] Iteration 615: step size 1.000e+00, correction pair accepted.
+[MAP]        615     1511.670   5.839642e+02   3.983487e+02
+[MAP][DEBUG] Iteration 616: step size 1.000e+00, correction pair accepted.
+[MAP]        616     1513.735   5.836340e+02   4.137565e+02
+[MAP][DEBUG] Iteration 617: step size 1.000e+00, correction pair accepted.
+[MAP]        617     1515.842   5.829295e+02   4.747230e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.842358e+02).
+[MAP][DEBUG] Iteration 618: step size 5.000e-01, correction pair accepted.
+[MAP]        618     1519.609   5.827565e+02   6.141339e+02
+[MAP][DEBUG] Iteration 619: step size 1.000e+00, correction pair accepted.
+[MAP]        619     1521.657   5.817764e+02   2.682469e+02
+[MAP][DEBUG] Iteration 620: step size 1.000e+00, correction pair accepted.
+[MAP]        620     1523.729   5.813258e+02   1.741232e+02
+[MAP][DEBUG] Iteration 621: step size 1.000e+00, correction pair accepted.
+[MAP]        621     1526.035   5.809832e+02   1.842035e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.809895e+02).
+[MAP][DEBUG] Iteration 622: step size 5.000e-01, correction pair accepted.
+[MAP]        622     1529.868   5.808970e+02   3.936888e+02
+[MAP][DEBUG] Iteration 623: step size 1.000e+00, correction pair accepted.
+[MAP]        623     1532.036   5.806429e+02   2.820071e+02
+[MAP][DEBUG] Iteration 624: step size 1.000e+00, correction pair accepted.
+[MAP]        624     1534.147   5.806268e+02   5.834940e+02
+[MAP][DEBUG] Iteration 625: step size 1.000e+00, correction pair accepted.
+[MAP]        625     1536.258   5.805451e+02   2.159575e+02
+[MAP][DEBUG] Iteration 626: step size 1.000e+00, correction pair accepted.
+[MAP]        626     1538.287   5.805205e+02   1.631650e+02
+[MAP][DEBUG] Iteration 627: step size 1.000e+00, correction pair accepted.
+[MAP]        627     1540.440   5.804784e+02   1.797063e+02
+[MAP][DEBUG] Iteration 628: step size 1.000e+00, correction pair accepted.
+[MAP]        628     1542.536   5.801517e+02   2.931361e+02
+[MAP][DEBUG] Iteration 629: step size 1.000e+00, correction pair accepted.
+[MAP]        629     1544.854   5.797462e+02   2.721316e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.801953e+02).
+[MAP][DEBUG] Iteration 630: step size 5.000e-01, correction pair accepted.
+[MAP]        630     1548.612   5.794633e+02   7.314091e+02
+[MAP][DEBUG] Iteration 631: step size 1.000e+00, correction pair accepted.
+[MAP]        631     1550.719   5.790318e+02   2.288287e+02
+[MAP][DEBUG] Iteration 632: step size 1.000e+00, correction pair accepted.
+[MAP]        632     1552.878   5.788790e+02   1.945634e+02
+[MAP][DEBUG] Iteration 633: step size 1.000e+00, correction pair accepted.
+[MAP]        633     1554.940   5.787674e+02   2.650417e+02
+[MAP][DEBUG] Iteration 634: step size 1.000e+00, correction pair accepted.
+[MAP]        634     1557.026   5.786291e+02   2.570181e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.790416e+02).
+[MAP][DEBUG] Iteration 635: step size 5.000e-01, correction pair accepted.
+[MAP]        635     1560.822   5.784793e+02   1.098297e+03
+[MAP][DEBUG] Iteration 636: step size 1.000e+00, correction pair accepted.
+[MAP]        636     1563.058   5.782803e+02   2.522590e+02
+[MAP][DEBUG] Iteration 637: step size 1.000e+00, correction pair accepted.
+[MAP]        637     1565.146   5.782488e+02   2.165575e+02
+[MAP][DEBUG] Iteration 638: step size 1.000e+00, correction pair accepted.
+[MAP]        638     1567.270   5.781532e+02   2.151104e+02
+[MAP][DEBUG] Iteration 639: step size 1.000e+00, correction pair accepted.
+[MAP]        639     1569.422   5.778725e+02   4.416854e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.781406e+02).
+[MAP][DEBUG] Iteration 640: step size 5.000e-01, correction pair accepted.
+[MAP]        640     1573.208   5.777610e+02   3.746013e+02
+[MAP][DEBUG] Iteration 641: step size 1.000e+00, correction pair accepted.
+[MAP]        641     1575.257   5.772792e+02   3.766933e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.775301e+02).
+[MAP][DEBUG] Iteration 642: step size 5.000e-01, correction pair accepted.
+[MAP]        642     1579.059   5.769062e+02   5.358834e+02
+[MAP][DEBUG] Iteration 643: step size 1.000e+00, correction pair accepted.
+[MAP]        643     1583.951   5.764888e+02   2.603430e+02
+[MAP][DEBUG] Iteration 644: step size 1.000e+00, correction pair accepted.
+[MAP]        644     1586.157   5.761266e+02   2.584662e+02
+[MAP][DEBUG] Iteration 645: step size 1.000e+00, correction pair accepted.
+[MAP]        645     1588.426   5.754636e+02   3.766963e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.759922e+02).
+[MAP][DEBUG] Iteration 646: step size 5.000e-01, correction pair accepted.
+[MAP]        646     1592.328   5.752985e+02   1.058501e+03
+[MAP][DEBUG] Iteration 647: step size 1.000e+00, correction pair accepted.
+[MAP]        647     1594.512   5.749411e+02   3.808047e+02
+[MAP][DEBUG] Iteration 648: step size 1.000e+00, correction pair accepted.
+[MAP]        648     1596.758   5.748629e+02   3.127799e+02
+[MAP][DEBUG] Iteration 649: step size 1.000e+00, correction pair accepted.
+[MAP]        649     1598.858   5.746687e+02   1.636755e+02
+[MAP][DEBUG] Iteration 650: step size 1.000e+00, correction pair accepted.
+[MAP]        650     1600.840   5.745489e+02   2.432907e+02
+[MAP][DEBUG] Iteration 651: step size 1.000e+00, correction pair accepted.
+[MAP]        651     1602.801   5.744753e+02   9.604263e+02
+[MAP][DEBUG] Iteration 652: step size 1.000e+00, correction pair accepted.
+[MAP]        652     1604.480   5.741069e+02   5.349950e+02
+[MAP][DEBUG] Iteration 653: step size 1.000e+00, correction pair accepted.
+[MAP]        653     1606.329   5.736498e+02   2.435025e+02
+[MAP][DEBUG] Iteration 654: step size 1.000e+00, correction pair accepted.
+[MAP]        654     1608.162   5.733656e+02   2.926380e+02
+[MAP][DEBUG] Iteration 655: step size 1.000e+00, correction pair accepted.
+[MAP]        655     1610.102   5.729767e+02   2.287355e+02
+[MAP][DEBUG] Iteration 656: step size 1.000e+00, correction pair accepted.
+[MAP]        656     1611.901   5.726792e+02   4.658054e+02
+[MAP][DEBUG] Iteration 657: step size 1.000e+00, correction pair accepted.
+[MAP]        657     1613.969   5.724649e+02   1.227051e+03
+[MAP][DEBUG] Iteration 658: step size 1.000e+00, correction pair accepted.
+[MAP]        658     1616.233   5.723387e+02   2.207772e+02
+[MAP][DEBUG] Iteration 659: step size 1.000e+00, correction pair accepted.
+[MAP]        659     1618.538   5.723285e+02   2.133964e+02
+[MAP][DEBUG] Iteration 660: step size 1.000e+00, correction pair accepted.
+[MAP]        660     1620.859   5.722753e+02   3.167031e+02
+[MAP][DEBUG] Iteration 661: step size 1.000e+00, correction pair accepted.
+[MAP]        661     1622.981   5.721647e+02   3.812778e+02
+[MAP][DEBUG] Iteration 662: step size 1.000e+00, correction pair accepted.
+[MAP]        662     1625.235   5.720678e+02   1.270162e+03
+[MAP][DEBUG] Iteration 663: step size 1.000e+00, correction pair accepted.
+[MAP]        663     1627.424   5.716636e+02   4.757111e+02
+[MAP][DEBUG] Iteration 664: step size 1.000e+00, correction pair accepted.
+[MAP]        664     1629.676   5.715123e+02   2.225379e+02
+[MAP][DEBUG] Iteration 665: step size 1.000e+00, correction pair accepted.
+[MAP]        665     1631.968   5.713793e+02   2.296598e+02
+[MAP][DEBUG] Iteration 666: step size 1.000e+00, correction pair accepted.
+[MAP]        666     1634.223   5.713026e+02   2.284119e+02
+[MAP][DEBUG] Iteration 667: step size 1.000e+00, correction pair accepted.
+[MAP]        667     1636.461   5.710199e+02   3.222087e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.802001e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 5.727676e+02).
+[MAP][DEBUG] Backtracking step 2: step size 2.500e-01 rejected (loss 5.711802e+02).
+[MAP][DEBUG] Iteration 668: step size 1.250e-01, correction pair accepted.
+[MAP]        668     1644.241   5.709220e+02   3.582626e+02
+[MAP][DEBUG] Iteration 669: step size 1.000e+00, correction pair accepted.
+[MAP]        669     1646.424   5.707012e+02   2.713929e+02
+[MAP][DEBUG] Iteration 670: step size 1.000e+00, correction pair accepted.
+[MAP]        670     1648.679   5.706988e+02   4.290055e+02
+[MAP][DEBUG] Iteration 671: step size 1.000e+00, correction pair accepted.
+[MAP]        671     1650.954   5.705267e+02   1.891149e+02
+[MAP][DEBUG] Iteration 672: step size 1.000e+00, correction pair accepted.
+[MAP]        672     1653.126   5.704514e+02   1.892330e+02
+[MAP][DEBUG] Iteration 673: step size 1.000e+00, correction pair accepted.
+[MAP]        673     1655.337   5.702150e+02   2.418077e+02
+[MAP][DEBUG] Iteration 674: step size 1.000e+00, correction pair accepted.
+[MAP]        674     1657.560   5.697479e+02   2.041436e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.704315e+02).
+[MAP][DEBUG] Iteration 675: step size 5.000e-01, correction pair accepted.
+[MAP]        675     1661.597   5.695909e+02   1.129558e+03
+[MAP][DEBUG] Iteration 676: step size 1.000e+00, correction pair accepted.
+[MAP]        676     1663.781   5.691271e+02   4.097766e+02
+[MAP][DEBUG] Iteration 677: step size 1.000e+00, correction pair accepted.
+[MAP]        677     1666.016   5.688315e+02   2.884492e+02
+[MAP][DEBUG] Iteration 678: step size 1.000e+00, correction pair accepted.
+[MAP]        678     1668.316   5.686037e+02   3.488123e+02
+[MAP][DEBUG] Iteration 679: step size 1.000e+00, correction pair accepted.
+[MAP]        679     1670.608   5.680430e+02   3.179853e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.828939e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 5.713640e+02).
+[MAP][DEBUG] Backtracking step 2: step size 2.500e-01 rejected (loss 5.686723e+02).
+[MAP][DEBUG] Backtracking step 3: step size 1.250e-01 rejected (loss 5.681004e+02).
+[MAP][DEBUG] Iteration 680: step size 6.250e-02, correction pair accepted.
+[MAP]        680     1680.247   5.680047e+02   6.986886e+02
+[MAP][DEBUG] Iteration 681: step size 1.000e+00, correction pair accepted.
+[MAP]        681     1682.473   5.676674e+02   4.386208e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.676758e+02).
+[MAP][DEBUG] Iteration 682: step size 5.000e-01, correction pair accepted.
+[MAP]        682     1686.442   5.675571e+02   2.668662e+02
+[MAP][DEBUG] Iteration 683: step size 1.000e+00, correction pair accepted.
+[MAP]        683     1688.640   5.674659e+02   3.257413e+02
+[MAP][DEBUG] Iteration 684: step size 1.000e+00, correction pair accepted.
+[MAP]        684     1690.792   5.673242e+02   3.473214e+02
+[MAP][DEBUG] Iteration 685: step size 1.000e+00, correction pair accepted.
+[MAP]        685     1692.969   5.669331e+02   4.310786e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.669352e+02).
+[MAP][DEBUG] Iteration 686: step size 5.000e-01, correction pair accepted.
+[MAP]        686     1697.031   5.666941e+02   2.974969e+02
+[MAP][DEBUG] Iteration 687: step size 1.000e+00, correction pair accepted.
+[MAP]        687     1699.255   5.664977e+02   2.263326e+02
+[MAP][DEBUG] Iteration 688: step size 1.000e+00, correction pair accepted.
+[MAP]        688     1701.444   5.663416e+02   4.880726e+02
+[MAP][DEBUG] Iteration 689: step size 1.000e+00, correction pair accepted.
+[MAP]        689     1703.682   5.662304e+02   2.102418e+02
+[MAP][DEBUG] Iteration 690: step size 1.000e+00, correction pair accepted.
+[MAP]        690     1705.876   5.661017e+02   1.842505e+02
+[MAP][DEBUG] Iteration 691: step size 1.000e+00, correction pair accepted.
+[MAP]        691     1708.066   5.659393e+02   4.254549e+02
+[MAP][DEBUG] Iteration 692: step size 1.000e+00, correction pair accepted.
+[MAP]        692     1710.233   5.655817e+02   5.067710e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.813119e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 5.689784e+02).
+[MAP][DEBUG] Backtracking step 2: step size 2.500e-01 rejected (loss 5.661599e+02).
+[MAP][DEBUG] Backtracking step 3: step size 1.250e-01 rejected (loss 5.655922e+02).
+[MAP][DEBUG] Iteration 693: step size 6.250e-02, correction pair accepted.
+[MAP]        693     1719.687   5.655149e+02   1.005963e+03
+[MAP][DEBUG] Iteration 694: step size 1.000e+00, correction pair accepted.
+[MAP]        694     1721.937   5.651139e+02   7.785196e+02
+[MAP][DEBUG] Iteration 695: step size 1.000e+00, correction pair accepted.
+[MAP]        695     1724.214   5.646054e+02   3.926097e+02
+[MAP][DEBUG] Iteration 696: step size 1.000e+00, correction pair accepted.
+[MAP]        696     1726.417   5.642968e+02   2.442185e+02
+[MAP][DEBUG] Iteration 697: step size 1.000e+00, correction pair accepted.
+[MAP]        697     1728.614   5.641391e+02   3.186224e+02
+[MAP][DEBUG] Iteration 698: step size 1.000e+00, correction pair accepted.
+[MAP]        698     1730.810   5.638830e+02   3.132037e+02
+[MAP][DEBUG] Iteration 699: step size 1.000e+00, correction pair accepted.
+[MAP]        699     1733.097   5.634661e+02   4.691140e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.669128e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 5.638760e+02).
+[MAP][DEBUG] Iteration 700: step size 2.500e-01, correction pair accepted.
+[MAP]        700     1739.005   5.633435e+02   5.165084e+02
+[MAP][DEBUG] Iteration 701: step size 1.000e+00, correction pair accepted.
+[MAP]        701     1741.220   5.631547e+02   2.966351e+02
+[MAP][DEBUG] Iteration 702: step size 1.000e+00, correction pair accepted.
+[MAP]        702     1743.353   5.630260e+02   1.488551e+02
+[MAP][DEBUG] Iteration 703: step size 1.000e+00, correction pair accepted.
+[MAP]        703     1745.583   5.629142e+02   1.698087e+02
+[MAP][DEBUG] Iteration 704: step size 1.000e+00, correction pair accepted.
+[MAP]        704     1747.838   5.628521e+02   5.232258e+02
+[MAP][DEBUG] Iteration 705: step size 1.000e+00, correction pair accepted.
+[MAP]        705     1750.035   5.626916e+02   2.527350e+02
+[MAP][DEBUG] Iteration 706: step size 1.000e+00, correction pair accepted.
+[MAP]        706     1752.259   5.625645e+02   2.715994e+02
+[MAP][DEBUG] Iteration 707: step size 1.000e+00, correction pair accepted.
+[MAP]        707     1754.456   5.622973e+02   2.327998e+02
+[MAP][DEBUG] Iteration 708: step size 1.000e+00, correction pair accepted.
+[MAP]        708     1756.631   5.620577e+02   4.387738e+02
+[MAP][DEBUG] Iteration 709: step size 1.000e+00, correction pair accepted.
+[MAP]        709     1758.855   5.617371e+02   3.249666e+02
+[MAP][DEBUG] Iteration 710: step size 1.000e+00, correction pair accepted.
+[MAP]        710     1761.043   5.615969e+02   1.880475e+02
+[MAP][DEBUG] Iteration 711: step size 1.000e+00, correction pair accepted.
+[MAP]        711     1763.307   5.614553e+02   1.910188e+02
+[MAP][DEBUG] Iteration 712: step size 1.000e+00, correction pair accepted.
+[MAP]        712     1765.543   5.612948e+02   3.201656e+02
+[MAP][DEBUG] Iteration 713: step size 1.000e+00, correction pair accepted.
+[MAP]        713     1767.859   5.611497e+02   3.754901e+02
+[MAP][DEBUG] Iteration 714: step size 1.000e+00, correction pair accepted.
+[MAP]        714     1770.066   5.610238e+02   2.245390e+02
+[MAP][DEBUG] Iteration 715: step size 1.000e+00, correction pair accepted.
+[MAP]        715     1772.313   5.609656e+02   1.668971e+02
+[MAP][DEBUG] Iteration 716: step size 1.000e+00, correction pair accepted.
+[MAP]        716     1774.492   5.608640e+02   2.128397e+02
+[MAP][DEBUG] Iteration 717: step size 1.000e+00, correction pair accepted.
+[MAP]        717     1776.665   5.606524e+02   7.053860e+02
+[MAP][DEBUG] Iteration 718: step size 1.000e+00, correction pair accepted.
+[MAP]        718     1778.946   5.603848e+02   3.484132e+02
+[MAP][DEBUG] Iteration 719: step size 1.000e+00, correction pair accepted.
+[MAP]        719     1781.144   5.601482e+02   2.458381e+02
+[MAP][DEBUG] Iteration 720: step size 1.000e+00, correction pair accepted.
+[MAP]        720     1783.240   5.599841e+02   1.818228e+02
+[MAP][DEBUG] Iteration 721: step size 1.000e+00, correction pair accepted.
+[MAP]        721     1785.486   5.597505e+02   2.711523e+02
+[MAP][DEBUG] Iteration 722: step size 1.000e+00, correction pair accepted.
+[MAP]        722     1787.686   5.596510e+02   2.183034e+02
+[MAP][DEBUG] Iteration 723: step size 1.000e+00, correction pair accepted.
+[MAP]        723     1789.906   5.595254e+02   1.745270e+02
+[MAP][DEBUG] Iteration 724: step size 1.000e+00, correction pair accepted.
+[MAP]        724     1792.176   5.591452e+02   1.543796e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.596102e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 5.591858e+02).
+[MAP][DEBUG] Iteration 725: step size 2.500e-01, correction pair accepted.
+[MAP]        725     1798.088   5.591206e+02   5.348130e+02
+[MAP][DEBUG] Iteration 726: step size 1.000e+00, correction pair accepted.
+[MAP]        726     1800.185   5.589825e+02   2.867183e+02
+[MAP][DEBUG] Iteration 727: step size 1.000e+00, correction pair accepted.
+[MAP]        727     1802.424   5.588822e+02   1.260333e+02
+[MAP][DEBUG] Iteration 728: step size 1.000e+00, correction pair accepted.
+[MAP]        728     1804.599   5.588327e+02   2.038204e+02
+[MAP][DEBUG] Iteration 729: step size 1.000e+00, correction pair accepted.
+[MAP]        729     1806.780   5.587554e+02   2.855202e+02
+[MAP][DEBUG] Iteration 730: step size 1.000e+00, correction pair accepted.
+[MAP]        730     1808.961   5.586275e+02   3.616007e+02
+[MAP][DEBUG] Iteration 731: step size 1.000e+00, correction pair accepted.
+[MAP]        731     1811.167   5.585281e+02   3.658423e+02
+[MAP][DEBUG] Iteration 732: step size 1.000e+00, correction pair accepted.
+[MAP]        732     1813.456   5.582560e+02   1.898658e+02
+[MAP][DEBUG] Iteration 733: step size 1.000e+00, correction pair accepted.
+[MAP]        733     1815.668   5.580651e+02   1.636295e+02
+[MAP][DEBUG] Iteration 734: step size 1.000e+00, correction pair accepted.
+[MAP]        734     1817.996   5.576901e+02   1.769293e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.586287e+02).
+[MAP][DEBUG] Iteration 735: step size 5.000e-01, correction pair accepted.
+[MAP]        735     1822.103   5.576546e+02   5.760803e+02
+[MAP][DEBUG] Iteration 736: step size 1.000e+00, correction pair accepted.
+[MAP]        736     1824.384   5.573534e+02   3.241772e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.577000e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 5.573708e+02).
+[MAP][DEBUG] Iteration 737: step size 2.500e-01, correction pair accepted.
+[MAP]        737     1830.365   5.573221e+02   2.612180e+02
+[MAP][DEBUG] Iteration 738: step size 1.000e+00, correction pair accepted.
+[MAP]        738     1832.575   5.572457e+02   1.836703e+02
+[MAP][DEBUG] Iteration 739: step size 1.000e+00, correction pair accepted.
+[MAP]        739     1834.791   5.571318e+02   2.528461e+02
+[MAP][DEBUG] Iteration 740: step size 1.000e+00, correction pair accepted.
+[MAP]        740     1836.943   5.569717e+02   5.790854e+02
+[MAP][DEBUG] Iteration 741: step size 1.000e+00, correction pair accepted.
+[MAP]        741     1839.127   5.568372e+02   3.599537e+02
+[MAP][DEBUG] Iteration 742: step size 1.000e+00, correction pair accepted.
+[MAP]        742     1841.404   5.566853e+02   1.630229e+02
+[MAP][DEBUG] Iteration 743: step size 1.000e+00, correction pair accepted.
+[MAP]        743     1843.568   5.565784e+02   1.208050e+02
+[MAP][DEBUG] Iteration 744: step size 1.000e+00, correction pair accepted.
+[MAP]        744     1845.791   5.563908e+02   1.491486e+02
+[MAP][DEBUG] Iteration 745: step size 1.000e+00, correction pair accepted.
+[MAP]        745     1848.088   5.561575e+02   2.511605e+02
+[MAP][DEBUG] Iteration 746: step size 1.000e+00, correction pair accepted.
+[MAP]        746     1850.376   5.558638e+02   1.829331e+02
+[MAP][DEBUG] Iteration 747: step size 1.000e+00, correction pair accepted.
+[MAP]        747     1852.503   5.557118e+02   1.508527e+02
+[MAP][DEBUG] Iteration 748: step size 1.000e+00, correction pair accepted.
+[MAP]        748     1854.691   5.556502e+02   1.827942e+02
+[MAP][DEBUG] Iteration 749: step size 1.000e+00, correction pair accepted.
+[MAP]        749     1856.884   5.556177e+02   4.543682e+02
+[MAP][DEBUG] Iteration 750: step size 1.000e+00, correction pair accepted.
+[MAP]        750     1859.092   5.555396e+02   1.782036e+02
+[MAP][DEBUG] Iteration 751: step size 1.000e+00, correction pair accepted.
+[MAP]        751     1861.349   5.554121e+02   4.069631e+02
+[MAP][DEBUG] Iteration 752: step size 1.000e+00, correction pair accepted.
+[MAP]        752     1863.477   5.552513e+02   5.104551e+02
+[MAP][DEBUG] Iteration 753: step size 1.000e+00, correction pair accepted.
+[MAP]        753     1865.682   5.551025e+02   4.578945e+02
+[MAP][DEBUG] Iteration 754: step size 1.000e+00, correction pair accepted.
+[MAP]        754     1867.919   5.549711e+02   2.802668e+02
+[MAP][DEBUG] Iteration 755: step size 1.000e+00, correction pair accepted.
+[MAP]        755     1870.143   5.548934e+02   3.124038e+02
+[MAP][DEBUG] Iteration 756: step size 1.000e+00, correction pair accepted.
+[MAP]        756     1872.393   5.546776e+02   7.137864e+02
+[MAP][DEBUG] Iteration 757: step size 1.000e+00, correction pair accepted.
+[MAP]        757     1874.616   5.543606e+02   6.851867e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.546340e+02).
+[MAP][DEBUG] Iteration 758: step size 5.000e-01, correction pair accepted.
+[MAP]        758     1878.618   5.539698e+02   4.881143e+02
+[MAP][DEBUG] Iteration 759: step size 1.000e+00, correction pair accepted.
+[MAP]        759     1880.798   5.534274e+02   2.227787e+02
+[MAP][DEBUG] Iteration 760: step size 1.000e+00, correction pair accepted.
+[MAP]        760     1883.047   5.532261e+02   6.877421e+02
+[MAP][DEBUG] Iteration 761: step size 1.000e+00, correction pair accepted.
+[MAP]        761     1885.289   5.530170e+02   4.823458e+02
+[MAP][DEBUG] Iteration 762: step size 1.000e+00, correction pair accepted.
+[MAP]        762     1887.508   5.529171e+02   4.364903e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.530336e+02).
+[MAP][DEBUG] Iteration 763: step size 5.000e-01, correction pair accepted.
+[MAP]        763     1891.504   5.528194e+02   2.616364e+02
+[MAP][DEBUG] Iteration 764: step size 1.000e+00, correction pair accepted.
+[MAP]        764     1893.737   5.527463e+02   2.020380e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.530320e+02).
+[MAP][DEBUG] Iteration 765: step size 5.000e-01, correction pair accepted.
+[MAP]        765     1897.771   5.527399e+02   6.926467e+02
+[MAP][DEBUG] Iteration 766: step size 1.000e+00, correction pair accepted.
+[MAP]        766     1900.018   5.526455e+02   3.455577e+02
+[MAP][DEBUG] Iteration 767: step size 1.000e+00, correction pair accepted.
+[MAP]        767     1902.267   5.525721e+02   1.496500e+02
+[MAP][DEBUG] Iteration 768: step size 1.000e+00, correction pair accepted.
+[MAP]        768     1904.554   5.525136e+02   1.403375e+02
+[MAP][DEBUG] Iteration 769: step size 1.000e+00, correction pair accepted.
+[MAP]        769     1906.730   5.523819e+02   1.661555e+02
+[MAP][DEBUG] Iteration 770: step size 1.000e+00, correction pair accepted.
+[MAP]        770     1908.907   5.523050e+02   8.870663e+02
+[MAP][DEBUG] Iteration 771: step size 1.000e+00, correction pair accepted.
+[MAP]        771     1911.042   5.518241e+02   4.286694e+02
+[MAP][DEBUG] Iteration 772: step size 1.000e+00, correction pair accepted.
+[MAP]        772     1913.192   5.516740e+02   4.142196e+02
+[MAP][DEBUG] Iteration 773: step size 1.000e+00, correction pair accepted.
+[MAP]        773     1915.306   5.515213e+02   2.836142e+02
+[MAP][DEBUG] Iteration 774: step size 1.000e+00, correction pair accepted.
+[MAP]        774     1917.562   5.513124e+02   1.550333e+02
+[MAP][DEBUG] Iteration 775: step size 1.000e+00, correction pair accepted.
+[MAP]        775     1919.745   5.510951e+02   1.805303e+02
+[MAP][DEBUG] Iteration 776: step size 1.000e+00, correction pair accepted.
+[MAP]        776     1922.012   5.509601e+02   7.781113e+02
+[MAP][DEBUG] Iteration 777: step size 1.000e+00, correction pair accepted.
+[MAP]        777     1924.209   5.507226e+02   4.123852e+02
+[MAP][DEBUG] Iteration 778: step size 1.000e+00, correction pair accepted.
+[MAP]        778     1926.363   5.506310e+02   3.326238e+02
+[MAP][DEBUG] Iteration 779: step size 1.000e+00, correction pair accepted.
+[MAP]        779     1928.520   5.503204e+02   2.580683e+02
+[MAP][DEBUG] Iteration 780: step size 1.000e+00, correction pair accepted.
+[MAP]        780     1930.886   5.499360e+02   3.769023e+02
+[MAP][DEBUG] Iteration 781: step size 1.000e+00, correction pair accepted.
+[MAP]        781     1933.219   5.498743e+02   6.181314e+02
+[MAP][DEBUG] Iteration 782: step size 1.000e+00, correction pair accepted.
+[MAP]        782     1935.509   5.493549e+02   5.972211e+02
+[MAP][DEBUG] Iteration 783: step size 1.000e+00, correction pair accepted.
+[MAP]        783     1937.799   5.486596e+02   4.388773e+02
+[MAP][DEBUG] Iteration 784: step size 1.000e+00, correction pair accepted.
+[MAP]        784     1939.844   5.483875e+02   6.457638e+02
+[MAP][DEBUG] Iteration 785: step size 1.000e+00, correction pair accepted.
+[MAP]        785     1941.948   5.482073e+02   3.391948e+02
+[MAP][DEBUG] Iteration 786: step size 1.000e+00, correction pair accepted.
+[MAP]        786     1944.019   5.481438e+02   1.587906e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.481562e+02).
+[MAP][DEBUG] Iteration 787: step size 5.000e-01, correction pair accepted.
+[MAP]        787     1947.864   5.481361e+02   1.586355e+02
+[MAP][DEBUG] Iteration 788: step size 1.000e+00, correction pair accepted.
+[MAP]        788     1949.896   5.481309e+02   1.895035e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.486043e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 5.482355e+02).
+[MAP][DEBUG] Backtracking step 2: step size 2.500e-01 rejected (loss 5.481471e+02).
+[MAP][DEBUG] Iteration 789: step size 1.250e-01, correction pair accepted.
+[MAP]        789     1957.086   5.481306e+02   1.210990e+02
+[MAP][DEBUG] Iteration 790: step size 1.000e+00, correction pair accepted.
+[MAP]        790     1959.172   5.481130e+02   1.491995e+02
+[MAP][DEBUG] Iteration 791: step size 1.000e+00, correction pair accepted.
+[MAP]        791     1961.329   5.480144e+02   1.502505e+02
+[MAP][DEBUG] Iteration 792: step size 1.000e+00, correction pair accepted.
+[MAP]        792     1963.487   5.476577e+02   2.263869e+02
+[MAP][DEBUG] Iteration 793: step size 1.000e+00, correction pair accepted.
+[MAP]        793     1965.577   5.471393e+02   3.133820e+02
+[MAP][DEBUG] Iteration 794: step size 1.000e+00, correction pair accepted.
+[MAP]        794     1967.639   5.466110e+02   4.719071e+02
+[MAP][DEBUG] Iteration 795: step size 1.000e+00, correction pair accepted.
+[MAP]        795     1969.710   5.462369e+02   7.079999e+02
+[MAP][DEBUG] Iteration 796: step size 1.000e+00, correction pair accepted.
+[MAP]        796     1971.820   5.460879e+02   2.416398e+02
+[MAP][DEBUG] Iteration 797: step size 1.000e+00, correction pair accepted.
+[MAP]        797     1973.876   5.460397e+02   1.926742e+02
+[MAP][DEBUG] Iteration 798: step size 1.000e+00, correction pair accepted.
+[MAP]        798     1976.025   5.459961e+02   2.365258e+02
+[MAP][DEBUG] Iteration 799: step size 1.000e+00, correction pair accepted.
+[MAP]        799     1978.131   5.458451e+02   4.987444e+02
+[MAP][DEBUG] Iteration 800: step size 1.000e+00, correction pair accepted.
+[MAP]        800     1980.378   5.456720e+02   4.735164e+02
+[MAP][DEBUG] Iteration 801: step size 1.000e+00, correction pair accepted.
+[MAP]        801     1982.427   5.454275e+02   3.629834e+02
+[MAP][DEBUG] Iteration 802: step size 1.000e+00, correction pair accepted.
+[MAP]        802     1984.532   5.451009e+02   3.500118e+02
+[MAP][DEBUG] Iteration 803: step size 1.000e+00, correction pair accepted.
+[MAP]        803     1986.686   5.446266e+02   2.671243e+02
+[MAP][DEBUG] Iteration 804: step size 1.000e+00, correction pair accepted.
+[MAP]        804     1988.845   5.443915e+02   2.994192e+02
+[MAP][DEBUG] Iteration 805: step size 1.000e+00, correction pair accepted.
+[MAP]        805     1991.022   5.443602e+02   6.610718e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.446251e+02).
+[MAP][DEBUG] Iteration 806: step size 5.000e-01, correction pair accepted.
+[MAP]        806     1994.885   5.440831e+02   8.967608e+02
+[MAP][DEBUG] Iteration 807: step size 1.000e+00, correction pair accepted.
+[MAP]        807     1996.938   5.437754e+02   2.614615e+02
+[MAP][DEBUG] Iteration 808: step size 1.000e+00, correction pair accepted.
+[MAP]        808     1999.000   5.437076e+02   1.680035e+02
+[MAP][DEBUG] Iteration 809: step size 1.000e+00, correction pair accepted.
+[MAP]        809     2001.091   5.436350e+02   2.302291e+02
+[MAP][DEBUG] Iteration 810: step size 1.000e+00, correction pair accepted.
+[MAP]        810     2003.378   5.435190e+02   2.262111e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.443791e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 5.436225e+02).
+[MAP][DEBUG] Iteration 811: step size 2.500e-01, correction pair accepted.
+[MAP]        811     2008.870   5.434893e+02   7.071184e+02
+[MAP][DEBUG] Iteration 812: step size 1.000e+00, correction pair accepted.
+[MAP]        812     2010.941   5.433088e+02   3.729760e+02
+[MAP][DEBUG] Iteration 813: step size 1.000e+00, correction pair accepted.
+[MAP]        813     2012.991   5.432070e+02   1.596496e+02
+[MAP][DEBUG] Iteration 814: step size 1.000e+00, correction pair accepted.
+[MAP]        814     2015.036   5.431664e+02   2.568391e+02
+[MAP][DEBUG] Iteration 815: step size 1.000e+00, correction pair accepted.
+[MAP]        815     2017.131   5.430967e+02   3.005224e+02
+[MAP][DEBUG] Iteration 816: step size 1.000e+00, correction pair accepted.
+[MAP]        816     2019.195   5.428602e+02   3.305900e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.433082e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 5.428884e+02).
+[MAP][DEBUG] Iteration 817: step size 2.500e-01, correction pair accepted.
+[MAP]        817     2024.880   5.428235e+02   2.113751e+02
+[MAP][DEBUG] Iteration 818: step size 1.000e+00, correction pair accepted.
+[MAP]        818     2026.960   5.427782e+02   2.441532e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.456481e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 5.432689e+02).
+[MAP][DEBUG] Backtracking step 2: step size 2.500e-01 rejected (loss 5.427841e+02).
+[MAP][DEBUG] Iteration 819: step size 1.250e-01, correction pair accepted.
+[MAP]        819     2034.281   5.427258e+02   3.094427e+02
+[MAP][DEBUG] Iteration 820: step size 1.000e+00, correction pair accepted.
+[MAP]        820     2036.344   5.426366e+02   2.689267e+02
+[MAP][DEBUG] Iteration 821: step size 1.000e+00, correction pair accepted.
+[MAP]        821     2038.447   5.425254e+02   2.436782e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.425281e+02).
+[MAP][DEBUG] Iteration 822: step size 5.000e-01, correction pair accepted.
+[MAP]        822     2042.329   5.424092e+02   4.839976e+02
+[MAP][DEBUG] Iteration 823: step size 1.000e+00, correction pair accepted.
+[MAP]        823     2044.406   5.422532e+02   2.541046e+02
+[MAP][DEBUG] Iteration 824: step size 1.000e+00, correction pair accepted.
+[MAP]        824     2046.541   5.421232e+02   1.993804e+02
+[MAP][DEBUG] Iteration 825: step size 1.000e+00, correction pair accepted.
+[MAP]        825     2048.697   5.420174e+02   2.588924e+02
+[MAP][DEBUG] Iteration 826: step size 1.000e+00, correction pair accepted.
+[MAP]        826     2050.775   5.418102e+02   2.917478e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.437485e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 5.420624e+02).
+[MAP][DEBUG] Iteration 827: step size 2.500e-01, correction pair accepted.
+[MAP]        827     2056.545   5.417551e+02   6.934154e+02
+[MAP][DEBUG] Iteration 828: step size 1.000e+00, correction pair accepted.
+[MAP]        828     2058.612   5.416012e+02   2.526537e+02
+[MAP][DEBUG] Iteration 829: step size 1.000e+00, correction pair accepted.
+[MAP]        829     2060.992   5.415671e+02   1.451854e+02
+[MAP][DEBUG] Iteration 830: step size 1.000e+00, correction pair accepted.
+[MAP]        830     2062.975   5.415600e+02   1.781609e+02
+[MAP][DEBUG] Iteration 831: step size 1.000e+00, correction pair accepted.
+[MAP]        831     2065.072   5.415499e+02   4.651975e+02
+[MAP][DEBUG] Iteration 832: step size 1.000e+00, correction pair accepted.
+[MAP]        832     2067.202   5.415244e+02   2.819586e+02
+[MAP][DEBUG] Iteration 833: step size 1.000e+00, correction pair accepted.
+[MAP]        833     2069.333   5.414560e+02   2.283784e+02
+[MAP][DEBUG] Iteration 834: step size 1.000e+00, correction pair accepted.
+[MAP]        834     2071.443   5.414018e+02   5.330227e+02
+[MAP][DEBUG] Iteration 835: step size 1.000e+00, correction pair accepted.
+[MAP]        835     2073.460   5.413075e+02   4.115445e+02
+[MAP][DEBUG] Iteration 836: step size 1.000e+00, correction pair accepted.
+[MAP]        836     2075.693   5.411566e+02   1.486090e+02
+[MAP][DEBUG] Iteration 837: step size 1.000e+00, correction pair accepted.
+[MAP]        837     2077.876   5.410915e+02   1.784632e+02
+[MAP][DEBUG] Iteration 838: step size 1.000e+00, correction pair accepted.
+[MAP]        838     2080.080   5.410120e+02   3.127330e+02
+[MAP][DEBUG] Iteration 839: step size 1.000e+00, correction pair accepted.
+[MAP]        839     2082.271   5.408753e+02   2.377687e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.411061e+02).
+[MAP][DEBUG] Iteration 840: step size 5.000e-01, correction pair accepted.
+[MAP]        840     2086.129   5.408135e+02   5.709475e+02
+[MAP][DEBUG] Iteration 841: step size 1.000e+00, correction pair accepted.
+[MAP]        841     2088.227   5.406480e+02   2.353052e+02
+[MAP][DEBUG] Iteration 842: step size 1.000e+00, correction pair accepted.
+[MAP]        842     2090.362   5.405177e+02   3.066302e+02
+[MAP][DEBUG] Iteration 843: step size 1.000e+00, correction pair accepted.
+[MAP]        843     2092.409   5.404134e+02   4.610840e+02
+[MAP][DEBUG] Iteration 844: step size 1.000e+00, correction pair accepted.
+[MAP]        844     2094.501   5.401813e+02   4.889479e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.408119e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 5.401882e+02).
+[MAP][DEBUG] Iteration 845: step size 2.500e-01, correction pair accepted.
+[MAP]        845     2100.229   5.401057e+02   9.658453e+02
+[MAP][DEBUG] Iteration 846: step size 1.000e+00, correction pair accepted.
+[MAP]        846     2102.349   5.398658e+02   5.316532e+02
+[MAP][DEBUG] Iteration 847: step size 1.000e+00, correction pair accepted.
+[MAP]        847     2104.432   5.397159e+02   2.198947e+02
+[MAP][DEBUG] Iteration 848: step size 1.000e+00, correction pair accepted.
+[MAP]        848     2106.538   5.396440e+02   2.947536e+02
+[MAP][DEBUG] Iteration 849: step size 1.000e+00, correction pair accepted.
+[MAP]        849     2108.680   5.396084e+02   2.315514e+02
+[MAP][DEBUG] Iteration 850: step size 1.000e+00, correction pair accepted.
+[MAP]        850     2110.778   5.395670e+02   1.975021e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.395994e+02).
+[MAP][DEBUG] Iteration 851: step size 5.000e-01, correction pair accepted.
+[MAP]        851     2114.581   5.395442e+02   1.850965e+02
+[MAP][DEBUG] Iteration 852: step size 1.000e+00, correction pair accepted.
+[MAP]        852     2116.592   5.395209e+02   2.587990e+02
+[MAP][DEBUG] Iteration 853: step size 1.000e+00, correction pair accepted.
+[MAP]        853     2118.735   5.394605e+02   2.446643e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.416557e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 5.399056e+02).
+[MAP][DEBUG] Backtracking step 2: step size 2.500e-01 rejected (loss 5.395210e+02).
+[MAP][DEBUG] Iteration 854: step size 1.250e-01, correction pair accepted.
+[MAP]        854     2126.244   5.394478e+02   4.391008e+02
+[MAP][DEBUG] Iteration 855: step size 1.000e+00, correction pair accepted.
+[MAP]        855     2128.343   5.393571e+02   3.217365e+02
+[MAP][DEBUG] Iteration 856: step size 1.000e+00, correction pair accepted.
+[MAP]        856     2130.466   5.391336e+02   4.410343e+02
+[MAP][DEBUG] Iteration 857: step size 1.000e+00, correction pair accepted.
+[MAP]        857     2132.594   5.389928e+02   4.467095e+02
+[MAP][DEBUG] Iteration 858: step size 1.000e+00, correction pair accepted.
+[MAP]        858     2134.662   5.386878e+02   5.351292e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.412307e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 5.389969e+02).
+[MAP][DEBUG] Iteration 859: step size 2.500e-01, correction pair accepted.
+[MAP]        859     2140.489   5.386026e+02   4.972445e+02
+[MAP][DEBUG] Iteration 860: step size 1.000e+00, correction pair accepted.
+[MAP]        860     2142.581   5.383069e+02   2.306199e+02
+[MAP][DEBUG] Iteration 861: step size 1.000e+00, correction pair accepted.
+[MAP]        861     2144.667   5.381974e+02   2.237253e+02
+[MAP][DEBUG] Iteration 862: step size 1.000e+00, correction pair accepted.
+[MAP]        862     2146.750   5.380728e+02   4.757338e+02
+[MAP][DEBUG] Iteration 863: step size 1.000e+00, correction pair accepted.
+[MAP]        863     2148.831   5.379931e+02   2.527328e+02
+[MAP][DEBUG] Iteration 864: step size 1.000e+00, correction pair accepted.
+[MAP]        864     2150.909   5.379105e+02   1.752122e+02
+[MAP][DEBUG] Iteration 865: step size 1.000e+00, correction pair accepted.
+[MAP]        865     2153.062   5.377663e+02   1.375059e+02
+[MAP][DEBUG] Iteration 866: step size 1.000e+00, correction pair accepted.
+[MAP]        866     2155.192   5.374915e+02   3.304152e+02
+[MAP][DEBUG] Iteration 867: step size 1.000e+00, correction pair accepted.
+[MAP]        867     2157.293   5.373736e+02   3.530767e+02
+[MAP][DEBUG] Iteration 868: step size 1.000e+00, correction pair accepted.
+[MAP]        868     2159.387   5.371219e+02   4.449976e+02
+[MAP][DEBUG] Iteration 869: step size 1.000e+00, correction pair accepted.
+[MAP]        869     2161.609   5.370963e+02   2.090341e+02
+[MAP][DEBUG] Iteration 870: step size 1.000e+00, correction pair accepted.
+[MAP]        870     2163.724   5.370939e+02   1.485448e+02
+[MAP][DEBUG] Iteration 871: step size 1.000e+00, correction pair accepted.
+[MAP]        871     2165.741   5.370893e+02   2.179072e+02
+[MAP][DEBUG] Iteration 872: step size 1.000e+00, correction pair accepted.
+[MAP]        872     2167.828   5.370833e+02   4.558221e+02
+[MAP][DEBUG] Iteration 873: step size 1.000e+00, correction pair accepted.
+[MAP]        873     2169.881   5.370686e+02   2.355219e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.371076e+02).
+[MAP][DEBUG] Iteration 874: step size 5.000e-01, correction pair accepted.
+[MAP]        874     2173.748   5.370516e+02   3.876614e+02
+[MAP][DEBUG] Iteration 875: step size 1.000e+00, correction pair accepted.
+[MAP]        875     2175.903   5.369948e+02   3.426379e+02
+[MAP][DEBUG] Iteration 876: step size 1.000e+00, correction pair accepted.
+[MAP]        876     2178.078   5.368350e+02   1.915750e+02
+[MAP][DEBUG] Iteration 877: step size 1.000e+00, correction pair accepted.
+[MAP]        877     2180.051   5.366948e+02   2.421912e+02
+[MAP][DEBUG] Iteration 878: step size 1.000e+00, correction pair accepted.
+[MAP]        878     2182.370   5.363203e+02   4.232018e+02
+[MAP][DEBUG] Iteration 879: step size 1.000e+00, correction pair accepted.
+[MAP]        879     2184.445   5.359850e+02   2.493020e+02
+[MAP][DEBUG] Iteration 880: step size 1.000e+00, correction pair accepted.
+[MAP]        880     2186.527   5.357625e+02   3.269724e+02
+[MAP][DEBUG] Iteration 881: step size 1.000e+00, correction pair accepted.
+[MAP]        881     2188.564   5.356433e+02   2.169915e+02
+[MAP][DEBUG] Iteration 882: step size 1.000e+00, correction pair accepted.
+[MAP]        882     2190.656   5.355704e+02   3.445453e+02
+[MAP][DEBUG] Iteration 883: step size 1.000e+00, correction pair accepted.
+[MAP]        883     2192.715   5.354171e+02   3.104498e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.354720e+02).
+[MAP][DEBUG] Iteration 884: step size 5.000e-01, correction pair accepted.
+[MAP]        884     2196.671   5.353129e+02   9.558327e+02
+[MAP][DEBUG] Iteration 885: step size 1.000e+00, correction pair accepted.
+[MAP]        885     2198.764   5.350781e+02   4.386098e+02
+[MAP][DEBUG] Iteration 886: step size 1.000e+00, correction pair accepted.
+[MAP]        886     2200.971   5.349426e+02   1.960399e+02
+[MAP][DEBUG] Iteration 887: step size 1.000e+00, correction pair accepted.
+[MAP]        887     2203.133   5.348330e+02   2.990057e+02
+[MAP][DEBUG] Iteration 888: step size 1.000e+00, correction pair accepted.
+[MAP]        888     2205.224   5.346609e+02   3.993700e+02
+[MAP][DEBUG] Iteration 889: step size 1.000e+00, correction pair accepted.
+[MAP]        889     2207.342   5.343324e+02   4.406262e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.344303e+02).
+[MAP][DEBUG] Iteration 890: step size 5.000e-01, correction pair accepted.
+[MAP]        890     2211.155   5.340820e+02   8.496943e+02
+[MAP][DEBUG] Iteration 891: step size 1.000e+00, correction pair accepted.
+[MAP]        891     2213.244   5.337229e+02   3.292671e+02
+[MAP][DEBUG] Iteration 892: step size 1.000e+00, correction pair accepted.
+[MAP]        892     2215.297   5.335890e+02   1.396416e+02
+[MAP][DEBUG] Iteration 893: step size 1.000e+00, correction pair accepted.
+[MAP]        893     2217.402   5.335553e+02   2.063470e+02
+[MAP][DEBUG] Iteration 894: step size 1.000e+00, correction pair accepted.
+[MAP]        894     2219.540   5.335061e+02   1.830900e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.340444e+02).
+[MAP][DEBUG] Iteration 895: step size 5.000e-01, correction pair accepted.
+[MAP]        895     2223.607   5.335045e+02   1.047936e+03
+[MAP][DEBUG] Iteration 896: step size 1.000e+00, correction pair accepted.
+[MAP]        896     2225.744   5.332775e+02   1.543517e+02
+[MAP][DEBUG] Iteration 897: step size 1.000e+00, correction pair accepted.
+[MAP]        897     2227.885   5.331705e+02   3.293789e+02
+[MAP][DEBUG] Iteration 898: step size 1.000e+00, correction pair accepted.
+[MAP]        898     2229.976   5.330190e+02   3.756740e+02
+[MAP][DEBUG] Iteration 899: step size 1.000e+00, correction pair accepted.
+[MAP]        899     2232.114   5.327854e+02   4.634224e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.327959e+02).
+[MAP][DEBUG] Iteration 900: step size 5.000e-01, correction pair accepted.
+[MAP]        900     2235.902   5.326324e+02   1.951862e+02
+[MAP][DEBUG] Iteration 901: step size 1.000e+00, correction pair accepted.
+[MAP]        901     2238.029   5.324113e+02   2.133285e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.332921e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 5.325132e+02).
+[MAP][DEBUG] Iteration 902: step size 2.500e-01, correction pair accepted.
+[MAP]        902     2243.546   5.323743e+02   2.486669e+02
+[MAP][DEBUG] Iteration 903: step size 1.000e+00, correction pair accepted.
+[MAP]        903     2245.663   5.322851e+02   2.442822e+02
+[MAP][DEBUG] Iteration 904: step size 1.000e+00, correction pair accepted.
+[MAP]        904     2247.930   5.319722e+02   2.157167e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.325114e+02).
+[MAP][DEBUG] Iteration 905: step size 5.000e-01, correction pair accepted.
+[MAP]        905     2251.817   5.319156e+02   5.028906e+02
+[MAP][DEBUG] Iteration 906: step size 1.000e+00, correction pair accepted.
+[MAP]        906     2253.931   5.316410e+02   1.270858e+02
+[MAP][DEBUG] Iteration 907: step size 1.000e+00, correction pair accepted.
+[MAP]        907     2256.051   5.315645e+02   1.465139e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.350790e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 5.323458e+02).
+[MAP][DEBUG] Backtracking step 2: step size 2.500e-01 rejected (loss 5.317070e+02).
+[MAP][DEBUG] Backtracking step 3: step size 1.250e-01 rejected (loss 5.315747e+02).
+[MAP][DEBUG] Iteration 908: step size 6.250e-02, correction pair accepted.
+[MAP]        908     2265.344   5.315554e+02   2.800688e+02
+[MAP][DEBUG] Iteration 909: step size 1.000e+00, correction pair accepted.
+[MAP]        909     2267.456   5.315290e+02   2.115467e+02
+[MAP][DEBUG] Iteration 910: step size 1.000e+00, correction pair accepted.
+[MAP]        910     2269.561   5.314310e+02   1.413657e+02
+[MAP][DEBUG] Iteration 911: step size 1.000e+00, correction pair accepted.
+[MAP]        911     2271.785   5.311738e+02   2.863244e+02
+[MAP][DEBUG] Iteration 912: step size 1.000e+00, correction pair accepted.
+[MAP]        912     2273.937   5.310720e+02   2.843037e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.342015e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 5.316706e+02).
+[MAP][DEBUG] Backtracking step 2: step size 2.500e-01 rejected (loss 5.311319e+02).
+[MAP][DEBUG] Iteration 913: step size 1.250e-01, correction pair accepted.
+[MAP]        913     2281.373   5.310419e+02   4.961852e+02
+[MAP][DEBUG] Iteration 914: step size 1.000e+00, correction pair accepted.
+[MAP]        914     2283.464   5.309637e+02   2.732560e+02
+[MAP][DEBUG] Iteration 915: step size 1.000e+00, correction pair accepted.
+[MAP]        915     2285.606   5.309063e+02   1.361863e+02
+[MAP][DEBUG] Iteration 916: step size 1.000e+00, correction pair accepted.
+[MAP]        916     2287.930   5.308429e+02   2.739370e+02
+[MAP][DEBUG] Iteration 917: step size 1.000e+00, correction pair accepted.
+[MAP]        917     2290.072   5.307524e+02   3.785368e+02
+[MAP][DEBUG] Iteration 918: step size 1.000e+00, correction pair accepted.
+[MAP]        918     2292.296   5.306436e+02   3.260707e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.316728e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 5.307818e+02).
+[MAP][DEBUG] Iteration 919: step size 2.500e-01, correction pair accepted.
+[MAP]        919     2298.019   5.306189e+02   9.717270e+02
+[MAP][DEBUG] Iteration 920: step size 1.000e+00, correction pair accepted.
+[MAP]        920     2300.005   5.304913e+02   3.717885e+02
+[MAP][DEBUG] Iteration 921: step size 1.000e+00, correction pair accepted.
+[MAP]        921     2302.052   5.304425e+02   1.681189e+02
+[MAP][DEBUG] Iteration 922: step size 1.000e+00, correction pair accepted.
+[MAP]        922     2304.106   5.304188e+02   2.622705e+02
+[MAP][DEBUG] Iteration 923: step size 1.000e+00, correction pair accepted.
+[MAP]        923     2306.158   5.303893e+02   2.854794e+02
+[MAP][DEBUG] Iteration 924: step size 1.000e+00, correction pair accepted.
+[MAP]        924     2308.201   5.302394e+02   2.894494e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.313837e+02).
+[MAP][DEBUG] Iteration 925: step size 5.000e-01, correction pair accepted.
+[MAP]        925     2311.453   5.300232e+02   4.617785e+02
+[MAP][DEBUG] Iteration 926: step size 1.000e+00, correction pair accepted.
+[MAP]        926     2313.155   5.295985e+02   2.074525e+02
+[MAP][DEBUG] Iteration 927: step size 1.000e+00, correction pair accepted.
+[MAP]        927     2314.896   5.291747e+02   2.380871e+02
+[MAP][DEBUG] Iteration 928: step size 1.000e+00, correction pair accepted.
+[MAP]        928     2316.652   5.290637e+02   1.939117e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.294955e+02).
+[MAP][DEBUG] Iteration 929: step size 5.000e-01, correction pair accepted.
+[MAP]        929     2320.061   5.290299e+02   3.397465e+02
+[MAP][DEBUG] Iteration 930: step size 1.000e+00, correction pair accepted.
+[MAP]        930     2322.096   5.289159e+02   3.675713e+02
+[MAP][DEBUG] Iteration 931: step size 1.000e+00, correction pair accepted.
+[MAP]        931     2324.085   5.288703e+02   1.581564e+02
+[MAP][DEBUG] Iteration 932: step size 1.000e+00, correction pair accepted.
+[MAP]        932     2326.109   5.288629e+02   1.323626e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.288833e+02).
+[MAP][DEBUG] Iteration 933: step size 5.000e-01, correction pair accepted.
+[MAP]        933     2329.778   5.288345e+02   4.171230e+02
+[MAP][DEBUG] Iteration 934: step size 1.000e+00, correction pair accepted.
+[MAP]        934     2331.784   5.288143e+02   1.755522e+02
+[MAP][DEBUG] Iteration 935: step size 1.000e+00, correction pair accepted.
+[MAP]        935     2333.879   5.288065e+02   1.372834e+02
+[MAP][DEBUG] Iteration 936: step size 1.000e+00, correction pair accepted.
+[MAP]        936     2335.901   5.287879e+02   2.375147e+02
+[MAP][DEBUG] Iteration 937: step size 1.000e+00, correction pair accepted.
+[MAP]        937     2337.920   5.287470e+02   3.252779e+02
+[MAP][DEBUG] Iteration 938: step size 1.000e+00, correction pair accepted.
+[MAP]        938     2339.978   5.286141e+02   4.438604e+02
+[MAP][DEBUG] Iteration 939: step size 1.000e+00, correction pair accepted.
+[MAP]        939     2341.996   5.284414e+02   3.463194e+02
+[MAP][DEBUG] Iteration 940: step size 1.000e+00, correction pair accepted.
+[MAP]        940     2344.028   5.282507e+02   1.520061e+02
+[MAP][DEBUG] Iteration 941: step size 1.000e+00, correction pair accepted.
+[MAP]        941     2346.005   5.281455e+02   1.677744e+02
+[MAP][DEBUG] Iteration 942: step size 1.000e+00, correction pair accepted.
+[MAP]        942     2348.095   5.280296e+02   3.977238e+02
+[MAP][DEBUG] Iteration 943: step size 1.000e+00, correction pair accepted.
+[MAP]        943     2350.176   5.279141e+02   3.854476e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.301487e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 5.283593e+02).
+[MAP][DEBUG] Backtracking step 2: step size 2.500e-01 rejected (loss 5.279657e+02).
+[MAP][DEBUG] Iteration 944: step size 1.250e-01, correction pair accepted.
+[MAP]        944     2357.168   5.279013e+02   7.436752e+02
+[MAP][DEBUG] Iteration 945: step size 1.000e+00, correction pair accepted.
+[MAP]        945     2359.138   5.278107e+02   3.835121e+02
+[MAP][DEBUG] Iteration 946: step size 1.000e+00, correction pair accepted.
+[MAP]        946     2361.166   5.277742e+02   1.501866e+02
+[MAP][DEBUG] Iteration 947: step size 1.000e+00, correction pair accepted.
+[MAP]        947     2363.144   5.277641e+02   1.829876e+02
+[MAP][DEBUG] Iteration 948: step size 1.000e+00, correction pair accepted.
+[MAP]        948     2365.150   5.277260e+02   2.028365e+02
+[MAP][DEBUG] Iteration 949: step size 1.000e+00, correction pair accepted.
+[MAP]        949     2367.191   5.276518e+02   3.890583e+02
+[MAP][DEBUG] Iteration 950: step size 1.000e+00, correction pair accepted.
+[MAP]        950     2369.228   5.275971e+02   2.614953e+02
+[MAP][DEBUG] Iteration 951: step size 1.000e+00, correction pair accepted.
+[MAP]        951     2371.279   5.272675e+02   1.656630e+02
+[MAP][DEBUG] Iteration 952: step size 1.000e+00, correction pair accepted.
+[MAP]        952     2373.302   5.269491e+02   2.835384e+02
+[MAP][DEBUG] Iteration 953: step size 1.000e+00, correction pair accepted.
+[MAP]        953     2375.399   5.266403e+02   5.732634e+02
+[MAP][DEBUG] Iteration 954: step size 1.000e+00, correction pair accepted.
+[MAP]        954     2377.391   5.262005e+02   2.128071e+02
+[MAP][DEBUG] Iteration 955: step size 1.000e+00, correction pair accepted.
+[MAP]        955     2379.404   5.260128e+02   4.326197e+02
+[MAP][DEBUG] Iteration 956: step size 1.000e+00, correction pair accepted.
+[MAP]        956     2381.440   5.258784e+02   2.519526e+02
+[MAP][DEBUG] Iteration 957: step size 1.000e+00, correction pair accepted.
+[MAP]        957     2383.476   5.257743e+02   1.685298e+02
+[MAP][DEBUG] Iteration 958: step size 1.000e+00, correction pair accepted.
+[MAP]        958     2385.504   5.256705e+02   1.544671e+02
+[MAP][DEBUG] Iteration 959: step size 1.000e+00, correction pair accepted.
+[MAP]        959     2387.487   5.255290e+02   1.978487e+02
+[MAP][DEBUG] Iteration 960: step size 1.000e+00, correction pair accepted.
+[MAP]        960     2389.503   5.254751e+02   2.231760e+02
+[MAP][DEBUG] Iteration 961: step size 1.000e+00, correction pair accepted.
+[MAP]        961     2391.514   5.253994e+02   1.565665e+02
+[MAP][DEBUG] Iteration 962: step size 1.000e+00, correction pair accepted.
+[MAP]        962     2393.545   5.252869e+02   2.131695e+02
+[MAP][DEBUG] Iteration 963: step size 1.000e+00, correction pair accepted.
+[MAP]        963     2395.543   5.250942e+02   2.290906e+02
+[MAP][DEBUG] Iteration 964: step size 1.000e+00, correction pair accepted.
+[MAP]        964     2397.569   5.249273e+02   5.709689e+02
+[MAP][DEBUG] Iteration 965: step size 1.000e+00, correction pair accepted.
+[MAP]        965     2399.663   5.245972e+02   1.864189e+02
+[MAP][DEBUG] Iteration 966: step size 1.000e+00, correction pair accepted.
+[MAP]        966     2401.704   5.244883e+02   1.265976e+02
+[MAP][DEBUG] Iteration 967: step size 1.000e+00, correction pair accepted.
+[MAP]        967     2403.705   5.244139e+02   4.099204e+02
+[MAP][DEBUG] Iteration 968: step size 1.000e+00, correction pair accepted.
+[MAP]        968     2405.766   5.243788e+02   2.756919e+02
+[MAP][DEBUG] Iteration 969: step size 1.000e+00, correction pair accepted.
+[MAP]        969     2407.716   5.243328e+02   1.626893e+02
+[MAP][DEBUG] Iteration 970: step size 1.000e+00, correction pair accepted.
+[MAP]        970     2409.687   5.242836e+02   1.675446e+02
+[MAP][DEBUG] Iteration 971: step size 1.000e+00, correction pair accepted.
+[MAP]        971     2411.708   5.242388e+02   1.493452e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.243776e+02).
+[MAP][DEBUG] Iteration 972: step size 5.000e-01, correction pair accepted.
+[MAP]        972     2415.357   5.242175e+02   3.177006e+02
+[MAP][DEBUG] Iteration 973: step size 1.000e+00, correction pair accepted.
+[MAP]        973     2417.351   5.241433e+02   1.566847e+02
+[MAP][DEBUG] Iteration 974: step size 1.000e+00, correction pair accepted.
+[MAP]        974     2419.299   5.241011e+02   1.207953e+02
+[MAP][DEBUG] Iteration 975: step size 1.000e+00, correction pair accepted.
+[MAP]        975     2421.307   5.240202e+02   1.168514e+02
+[MAP][DEBUG] Iteration 976: step size 1.000e+00, correction pair accepted.
+[MAP]        976     2423.298   5.239410e+02   1.529100e+02
+[MAP][DEBUG] Iteration 977: step size 1.000e+00, correction pair accepted.
+[MAP]        977     2425.328   5.238217e+02   1.700671e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.239251e+02).
+[MAP][DEBUG] Iteration 978: step size 5.000e-01, correction pair accepted.
+[MAP]        978     2429.095   5.237803e+02   2.821302e+02
+[MAP][DEBUG] Iteration 979: step size 1.000e+00, correction pair accepted.
+[MAP]        979     2431.058   5.237216e+02   5.764282e+02
+[MAP][DEBUG] Iteration 980: step size 1.000e+00, correction pair accepted.
+[MAP]        980     2433.092   5.236614e+02   1.867753e+02
+[MAP][DEBUG] Iteration 981: step size 1.000e+00, correction pair accepted.
+[MAP]        981     2435.127   5.236430e+02   1.002973e+02
+[MAP][DEBUG] Iteration 982: step size 1.000e+00, correction pair accepted.
+[MAP]        982     2437.162   5.236261e+02   1.060031e+02
+[MAP][DEBUG] Iteration 983: step size 1.000e+00, correction pair accepted.
+[MAP]        983     2439.166   5.235791e+02   1.321111e+02
+[MAP][DEBUG] Iteration 984: step size 1.000e+00, correction pair accepted.
+[MAP]        984     2441.210   5.234826e+02   3.268631e+02
+[MAP][DEBUG] Iteration 985: step size 1.000e+00, correction pair accepted.
+[MAP]        985     2443.217   5.233459e+02   2.425378e+02
+[MAP][DEBUG] Iteration 986: step size 1.000e+00, correction pair accepted.
+[MAP]        986     2445.260   5.232268e+02   1.463037e+02
+[MAP][DEBUG] Iteration 987: step size 1.000e+00, correction pair accepted.
+[MAP]        987     2447.325   5.230327e+02   1.481154e+02
+[MAP][DEBUG] Iteration 988: step size 1.000e+00, correction pair accepted.
+[MAP]        988     2449.319   5.229387e+02   1.941228e+02
+[MAP][DEBUG] Iteration 989: step size 1.000e+00, correction pair accepted.
+[MAP]        989     2451.342   5.226610e+02   2.415106e+02
+[MAP][DEBUG] Backtracking step 0: step size 1.000e+00 rejected (loss 5.233269e+02).
+[MAP][DEBUG] Backtracking step 1: step size 5.000e-01 rejected (loss 5.227130e+02).
+[MAP][DEBUG] Iteration 990: step size 2.500e-01, correction pair accepted.
+[MAP]        990     2456.673   5.226137e+02   3.125465e+02
+[MAP][DEBUG] Iteration 991: step size 1.000e+00, correction pair accepted.
+[MAP]        991     2458.689   5.225539e+02   3.582144e+02
+[MAP][DEBUG] Iteration 992: step size 1.000e+00, correction pair accepted.
+[MAP]        992     2460.865   5.225120e+02   1.929811e+02
+[MAP][DEBUG] Iteration 993: step size 1.000e+00, correction pair accepted.
+[MAP]        993     2462.877   5.224735e+02   1.887380e+02
+[MAP][DEBUG] Iteration 994: step size 1.000e+00, correction pair accepted.
+[MAP]        994     2464.883   5.224204e+02   3.218595e+02
+[MAP][DEBUG] Iteration 995: step size 1.000e+00, correction pair accepted.
+[MAP]        995     2466.916   5.223171e+02   3.650850e+02
+[MAP][DEBUG] Iteration 996: step size 1.000e+00, correction pair accepted.
+[MAP]        996     2468.927   5.221494e+02   5.331908e+02
+[MAP][DEBUG] Iteration 997: step size 1.000e+00, correction pair accepted.
+[MAP]        997     2470.935   5.219291e+02   2.365813e+02
+[MAP][DEBUG] Iteration 998: step size 1.000e+00, correction pair accepted.
+[MAP]        998     2472.949   5.218755e+02   1.204031e+02
+[MAP][DEBUG] Iteration 999: step size 1.000e+00, correction pair accepted.
+[MAP]        999     2474.923   5.218195e+02   1.202746e+02
+[MAP][DEBUG] Iteration 1000: step size 1.000e+00, correction pair accepted.
+[MAP]       1000     2476.907   5.216515e+02   2.773414e+02
+[MAP][WARNING] Did not converge after 1000 iterations: Did not converge within 1000 iterations.

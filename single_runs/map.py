@@ -75,7 +75,7 @@ class MapRun(Run[MapRunConfig]):
         plots_dir = run_dir / "plots"
         plots_dir.mkdir(exist_ok=True)
         metrics = RunDirectory(run_dir).read_metrics()
-        data_dir = resolve_repository_path(problem.preprocessed_data_dir)
+        data_dir = resolve_repository_path(problem.data_dir)
         ground_truth = PreprocessedData.load(data_dir).ground_truth
         results_dir = self.results_dir(run_dir)
         map_estimate = np.load(results_dir / "map_estimate.npy")

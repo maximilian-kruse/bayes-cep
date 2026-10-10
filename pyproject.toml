@@ -82,7 +82,7 @@ cmd = """python scripts/run.py --overwrite --flat-results \
     --run-dir example_data/map \
     config:reference-map \
     --config.raw-dir example_data/raw \
-    --config.preprocessed-data-dir example_data/preprocessing"""
+    --config.data-dir example_data/preprocessing"""
 depends-on = ["example-preprocessing"]
 
 [tool.pixi.tasks.example-mcmc]
@@ -90,7 +90,7 @@ cmd = """python scripts/run.py --overwrite --flat-results \
     --run-dir example_data/mcmc \
     config:reference-mcmc \
     --config.raw-dir example_data/raw \
-    --config.preprocessed-data-dir example_data/preprocessing \
+    --config.data-dir example_data/preprocessing \
     --config.initial-state-path example_data/map/map_estimate.npy"""
 depends-on = ["example-map"]
 

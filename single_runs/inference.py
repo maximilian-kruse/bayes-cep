@@ -55,8 +55,9 @@ class InferenceProblemConfig:
     Attributes:
         raw_dir (Path): Directory containing `mesh.vtu` and `basis_vecs.npy`. It must be the one
             the preprocessing run used.
-        preprocessed_data_dir (Path): Directory with the preprocessed data files: the `results`
-            directory of the preprocessing run that produced them.
+        data_dir (Path): Directory with the data the posterior is conditioned on and the ground
+            truth (the files of `PreprocessedData`). It can come from anywhere, e.g. the `results`
+            directory of a preprocessing run.
         prior (PriorParameters): Parameters of the inference prior. Its mean is the prior mean of
             the preprocessed data.
         eikonal (EikonalSolverSettings): Forward-solver settings of the inference.
@@ -65,7 +66,7 @@ class InferenceProblemConfig:
     """
 
     raw_dir: Path
-    preprocessed_data_dir: Path
+    data_dir: Path
     prior: PriorParameters
     eikonal: EikonalSolverSettings
     interpolation: LinearInterpolationStrategy | NearestNeighborInterpolationStrategy
@@ -74,7 +75,7 @@ class InferenceProblemConfig:
     def input_files(self) -> list[Path]:
         """The raw files and the preprocessed data the posterior is built from."""
         raw_dir = resolve_repository_path(self.raw_dir)
-        data_dir = resolve_repository_path(self.preprocessed_data_dir)
+        data_dir = resolve_repository_path(self.data_dir)
         return [
             raw_dir / "mesh.vtu",
             raw_dir / "basis_vecs.npy",
@@ -93,7 +94,7 @@ class InferenceProblemConfig:
             AssembledPosterior: The posterior, its prior builder and the data.
         """
         raw_dir = resolve_repository_path(self.raw_dir)
-        data_dir = resolve_repository_path(self.preprocessed_data_dir)
+        data_dir = resolve_repository_path(self.data_dir)
         with steps.step(f"Loading the mesh and basis vectors from {raw_dir}"):
             mesh = load_pyvista_mesh(raw_dir / "mesh.vtu")
             basis_vectors = np.load(raw_dir / "basis_vecs.npy")

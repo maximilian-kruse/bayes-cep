@@ -87,8 +87,8 @@ through the `PYTHONPATH` set by the pixi activation. Modules of `run/`:
 - `study.py`: sweep nodes (`Axis`/`Zip`/`Product` over dotted config paths), `StudySetup(run_type,
   base, sweep, root, executor)` (what a study module defines as `STUDY`: the runs, the `root`
   (the study directory, named after the study), and the `ExecutorSettings` they execute with, local or SLURM
-  resources; resolves to `ResolvedRun`s; `run_directories()` gives the run directories of the
-  created study, for other studies to read) and `Study` (`create` writes `<root>/study/`
+  resources; resolves to `ResolvedRun`s; `run_directories()`/`results_directories()` give the
+  paths of the created study, for other studies to read) and `Study` (`create` writes `<root>/study/`
   atomically with `study.json`, run ids and environment, and requires the input files of all runs
   to exist; `load` re-resolves the module and requires the recorded run ids; `execute_runs` skips
   done runs and, unless `include_active`, submitted/running ones; `plot_finished_runs`;
@@ -105,7 +105,7 @@ defaults for scientific parameters: `reference.py` holds all of them (constants 
   prior mean, synthetic observations). `PreprocessedData` is its output (including the
   noise variance); ground truth and observation settings have no defaults on purpose, studies vary
   them.
-- `inference.py`: `InferenceProblemConfig` (raw dir, `preprocessed_data_dir`, prior, eikonal,
+- `inference.py`: `InferenceProblemConfig` (raw dir, `data_dir`, prior, eikonal,
   interpolation), embedded as `problem` in the MAP and MCMC configs, with `assemble_posterior`.
 - `map.py`: `MapRun` only optimizes, from the prior mean; `mcmc.py`: `McmcRun` only samples, from the
   `initial_state_path`, a `.npy` file (the prior mean of the preprocessing run, or a MAP run's
@@ -116,7 +116,7 @@ Each run plots in its own `report` method. A new run kind = config + `Run` subcl
 `studies/*.py` define `STUDY`; they are not archived with a study (the recorded commit and patch
 cover them), and set their own `root`. The reference factories of `single_runs/reference.py`
 take the raw and preprocessed data directories as arguments (no defaults); each study module
-states its `RAW_DIR`. A study of inference runs sweeps `problem.preprocessed_data_dir` over
+states its `RAW_DIR`. A study of inference runs sweeps `problem.data_dir` over
 `PREPROCESSING_STUDY.results_directories()` of a preprocessing study, which must be created and run
 first.
 

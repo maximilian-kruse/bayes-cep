@@ -110,14 +110,13 @@ def reference_correlation_length_settings() -> CorrelationLengthSettings:
 
 
 # ==================================================================================================
-def reference_inference_problem(
-    raw_dir: Path, preprocessed_data_dir: Path
-) -> InferenceProblemConfig:
+def reference_inference_problem(raw_dir: Path, data_dir: Path) -> InferenceProblemConfig:
     """The posterior of the example data.
 
     Args:
-        preprocessed_data_dir (Path): Directory with the preprocessed data, the `results`
-            directory of the preprocessing run; there is deliberately no default.
+        data_dir (Path): Directory with the data and the ground truth (the files of
+            `PreprocessedData`, e.g. the `results` directory of a preprocessing run); there is
+            deliberately no default.
         raw_dir (Path): Directory containing the raw data; there is deliberately no default.
 
     Returns:
@@ -125,7 +124,7 @@ def reference_inference_problem(
     """
     return InferenceProblemConfig(
         raw_dir=raw_dir,
-        preprocessed_data_dir=preprocessed_data_dir,
+        data_dir=data_dir,
         prior=reference_prior_parameters(),
         eikonal=reference_eikonal_settings(),
         interpolation=NearestNeighborInterpolationStrategy(),
@@ -174,19 +173,20 @@ def reference_preprocessing_config(
 
 
 # ==================================================================================================
-def reference_map_config(raw_dir: Path, preprocessed_data_dir: Path) -> MapRunConfig:
+def reference_map_config(raw_dir: Path, data_dir: Path) -> MapRunConfig:
     """The MAP run of the example data.
 
     Args:
-        preprocessed_data_dir (Path): Directory with the preprocessed data, the `results`
-            directory of the preprocessing run; there is deliberately no default.
+        data_dir (Path): Directory with the data and the ground truth (the files of
+            `PreprocessedData`, e.g. the `results` directory of a preprocessing run); there is
+            deliberately no default.
         raw_dir (Path): Directory containing the raw data; there is deliberately no default.
 
     Returns:
         MapRunConfig: The reference configuration for the given data.
     """
     return MapRunConfig(
-        problem=reference_inference_problem(raw_dir, preprocessed_data_dir),
+        problem=reference_inference_problem(raw_dir, data_dir),
         optimizer=reference_optimizer_strategy(),
     )
 
@@ -194,14 +194,15 @@ def reference_map_config(raw_dir: Path, preprocessed_data_dir: Path) -> MapRunCo
 # ==================================================================================================
 def reference_mcmc_config(
     raw_dir: Path,
-    preprocessed_data_dir: Path,
+    data_dir: Path,
     initial_state_path: Path,
 ) -> McmcRunConfig:
     """The MCMC run of the example data.
 
     Args:
-        preprocessed_data_dir (Path): Directory with the preprocessed data, the `results`
-            directory of the preprocessing run; there is deliberately no default.
+        data_dir (Path): Directory with the data and the ground truth (the files of
+            `PreprocessedData`, e.g. the `results` directory of a preprocessing run); there is
+            deliberately no default.
         initial_state_path (Path): `.npy` file with the state the chain starts at; there is
             deliberately no default. The example data starts at the MAP estimate.
         raw_dir (Path): Directory containing the raw data; there is deliberately no default.
@@ -210,7 +211,7 @@ def reference_mcmc_config(
         McmcRunConfig: The reference configuration for the given data.
     """
     return McmcRunConfig(
-        problem=reference_inference_problem(raw_dir, preprocessed_data_dir),
+        problem=reference_inference_problem(raw_dir, data_dir),
         initial_state_path=initial_state_path,
         algorithm=MCMCAlgorithmName.MALA,
         step_width=MCMC_STEP_WIDTH,

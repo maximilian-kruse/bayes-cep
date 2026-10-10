@@ -24,7 +24,7 @@ from studies.preprocessing_synthetic import STUDY as PREPROCESSING_STUDY
 
 RAW_DIR = Path("example_data/raw")  # the raw data all runs of this study work on
 
-REFERENCE_PREPROCESSED_DATA_DIR = PREPROCESSING_STUDY.results_directory(
+REFERENCE_DATA_DIR = PREPROCESSING_STUDY.results_directory(
     reference_preprocessing_config(RAW_DIR, SyntheticGroundTruthStrategy())
 )
 
@@ -32,7 +32,7 @@ STUDY = StudySetup(
     run_type=MapRun,
     name="optimizer_comparison",
     description="MAP estimate of one problem with the custom L-BFGS and with scipy's L-BFGS-B.",
-    base=reference_map_config(RAW_DIR, REFERENCE_PREPROCESSED_DATA_DIR),
+    base=reference_map_config(RAW_DIR, REFERENCE_DATA_DIR),
     sweep=Product(
         Axis(
             "optimizer",

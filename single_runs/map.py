@@ -140,7 +140,7 @@ class MapRun(Run[MapRunConfig]):
             optimizer_name = type(self.config.optimizer).__name__
             with steps.step(f"Building the optimizer ({optimizer_name})"):
                 model, optimizer = self.config.optimizer.build(
-                    assembled.log_posterior, assembled.posterior_builder.prior, optimizer_logger
+                    assembled.log_posterior, optimizer_logger
                 )
             optimization_start = time.perf_counter()
             with steps.step("Running MAP estimation"):

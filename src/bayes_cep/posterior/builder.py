@@ -11,13 +11,13 @@ from dataclasses import dataclass
 import numpy as np
 import pyvista as pv
 from ls_bayesian.common.logging import BaseLogger
-from ls_bayesian.posterior import interfaces, posterior
+from ls_bayesian.posterior import posterior
 
 from bayes_cep.mesh.interpolation import InterpolationStrategy
 from bayes_cep.mesh.io import create_dolfinx_mesh
 from bayes_cep.posterior.eikonal_map import EikonalParameterToSolutionMap, EikonalSolverSettings
 from bayes_cep.posterior.likelihood import LikelihoodSettings, build_activation_time_likelihood
-from bayes_cep.posterior.prior import FiberAnglePrior, PriorSettings, build_fiber_angle_prior
+from bayes_cep.posterior.prior import PriorSettings, build_fiber_angle_prior
 
 
 # ==================================================================================================
@@ -50,15 +50,8 @@ class PosteriorBuilder:
     All three components, including the likelihood, are built in `build`, not `__init__`: a
     `LogPosterior` is tied to one fixed dataset, so there is no cheaper alternative to rebuilding
     the whole set of components for a different dataset (e.g. a different synthetic replicate in a
-    simulation study) — an accepted trade-off for the simplicity of a no-argument `build`.
-
-    Attributes:
-        pv_mesh (pv.UnstructuredGrid): The triangular surface mesh. Set by `build`.
-        prior (FiberAnglePrior): The fiber-angle prior. Set by `build`.
-        forward_map (EikonalParameterToSolutionMap): The eikonal activation-time forward map. Set
-            by `build`.
-        likelihood (interfaces.Likelihood): The activation-time observation likelihood. Set by
-            `build`.
+    simulation study) — an accepted trade-off for the simplicity of a no-argument `build`. The
+    builder keeps no state: the prior is read from the result, `LogPosterior.prior`.
 
     Methods:
         build: Build the prior, forward map, and likelihood, then compose a `LogPosterior`.
@@ -97,20 +90,15 @@ class PosteriorBuilder:
         Returns:
             posterior.LogPosterior: The assembled negative log-posterior.
         """
-        self.pv_mesh: pv.UnstructuredGrid = self._settings.mesh
-        dlx_mesh = create_dolfinx_mesh(self.pv_mesh)
-        self.prior: FiberAnglePrior = build_fiber_angle_prior(
-            dlx_mesh, self._settings.prior_settings, logger=self._prior_logger
+        settings = self._settings
+        prior = build_fiber_angle_prior(
+            create_dolfinx_mesh(settings.mesh), settings.prior_settings, logger=self._prior_logger
         )
-        self.forward_map: EikonalParameterToSolutionMap = EikonalParameterToSolutionMap(
-            self.pv_mesh,
-            self._settings.basis_vectors,
-            self._settings.eikonal_settings,
+        forward_map = EikonalParameterToSolutionMap(
+            settings.mesh,
+            settings.basis_vectors,
+            settings.eikonal_settings,
             self._interpolation_strategy,
         )
-        self.likelihood: interfaces.Likelihood = build_activation_time_likelihood(
-            self._settings.likelihood_settings
-        )
-        return posterior.LogPosterior(
-            self.likelihood, self.forward_map, self.prior, logger=self._posterior_logger
-        )
+        likelihood = build_activation_time_likelihood(settings.likelihood_settings)
+        return posterior.LogPosterior(likelihood, forward_map, prior, logger=self._posterior_logger)

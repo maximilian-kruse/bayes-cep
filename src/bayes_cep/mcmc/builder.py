@@ -22,7 +22,6 @@ from ls_bayesian.mcmc.model import MCMCModel
 from ls_bayesian.mcmc.output import MCMCOutput
 from ls_bayesian.mcmc.sampler import Sampler
 from ls_bayesian.mcmc.storage import ZarrStorage
-from ls_bayesian.posterior import interfaces
 from ls_bayesian.posterior.posterior import LogPosterior
 
 from bayes_cep.mcmc.measures import LikelihoodTargetMeasure, PriorGaussianMeasure
@@ -122,21 +121,18 @@ class MCMCBuilder:
         self,
         settings: MCMCSettings,
         log_posterior: LogPosterior,
-        prior: interfaces.GaussianPrior,
         output_dir: Path,
     ) -> None:
         """Store the settings and the posterior to sample.
 
         Args:
             settings (MCMCSettings): Algorithm and storage settings.
-            log_posterior (LogPosterior): Posterior to sample, e.g. from `PosteriorBuilder.build`.
-            prior (interfaces.GaussianPrior): The same prior `log_posterior` was built with, e.g.
-                `PosteriorBuilder.prior`.
+            log_posterior (LogPosterior): Posterior to sample, e.g. from `PosteriorBuilder.build`;
+                its `prior` is the reference measure.
             output_dir (Path): Directory the sample store is created in.
         """
         self._settings = settings
         self._log_posterior = log_posterior
-        self._prior = prior
         self._output_dir = output_dir
 
     # ----------------------------------------------------------------------------------------------
@@ -153,7 +149,7 @@ class MCMCBuilder:
         Raises:
             ValueError: If a tracked component index is not smaller than the parameter dimension.
         """
-        parameter_dimension = self._prior.mean_vector.shape[0]
+        parameter_dimension = self._log_posterior.prior.mean_vector.shape[0]
         for index in self._settings.tracked_components:
             if index >= parameter_dimension:
                 raise ValueError(
@@ -162,7 +158,7 @@ class MCMCBuilder:
                 )
         model = MCMCModel(
             target=LikelihoodTargetMeasure(self._log_posterior),
-            reference=PriorGaussianMeasure(self._prior),
+            reference=PriorGaussianMeasure(self._log_posterior.prior),
         )
         algorithm: MCMCAlgorithm
         match self._settings.algorithm:

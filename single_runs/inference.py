@@ -7,7 +7,7 @@ is a pure description; `assemble_posterior` loads the files it names and builds 
 
 Classes:
     InferenceProblemConfig: Which data and which model the posterior is built from.
-    AssembledPosterior: The posterior with the prior builder and the data it was built from.
+    AssembledPosterior: The posterior and the data it was built from.
 
 Functions:
     assemble_posterior: Load the mesh and the preprocessed data and build the posterior.
@@ -70,15 +70,14 @@ class InferenceProblemConfig:
 # ==================================================================================================
 @dataclass(frozen=True)
 class AssembledPosterior:
-    """The posterior with the prior builder and the data it was built from.
+    """The posterior and the data it was built from.
 
     Attributes:
-        posterior_builder (PosteriorBuilder): The builder; `posterior_builder.prior` is the prior.
-        log_posterior (LogPosterior): The log posterior of the preprocessed data.
+        log_posterior (LogPosterior): The log posterior of the preprocessed data; its `prior` is
+            the prior.
         data (PreprocessedData): The data the posterior was built from.
     """
 
-    posterior_builder: PosteriorBuilder
     log_posterior: LogPosterior
     data: PreprocessedData
 
@@ -95,7 +94,7 @@ def assemble_posterior(
         logger (BaseLogger): Logger of the run.
 
     Returns:
-        AssembledPosterior: The posterior, its prior builder and the data.
+        AssembledPosterior: The posterior and the data.
 
     Raises:
         ValueError: If the preprocessed data does not belong to the mesh in `raw_dir`.
@@ -115,7 +114,7 @@ def assemble_posterior(
             "vertices: the raw data is not the one the preprocessing run used."
         )
     with steps.step("Building the posterior"):
-        posterior_builder = PosteriorBuilder(
+        log_posterior = PosteriorBuilder(
             PosteriorSettings(
                 mesh=mesh,
                 basis_vectors=basis_vectors,
@@ -129,6 +128,5 @@ def assemble_posterior(
                 ),
             ),
             interpolation_strategy=problem.interpolation,
-        )
-        log_posterior = posterior_builder.build()
-    return AssembledPosterior(posterior_builder, log_posterior, data)
+        ).build()
+    return AssembledPosterior(log_posterior, data)

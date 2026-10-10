@@ -11,7 +11,6 @@ from typing import override
 
 import numpy as np
 from ls_bayesian.optimization.model import OptimizationModel
-from ls_bayesian.posterior import interfaces
 from ls_bayesian.posterior.posterior import LogPosterior
 
 
@@ -35,17 +34,15 @@ class CameronMartinPosteriorModel(OptimizationModel):
     """
 
     # ----------------------------------------------------------------------------------------------
-    def __init__(self, log_posterior: LogPosterior, prior: interfaces.GaussianPrior) -> None:
-        r"""Wrap a `LogPosterior` and the `GaussianPrior` it was built with.
+    def __init__(self, log_posterior: LogPosterior) -> None:
+        r"""Wrap a `LogPosterior`.
 
         Args:
-            log_posterior (LogPosterior): Negative log-posterior to minimize.
-            prior (interfaces.GaussianPrior): The same prior `log_posterior` was built with;
-                supplies the Cameron-Martin covariance/precision operators, e.g.
-                `PosteriorBuilder.prior`.
+            log_posterior (LogPosterior): Negative log-posterior to minimize; its `prior`
+                supplies the Cameron-Martin covariance and precision operators.
         """
         self._log_posterior = log_posterior
-        self._prior = prior
+        self._prior = log_posterior.prior
 
     # ----------------------------------------------------------------------------------------------
     @override

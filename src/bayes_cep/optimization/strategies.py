@@ -42,7 +42,6 @@ from ls_bayesian.optimization.components.seed_scaling import (
 )
 from ls_bayesian.optimization.model import OptimizationModel
 from ls_bayesian.optimization.optimizer import BaseOptimizer
-from ls_bayesian.posterior import interfaces
 from ls_bayesian.posterior.posterior import LogPosterior
 
 from bayes_cep.optimization.model import CameronMartinPosteriorModel, EuclideanPosteriorModel
@@ -70,15 +69,12 @@ class OptimizerStrategy(ABC):
     def build(
         self,
         log_posterior: LogPosterior,
-        prior: interfaces.GaussianPrior,
         logger: BaseLogger | None = None,
     ) -> tuple[OptimizationModel, BaseOptimizer]:
         """Build the model and optimizer.
 
         Args:
             log_posterior (LogPosterior): Negative log-posterior to minimize.
-            prior (interfaces.GaussianPrior): The same prior `log_posterior` was built with, e.g.
-                `PosteriorBuilder.prior`.
             logger (BaseLogger | None, optional): Logger for iteration-by-iteration progress
                 reports, shared with any sub-components (line search, acceptance strategy).
                 Defaults to `None`.
@@ -110,11 +106,9 @@ class ScipyLBFGSBStrategy(OptimizerStrategy):
     def build(
         self,
         log_posterior: LogPosterior,
-        prior: interfaces.GaussianPrior,
         logger: BaseLogger | None = None,
     ) -> tuple[EuclideanPosteriorModel, ScipyLBFGSBOptimizer]:
-        """Build the Euclidean model and the L-BFGS-B optimizer. `prior` is accepted but unused:
-        `EuclideanPosteriorModel` only needs the posterior."""
+        """Build the Euclidean model and the L-BFGS-B optimizer."""
         model = EuclideanPosteriorModel(log_posterior)
         optimizer = ScipyLBFGSBOptimizer(self.settings, logger=logger)
         return model, optimizer
@@ -162,13 +156,12 @@ class CustomLBFGSStrategy(OptimizerStrategy):
     def build(
         self,
         log_posterior: LogPosterior,
-        prior: interfaces.GaussianPrior,
         logger: BaseLogger | None = None,
     ) -> tuple[CameronMartinPosteriorModel, CustomLBFGSOptimizer]:
         """Build the Cameron-Martin model, the line search, the cautious-update strategy, the
         seed-scaling strategy, and the L-BFGS optimizer, sharing the same logger across all four
         sub-components."""
-        model = CameronMartinPosteriorModel(log_posterior, prior)
+        model = CameronMartinPosteriorModel(log_posterior)
         line_search: ArmijoBacktrackingLineSearch | StrongWolfeLineSearch
         match self.line_search_settings:
             case StrongWolfeLineSearchSettings():

@@ -94,7 +94,6 @@ class McmcRun(Run[McmcRunConfig]):
         mcmc_builder = MCMCBuilder(
             config.sampler,
             assembled.log_posterior,
-            assembled.posterior_builder.prior,
             output_dir=results_dir,
         )
         sampler_logger_settings = LoggerSettings(

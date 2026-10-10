@@ -58,13 +58,15 @@ parameter $m$ is a fiber-orientation angle per mesh vertex.
 - `posterior/likelihood.py`: `GaussianLogLikelihood` (i.i.d. homoscedastic noise) for sparse
   activation-time observations. `posterior/builder.py`: `PosteriorBuilder` wires the pieces from a
   `PosteriorSettings`; everything is built in `build()`, never `__init__` (a `LogPosterior` is tied
-  to one dataset).
+  to one dataset), and the builder keeps no state. The prior is `LogPosterior.prior`, so the
+  optimizer models and the MCMC builder take only the posterior; this property exists in
+  `ls_bayesian` (branch `expose-posterior-prior` until it is merged there).
 - `optimization/`: MAP estimation via `ls_bayesian.optimization`. `model.py` adapts a
   `LogPosterior` in two geometries: `CameronMartinPosteriorModel` (metric-consistent: the gradient
   is a "dual" vector, and the prior covariance maps it to the Cameron-Martin representer) and
   `EuclideanPosteriorModel` (raw gradient). `strategies.py`: `OptimizerStrategy`
   (`CustomLBFGSStrategy`/`ScipyLBFGSBStrategy`) builds a backend together with its matching model
-  as one pair, never mix them; callers use `strategy.build(log_posterior, prior, logger)` directly.
+  as one pair, never mix them; callers use `strategy.build(log_posterior, logger)` directly.
 - `preprocessing/` (ground-truth strategies, constant prior mean, synthetic observations),
   `mcmc/` (sampler builder; `MCMCSettings` has no default algorithm or step width) and
   `statistics/` (axial statistics, correlation length) serve the runs. Settings in `src/` carry no

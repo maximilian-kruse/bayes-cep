@@ -1,10 +1,11 @@
 """Progress output of a run: numbered steps with timings, written to the console and the run log.
 
+Classes:
+    StepReporter: Numbers the steps of a run and logs each with its wall-clock time.
+
 Functions:
     run_logger: Context manager providing a prefix-free logger for one run, writing to the
         console and, optionally, a log file.
-    report_step: Context manager logging a numbered progress line and the step's wall-clock time.
-    Steps: Counter of the numbered steps of a run.
     describe_array: One-line summary of an array's name, shape, and value range.
 """
 
@@ -12,7 +13,7 @@ import sys
 import time
 import traceback
 from collections.abc import Generator
-from contextlib import AbstractContextManager, contextmanager
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
@@ -56,59 +57,59 @@ def run_logger(logfile_path: Path | None, print_to_console: bool = True) -> Gene
 
 
 # ==================================================================================================
-@contextmanager
-def report_step(
-    logger: BaseLogger, index: int, num_steps: int, description: str
-) -> Generator[None]:
-    """Log a numbered progress line before a step and its wall-clock time after.
+class StepReporter:
+    """Numbers the steps of a run and logs each with its wall-clock time.
 
-    Logs `[index/num_steps] description ...` on entry and `done in <t> s` on a normal exit. If the
-    body raises, no completion line is logged and the exception propagates.
-
-    Args:
-        logger (BaseLogger): Logger receiving the progress lines.
-        index (int): 1-based index of the step.
-        num_steps (int): Total number of steps.
-        description (str): What the step does.
-
-    Yields:
-        None: Control to the body of the step.
+    `with reporter.step("Loading data"):` logs `[1/total] Loading data ...` on entry and
+    `done in <t> s` on a normal exit; the next step is `[2/total]`, and so on. If the body raises,
+    no completion line is logged and the exception propagates.
     """
-    logger.info(f"[{index}/{num_steps}] {description} ...")
-    start = time.perf_counter()
-    yield
-    logger.info(f"      done in {time.perf_counter() - start:.2f} s")
 
-
-# ==================================================================================================
-class Steps:
-    """Numbers the steps of a run: `with steps("Loading data"):` logs `[1/total] Loading data ...`,
-    the next call `[2/total]`, and so on."""
-
-    def __init__(self, logger: BaseLogger, total: int) -> None:
-        """Count the steps of a run with `total` steps, logged to `logger`."""
+    def __init__(self, logger: BaseLogger, total_steps: int) -> None:
+        """Report the steps of a run with `total_steps` steps to `logger`."""
         self._logger = logger
-        self._total = total
-        self._count = 0
+        self._total_steps = total_steps
+        self._num_started_steps = 0
 
-    def __call__(self, description: str) -> AbstractContextManager[None]:
-        """Context manager for the next step; see `report_step`."""
-        self._count += 1
-        return report_step(self._logger, self._count, self._total, description)
+    # ----------------------------------------------------------------------------------------------
+    @contextmanager
+    def step(self, description: str) -> Generator[None]:
+        """Report the next step of the run: its numbered description, then its duration.
+
+        Args:
+            description (str): What the step does.
+
+        Yields:
+            None: Control to the body of the step.
+        """
+        self._num_started_steps += 1
+        self._logger.info(f"[{self._num_started_steps}/{self._total_steps}] {description} ...")
+        start = time.perf_counter()
+        yield
+        self._logger.info(f"      done in {time.perf_counter() - start:.2f} s")
 
 
 # ==================================================================================================
 def describe_array(name: str, array: np.ndarray) -> str:
-    """One-line summary of an array: name, shape, and value range.
+    """One-line summary of an array: name, shape, value range and non-finite entries.
+
+    Minimum, maximum and mean are taken over the finite entries only, so that a few `NaN`s do not
+    hide the range of the rest; the counts of `NaN` and infinite entries are always reported.
 
     Args:
         name (str): Label for the array.
-        array (np.ndarray): Non-empty numeric array.
+        array (np.ndarray): Numeric array.
 
     Returns:
-        str: `"<name>: shape <shape>, min <min>, max <max>, mean <mean>"`.
+        str: `"<name>: shape <shape>, min <min>, max <max>, mean <mean>, nan <count>, inf <count>"`;
+            the statistics read `n/a` if there are no finite entries.
     """
+    finite = array[np.isfinite(array)]
+    if finite.size == 0:
+        statistics = "min n/a, max n/a, mean n/a"
+    else:
+        statistics = f"min {finite.min():.4g}, max {finite.max():.4g}, mean {finite.mean():.4g}"
     return (
-        f"{name}: shape {array.shape}, min {array.min():.4g}, max {array.max():.4g}, "
-        f"mean {array.mean():.4g}"
+        f"{name}: shape {array.shape}, {statistics}, "
+        f"nan {np.isnan(array).sum()}, inf {np.isinf(array).sum()}"
     )

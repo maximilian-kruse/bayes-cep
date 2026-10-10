@@ -1,42 +1,47 @@
-"""Command line of the simulation studies: create, run, inspect and summarize.
+"""Command line interface of simulation studies: create, run, inspect and summarize.
 
 A study is a Python module in `studies/` defining `STUDY`: a base run configuration plus the
 sweeps over it. `create` resolves it into a fixed list of runs and writes the study directory;
-`run` executes runs from that directory in this process (`debug`) or as local processes (`local`).
+`run` executes runs from that directory in this process (`debug`), as local processes (`local`) or
+on a SLURM cluster (`slurm`).
+
+Example:
 
     pixi run study create studies/prior_investigation.py
     pixi run study show studies/prior_investigation.py
     pixi run study run working_data/prior_investigation --executor.cluster local
     pixi run study status working_data/prior_investigation
     pixi run study collect working_data/prior_investigation
-    pixi run -e dev study report working_data/prior_investigation
+    pixi run study report working_data/prior_investigation
 
-On a cluster, `submit` sends the unfinished runs to SLURM as one job array via `submitit` (task `i`
-runs run `i`); the tasks use this pixi environment, so it must be reachable from the compute nodes:
+On a cluster, `--executor.cluster slurm` sends the unfinished runs to SLURM as one job array via
+`submitit` (task `i` runs run `i`); the tasks use this pixi environment, so it must be reachable
+from the compute nodes. With `--no-wait`, the command returns after queueing:
 
-    pixi run study submit working_data/prior_investigation --executor.time-min 120
+    pixi run study run working_data/prior_investigation --executor.cluster slurm --no-wait
 
-Finished runs are skipped, so submitting again only repeats failed or unfinished runs. Logs go to
-`<study>/slurm/`; `status` shows the progress.
+Finished runs are skipped, so running again only repeats failed or unfinished runs. Logs go to
+`<study>/jobs/`; `status` shows the progress. To detach a `local` run, use `nohup` or `tmux`.
 """
 
 import sys
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Annotated
 
 import tyro
 
 from bayes_cep.run.collector import RunTableCollector
-from bayes_cep.run.config import format_tree
-from bayes_cep.run.directories import DONE, FAILED, StudyDirectory, read_json
-from bayes_cep.run.executor import Executor, ExecutorSettings
-from bayes_cep.run.study import load_resolved_runs, load_study
+from bayes_cep.run.config import format_config_tree
+from bayes_cep.run.directories import RunDirectory
+from bayes_cep.run.executor import ExecutorSettings, RunOutcome
+from bayes_cep.run.study import Study
 
 
 # ==================================================================================================
 @dataclass(frozen=True)
-class Create:
+class CreateCommand:
     """Resolve a study module and write the study directory.
 
     Attributes:
@@ -50,7 +55,7 @@ class Create:
 
 # ==================================================================================================
 @dataclass(frozen=True)
-class Show:
+class ShowCommand:
     """Print an overview of a study module, a study directory or a config JSON file.
 
     Attributes:
@@ -62,43 +67,28 @@ class Show:
 
 # ==================================================================================================
 @dataclass(frozen=True)
-class Run:
-    """Execute the unfinished runs and wait for them.
+class RunCommand:
+    """Execute the unfinished runs, in this process, as local processes or on SLURM.
 
     Attributes:
         study_dir (Path): Study directory.
         index (int | None): Only this run; all runs if `None`.
         force (bool): Whether to rerun finished runs.
-        executor (ExecutorSettings): Where the runs execute.
+        wait (bool): Whether to wait for the runs to finish; `False` (queue and return) is only
+            possible with the `"slurm"` cluster, where the scheduler owns the jobs.
+        executor (ExecutorSettings): Where and with which resources the runs execute.
     """
 
     study_dir: tyro.conf.Positional[Path]
     index: int | None = None
     force: bool = False
+    wait: bool = True
     executor: ExecutorSettings = field(default_factory=ExecutorSettings)
 
 
 # ==================================================================================================
 @dataclass(frozen=True)
-class Submit:
-    """Submit the unfinished runs to the cluster as one job array (via submitit).
-
-    Attributes:
-        study_dir (Path): Study directory.
-        index (int | None): Only this run; all unfinished runs if `None`.
-        force (bool): Whether to also resubmit finished runs.
-        executor (ExecutorSettings): Cluster and resources per run.
-    """
-
-    study_dir: tyro.conf.Positional[Path]
-    index: int | None = None
-    force: bool = False
-    executor: ExecutorSettings = field(default_factory=lambda: ExecutorSettings(cluster="slurm"))
-
-
-# ==================================================================================================
-@dataclass(frozen=True)
-class Status:
+class StatusCommand:
     """Print the state of every run.
 
     Attributes:
@@ -110,7 +100,7 @@ class Status:
 
 # ==================================================================================================
 @dataclass(frozen=True)
-class Collect:
+class CollectCommand:
     """Write the cross-run summary table `summary/run_table.parquet`.
 
     Attributes:
@@ -122,8 +112,8 @@ class Collect:
 
 # ==================================================================================================
 @dataclass(frozen=True)
-class Report:
-    """Render the plots of finished runs (needs the dev environment).
+class ReportCommand:
+    """Render the plots of finished runs.
 
     Attributes:
         study_dir (Path): Study directory.
@@ -135,50 +125,62 @@ class Report:
 
 
 # ==================================================================================================
-def main(command: Create | Show | Run | Submit | Status | Collect | Report) -> None:
+Command = (
+    Annotated[CreateCommand, tyro.conf.subcommand("create")]
+    | Annotated[ShowCommand, tyro.conf.subcommand("show")]
+    | Annotated[RunCommand, tyro.conf.subcommand("run")]
+    | Annotated[StatusCommand, tyro.conf.subcommand("status")]
+    | Annotated[CollectCommand, tyro.conf.subcommand("collect")]
+    | Annotated[ReportCommand, tyro.conf.subcommand("report")]
+)
+
+
+# ==================================================================================================
+def main(command: Command) -> None:
     """Dispatch the subcommand."""
     match command:
-        case Create():
-            study = load_study(command.module)
-            study_dir = study.create(command.module, command.root)
-            print(f"Created {study_dir} with {len(study.resolve())} runs.")
-        case Show():
+        case CreateCommand():
+            # Resolve the study module into its run list and write the study directory.
+            study = Study.load_from_module_file(command.module)
+            study_dir = study.create_directory(command.module, command.root)
+            print(f"Created {study_dir} with {len(study.resolve_runs())} runs.")
+        case ShowCommand():
+            # Print an overview of a study module, a study directory or a single run config.
             if command.path.suffix == ".py":
-                print(load_study(command.path).describe())
+                print(Study.load_from_module_file(command.path).describe())
             elif command.path.suffix == ".json":
-                print(format_tree(read_json(command.path)))
+                print(
+                    format_config_tree(
+                        RunDirectory(command.path.parent).records.read_record(command.path.name)
+                    )
+                )
             else:
-                print(load_study(StudyDirectory(command.path).definition_path).describe())
-        case Run():
+                print(Study.load_from_directory(command.path).describe())
+        case RunCommand():
+            # Execute unfinished runs (blocking), or queue them on SLURM and return (`--no-wait`).
             indices = None if command.index is None else [command.index]
-            outcomes = Executor(command.study_dir, command.executor).run(indices, command.force)
-            print(dict(Counter(outcomes.values())))
-            if FAILED in outcomes.values():
+            outcomes = Study.load_from_directory(command.study_dir).execute_runs(
+                command.study_dir, command.executor, indices, command.force, command.wait
+            )
+            print(dict(Counter(str(outcome) for outcome in outcomes.values())))
+            if RunOutcome.FAILED in outcomes.values():
                 sys.exit(1)
-        case Submit():
-            indices = None if command.index is None else [command.index]
-            jobs = Executor(command.study_dir, command.executor).submit(indices, command.force)
-            print(f"Submitted {len(jobs)} runs: {[job.job_id for job in jobs.values()]}")
-        case Status():
+        case StatusCommand():
+            # Print the state (pending/running/done/failed) of every run.
             table = RunTableCollector(command.study_dir).run_table()
             print(table[["index", "run_id", "state"]].to_string(index=False))
             print(dict(Counter(table["state"])))
-        case Collect():
-            study = load_study(StudyDirectory(command.study_dir).definition_path)
-            collector = study.collector(command.study_dir)
+        case CollectCommand():
+            # Write the cross-run table, then run the study's own analysis.
+            collector = Study.load_from_directory(command.study_dir).collector(command.study_dir)
             print(f"Wrote {collector.collect()}")
             print(collector.run_table().to_string(index=False))
-        case Report():
-            run_type, runs = load_resolved_runs(command.study_dir)
-            for run in runs:
-                if command.index is not None and run.index != command.index:
-                    continue
-                run_dir = StudyDirectory(command.study_dir).run(run.run_id)
-                if run_dir.state() != DONE:
-                    continue
-                print(f"Plotting run {run.index} ({run.run_id})")
-                run_type(run.config).report(run_dir.path)
+        case ReportCommand():
+            # Plot the finished runs; unfinished ones are skipped.
+            Study.load_from_directory(command.study_dir).plot_finished_runs(
+                command.study_dir, command.index
+            )
 
 
 if __name__ == "__main__":
-    main(tyro.cli(Create | Show | Run | Submit | Status | Collect | Report))
+    main(tyro.cli(Command))

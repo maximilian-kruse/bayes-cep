@@ -13,8 +13,8 @@ from ls_bayesian.common.logging import BaseLogger
 
 from bayes_cep.mesh.io import create_dolfinx_mesh, load_pyvista_mesh
 from bayes_cep.posterior.prior import PriorSettings, build_fiber_angle_prior
-from bayes_cep.run.config import resolve_path
-from bayes_cep.run.logging import describe_array, report_step
+from bayes_cep.run.directories import resolve_repository_path
+from bayes_cep.run.logging import StepReporter, describe_array
 from bayes_cep.run.template import Metrics, Run
 from bayes_cep.statistics.axial_statistics import (
     compute_axial_mean_and_variance,
@@ -28,7 +28,6 @@ from single_runs.config import PriorRunConfig
 class PriorRun(Run[PriorRunConfig]):
     """Sample a zero-mean prior, then estimate its pointwise variance and correlation length."""
 
-    config_type = PriorRunConfig
     outputs = {
         "results/sample.npy": "One prior sample [rad] per vertex, re-branched onto a single "
         "pi-periodic branch around its axial mean; drawn first, for visualization.",
@@ -46,7 +45,7 @@ class PriorRun(Run[PriorRunConfig]):
 
     @override
     def input_files(self) -> list[Path]:
-        return [resolve_path(self.config.raw_dir) / "mesh.vtu"]
+        return [resolve_repository_path(self.config.raw_dir) / "mesh.vtu"]
 
     @override
     def report(self, run_dir: Path) -> None:
@@ -61,15 +60,15 @@ class PriorRun(Run[PriorRunConfig]):
         results_dir = run_dir / "results"
         results_dir.mkdir(parents=True, exist_ok=True)
         config = self.config
-        num_steps = 5
+        steps = StepReporter(logger, total_steps=5)
 
-        raw_dir = resolve_path(config.raw_dir)
-        with report_step(logger, 1, num_steps, f"Loading the mesh from {raw_dir}"):
+        raw_dir = resolve_repository_path(config.raw_dir)
+        with steps.step(f"Loading the mesh from {raw_dir}"):
             mesh = load_pyvista_mesh(raw_dir / "mesh.vtu")
             connectivity = mesh.cells.reshape(-1, 4)[:, 1:]
         logger.info(f"      mesh: {mesh.n_points} vertices, {mesh.n_cells} triangles")
 
-        with report_step(logger, 2, num_steps, "Building the prior"):
+        with steps.step("Building the prior"):
             prior = build_fiber_angle_prior(
                 create_dolfinx_mesh(mesh),
                 PriorSettings(
@@ -80,16 +79,16 @@ class PriorRun(Run[PriorRunConfig]):
                 ),
             )
 
-        with report_step(logger, 3, num_steps, "Drawing the visualization sample"):
+        with steps.step("Drawing the visualization sample"):
             sample = shift_angles_to_minimize_axial_variance(prior.generate_sample()).flatten()
         logger.info(f"      {describe_array('sample [rad]', sample)}")
 
-        with report_step(logger, 4, num_steps, f"Drawing {config.num_samples} samples"):
+        with steps.step(f"Drawing {config.num_samples} samples"):
             samples = np.stack([prior.generate_sample() for _ in range(config.num_samples)])
             _, pointwise_variance = compute_axial_mean_and_variance(samples)
         logger.info(f"      {describe_array('pointwise variance', pointwise_variance)}")
 
-        with report_step(logger, 5, num_steps, "Estimating the correlation length"):
+        with steps.step("Estimating the correlation length"):
             correlation = estimate_correlation_length(
                 mesh.points, connectivity, samples, config.correlation
             )

@@ -15,7 +15,7 @@ change → run checks → review diff.
 ## Environment (pixi)
 - NEVER bare `python`/`pip`/`conda`/`uv`; always `pixi run ...`. Ask before adding deps. Never
   hand-edit `pixi.lock`; commit it with `pyproject.toml` (holds all pixi config; no `pixi.toml`).
-- Envs: `default` (numpy/scipy/pandas/pyarrow/submitit/beartype/dolfinx/scifem/jax/pyvista/meshio), `dev` (+ruff,
+- Envs: `default` (numpy/scipy/pandas/pyarrow/submitit/beartype/dolfinx/scifem/jax/pyvista/meshio/matplotlib), `dev` (+ruff,
   pre-commit, jupyter, plotting), `test` (+pytest, pytest-xdist, pytest-mock, nbclient). Tools need
   `-e`: `pixi run -e dev ruff check src` / `ruff format src`; `pixi run -e test pytest`.
 - No `tests/` directory exists yet, though `pyproject.toml` already points `testpaths` at it —
@@ -69,21 +69,29 @@ A **run** is a pure function of one frozen config, identified by an 8-hex conten
 canonical JSON; a **study** is a fixed list of runs from a base config plus sweeps. `run/` is
 generic (no domain imports); the concrete runs live outside the package, in `single_runs/` (and the
 studies in `studies/`), found through `PYTHONPATH` set by the pixi activation.
-- `run/config.py`: `RunConfig` base (frozen dataclass; `to_dict`/`from_dict` JSON round trip driven
+- `run/config.py`: `RunConfig` base (frozen dataclass; `to_json_dict`/`from_json_dict` JSON round trip driven
   by type hints and `__type__` tags, `run_id`, `describe()`). `run/template.py`: `Run[ConfigT]` ABC;
   `execute(run_dir)` is the wrapper (writes `config.json`, `metadata.json`, `status.json`
-  (`running`/`done`/`failed`; no directory = pending), `run.log`, `metrics.json`; records failures),
-  subclasses implement `_execute`, `report` (plots; separate local step, needs the dev env, so
-  cluster runs stay headless), `outputs`, and optionally `input_files`.
+  (`RunState`: `running`/`done`/`failed`; no directory = pending), `run.log`, `metrics.json`;
+  records failures, also those while recording, through `RunDirectory.record_*`; `execute` is the
+  only public way to run). A subclass names its config as the generic argument (`MapRun(Run[MapRunConfig])`
+  gives `config_type`), sets `outputs`, implements `_execute`, `report` (plots; separate local step,
+  so cluster runs stay headless), and optionally `input_files`. Stages and the example-data layout
+  are specific to `MapRun.generate_example_data`.
 - `single_runs/` (repository root): `config.py` (`PriorRunConfig`, `MapRunConfig`; the MAP ground truth and
   observation settings have no defaults on purpose: studies vary them), `prior.py` (`PriorRun`),
   `map.py` (`MapRun`), `plots.py`. A new run kind = config + `Run` subclass.
-- Study side, all in `run/`: `study.py` (nestable `Axis`/`Zip`/`Product` sweeps over dotted config
-  paths; `Study(run_type, base, sweep, collector)`; `create` writes `study/`: description,
-  `runs.json` with all configs, environment, archived definition; `load_resolved_runs` reads them
-  back and verifies the ids, so workers never import the definition), `executor.py` (`Executor`
-  over `submitit`: `debug` in process, `local`, `slurm`; one task per unfinished run),
-  `directories.py` (`RunDirectory`/`StudyDirectory`: on-disk layout, JSON records, run state),
+- Study side, all in `run/`: `study.py` (nestable `Axis`/`Zip`/`Product` sweep nodes over dotted
+  config paths; `Study(run_type, base, sweep, collector)` is the definition, and
+  `create_directory` writes `study/`: description, `runs.json` with all configs, environment,
+  archived definition and environment specification (`pixi.lock`, `pyproject.toml`, conda spec,
+  patch of uncommitted changes); a created study is loaded from the archived definition
+  (`load_from_directory`), must resolve to the recorded run ids, and `execute_runs` runs the
+  unfinished runs and `plot_finished_runs` plots the finished ones; workers get pickled `Run`
+  objects and never import the definition), `executor.py` (generic `Executor`: runs given `Run` objects in their run
+  directories; `debug` in process, `local` and `slurm` over `submitit`; knows nothing about
+  studies; `wait=False` queues on SLURM and returns; `RunOutcome`),
+  `directories.py` (the on-disk layout: repository root, `RunDirectory`/`StudyDirectory`, atomic JSON records, recorded config, run state),
   `collector.py` (`Collector` ABC: run table in Parquet, then a study-specific `_analyze`),
   `cli.py` (the `study` command).
 - `studies/*.py` define `STUDY`; they must be self-contained apart from `bayes_cep` (they are

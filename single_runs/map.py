@@ -1,9 +1,9 @@
 """MAP estimation run: generate synthetic data from a ground truth and compute the MAP estimate.
 
-The run has stages, to regenerate the example data piece by piece: `preprocessing` (ground truth,
-prior mean, synthetic observations), `map` (MAP estimate; reads the preprocessing data) and `mcmc`
-(chain started at the MAP estimate; reads both). `all` runs them in sequence, the MCMC stage only if
-the configuration has MCMC settings.
+A recorded run (`execute`) performs all stages. `generate_example_data` writes the example data
+instead, piece by piece: `preprocessing` (ground truth, prior mean, synthetic observations), `map`
+(MAP estimate; reads the preprocessing data) and `mcmc` (chain started at the MAP estimate; reads
+both). `all` runs them in sequence, the MCMC stage only if the configuration has MCMC settings.
 
 Classes:
     MapRun: The MAP estimation run.
@@ -28,8 +28,8 @@ from bayes_cep.posterior.likelihood import LikelihoodSettings
 from bayes_cep.posterior.prior import PriorSettings
 from bayes_cep.preprocessing.prior_mean import build_constant_prior_mean
 from bayes_cep.preprocessing.synthetic_observations import generate_synthetic_observations
-from bayes_cep.run.config import resolve_path
-from bayes_cep.run.logging import Steps, describe_array
+from bayes_cep.run.directories import resolve_repository_path
+from bayes_cep.run.logging import StepReporter, describe_array
 from bayes_cep.run.template import Metrics, Run
 from bayes_cep.statistics.axial_statistics import compute_axial_data_diff
 from single_runs.config import MapRunConfig
@@ -47,18 +47,22 @@ class _Paths:
     sampler_log: Path
 
     @classmethod
-    def of(cls, run_dir: Path, example_layout: bool) -> _Paths:
-        if example_layout:
-            logs = run_dir / "logs"
-            return cls(
-                run_dir / "preprocessing",
-                run_dir / "map",
-                run_dir / "mcmc",
-                logs / "optimizer.log",
-                logs / "sampler.log",
-            )
+    def for_run(cls, run_dir: Path) -> _Paths:
+        """The paths of a run directory: all results in `results/`."""
         results = run_dir / "results"
         return cls(results, results, results, run_dir / "optimizer.log", run_dir / "sampler.log")
+
+    @classmethod
+    def for_example_data(cls, example_dir: Path) -> _Paths:
+        """The paths of the example data: one folder per stage, logs in `logs/`."""
+        logs = example_dir / "logs"
+        return cls(
+            example_dir / "preprocessing",
+            example_dir / "map",
+            example_dir / "mcmc",
+            logs / "optimizer.log",
+            logs / "sampler.log",
+        )
 
 
 # --------------------------------------------------------------------------------------------------
@@ -76,7 +80,6 @@ class _Data:
 class MapRun(Run[MapRunConfig]):
     """Generate synthetic observations from a ground truth, then compute the MAP estimate."""
 
-    config_type = MapRunConfig
     stages = ("all", "preprocessing", "map", "mcmc")
     outputs = {
         "results/ground_truth_angle_field.npy": "Ground-truth fiber angle [rad] per vertex.",
@@ -99,9 +102,10 @@ class MapRun(Run[MapRunConfig]):
         "optimization_history.png (study report).",
     }
 
+    # ----------------------------------------------------------------------------------------------
     @override
     def input_files(self) -> list[Path]:
-        raw_dir = resolve_path(self.config.raw_dir)
+        raw_dir = resolve_repository_path(self.config.raw_dir)
         return [raw_dir / name for name in ("mesh.vtu", "basis_vecs.npy", "fiber_field.npy")]
 
     @override
@@ -112,22 +116,48 @@ class MapRun(Run[MapRunConfig]):
         report_map_run(self.config, run_dir)
 
     # ----------------------------------------------------------------------------------------------
+    def generate_example_data(self, example_dir: Path, stage: str = "all") -> None:
+        """Write the example data, without the records of a run: one folder per stage.
+
+        The data goes to `preprocessing/`, `map/` and `mcmc/` of `example_dir`, the logs to
+        `logs/<stage>.log` (`run.log` for all stages). A later stage reads the data of the earlier
+        ones from `example_dir`.
+
+        Args:
+            example_dir (Path): Directory of the example data; created if missing.
+            stage (str): The part to generate, one of `stages`. Defaults to `"all"`.
+
+        Raises:
+            ValueError: If `stage` is not one of `stages`, or `mcmc` is requested without MCMC
+                settings in the configuration.
+        """
+        if stage not in self.stages:
+            raise ValueError(f"stage must be one of {self.stages}, got {stage!r}.")
+        example_dir.mkdir(parents=True, exist_ok=True)
+        log_path = example_dir / "logs" / f"{'run' if stage == 'all' else stage}.log"
+        with self._logged(log_path) as logger:
+            self._run_stages(logger, _Paths.for_example_data(example_dir), stage)
+
+    # ----------------------------------------------------------------------------------------------
     @override
     def _execute(self, run_dir: Path, logger: BaseLogger) -> Metrics:
+        return self._run_stages(logger, _Paths.for_run(run_dir), "all")
+
+    # ----------------------------------------------------------------------------------------------
+    def _run_stages(self, logger: BaseLogger, paths: _Paths, stage: str) -> Metrics:
+        """Perform a stage, or all of them: preprocessing, MAP estimation, and MCMC sampling."""
         config = self.config
-        stage = self.stage
         if stage == "mcmc" and config.mcmc is None:
             raise ValueError("The mcmc stage needs MCMC settings in the configuration.")
         sample = stage == "mcmc" or (stage == "all" and config.mcmc is not None)
-        paths = _Paths.of(run_dir, self.example_layout)
         total = {"preprocessing": 3, "map": 5, "mcmc": 6, "all": 6}[stage] + 2 * (
             stage == "all" and sample
         )
-        steps = Steps(logger, total)
+        steps = StepReporter(logger, total)
         metrics: Metrics = {}
 
-        raw_dir = resolve_path(config.raw_dir)
-        with steps(f"Loading the mesh and basis vectors from {raw_dir}"):
+        raw_dir = resolve_repository_path(config.raw_dir)
+        with steps.step(f"Loading the mesh and basis vectors from {raw_dir}"):
             mesh = load_pyvista_mesh(raw_dir / "mesh.vtu")
             basis_vectors = np.load(raw_dir / "basis_vecs.npy")
         logger.info(f"      mesh: {mesh.n_points} vertices, {mesh.n_cells} triangles")
@@ -135,7 +165,7 @@ class MapRun(Run[MapRunConfig]):
         if stage in ("all", "preprocessing"):
             data = self._preprocess(mesh, basis_vectors, paths, steps, logger)
         else:
-            with steps(f"Loading the preprocessing data from {paths.data_dir}"):
+            with steps.step(f"Loading the preprocessing data from {paths.data_dir}"):
                 data = _load_data(paths.data_dir)
         if stage == "preprocessing":
             return metrics
@@ -146,7 +176,7 @@ class MapRun(Run[MapRunConfig]):
                 posterior_builder, log_posterior, data, paths, steps, logger, metrics
             )
         else:
-            with steps(f"Loading the MAP estimate from {paths.map_dir}"):
+            with steps.step(f"Loading the MAP estimate from {paths.map_dir}"):
                 map_estimate = np.load(paths.map_dir / "map_estimate.npy")
         if sample:
             self._sample(
@@ -160,20 +190,20 @@ class MapRun(Run[MapRunConfig]):
         mesh: UnstructuredGrid,
         basis_vectors: np.ndarray,
         paths: _Paths,
-        steps: Steps,
+        steps: StepReporter,
         logger: BaseLogger,
     ) -> _Data:
         """Build ground truth and prior mean, generate the observations, and save all four."""
         config = self.config
         strategy_name = type(config.ground_truth).__name__
-        with steps(f"Building ground truth and prior mean ({strategy_name})"):
-            fiber_field = np.load(resolve_path(config.raw_dir) / "fiber_field.npy")
+        with steps.step(f"Building ground truth and prior mean ({strategy_name})"):
+            fiber_field = np.load(resolve_repository_path(config.raw_dir) / "fiber_field.npy")
             ground_truth = config.ground_truth.build(mesh, fiber_field, basis_vectors)
             prior_mean = build_constant_prior_mean(ground_truth)
         logger.info(f"      {describe_array('ground truth [rad]', ground_truth)}")
         logger.info(f"      prior mean angle: {prior_mean[0]:.4f} rad")
 
-        with steps("Generating synthetic observations"):
+        with steps.step("Generating synthetic observations"):
             forward_map = EikonalParameterToSolutionMap(
                 mesh, basis_vectors, config.eikonal, config.interpolation
             )
@@ -194,10 +224,10 @@ class MapRun(Run[MapRunConfig]):
 
     # ----------------------------------------------------------------------------------------------
     def _build_posterior(
-        self, mesh: UnstructuredGrid, basis_vectors: np.ndarray, data: _Data, steps: Steps
+        self, mesh: UnstructuredGrid, basis_vectors: np.ndarray, data: _Data, steps: StepReporter
     ) -> tuple[PosteriorBuilder, LogPosterior]:
         config = self.config
-        with steps("Building the posterior"):
+        with steps.step("Building the posterior"):
             posterior_builder = PosteriorBuilder(
                 PosteriorSettings(
                     mesh=mesh,
@@ -227,7 +257,7 @@ class MapRun(Run[MapRunConfig]):
         log_posterior: LogPosterior,
         data: _Data,
         paths: _Paths,
-        steps: Steps,
+        steps: StepReporter,
         logger: BaseLogger,
         metrics: Metrics,
     ) -> np.ndarray:
@@ -237,12 +267,12 @@ class MapRun(Run[MapRunConfig]):
         )
         with BaseLogger(optimizer_logger_settings, prefix="map") as optimizer_logger:
             optimizer_name = type(self.config.optimizer).__name__
-            with steps(f"Building the optimizer ({optimizer_name})"):
+            with steps.step(f"Building the optimizer ({optimizer_name})"):
                 model, optimizer = self.config.optimizer.build(
                     log_posterior, posterior_builder.prior, optimizer_logger
                 )
             optimization_start = time.perf_counter()
-            with steps("Running MAP estimation"):
+            with steps.step("Running MAP estimation"):
                 result = optimizer.run(initial_guess=data.prior_mean, model=model)
             optimization_seconds = time.perf_counter() - optimization_start
 
@@ -284,7 +314,7 @@ class MapRun(Run[MapRunConfig]):
         log_posterior: LogPosterior,
         initial_state: np.ndarray,
         paths: _Paths,
-        steps: Steps,
+        steps: StepReporter,
         logger: BaseLogger,
         metrics: Metrics,
     ) -> None:
@@ -306,10 +336,10 @@ class MapRun(Run[MapRunConfig]):
             print_to_console=self.console, logfile_path=paths.sampler_log
         )
         with BaseLogger(sampler_logger_settings, prefix="mcmc") as sampler_logger:
-            with steps(f"Building the sampler ({settings.algorithm.name})"):
+            with steps.step(f"Building the sampler ({settings.algorithm.name})"):
                 sampler = mcmc_builder.build(logger=sampler_logger)
             sampling_start = time.perf_counter()
-            with steps(f"Sampling {settings.num_samples} states"):
+            with steps.step(f"Sampling {settings.num_samples} states"):
                 sampler.run(
                     initial_state=initial_state,
                     settings=SamplerSettings(

@@ -1,6 +1,6 @@
 """Plots of a finished run, rendered from its results and written to `<run_dir>/plots`.
 
-Rendering needs pyvista's off-screen mode and matplotlib (`pixi run -e dev ...`), so it is a
+Rendering needs pyvista's off-screen mode and matplotlib, so it is a
 separate step from the run itself: runs on a cluster only write data, plots are made where a
 renderer is available.
 
@@ -16,8 +16,7 @@ import pyvista as pv
 
 from bayes_cep.mesh.interpolation import NearestNeighborInterpolationStrategy
 from bayes_cep.mesh.io import load_pyvista_mesh
-from bayes_cep.run.config import resolve_path
-from bayes_cep.run.directories import RunDirectory
+from bayes_cep.run.directories import RunDirectory, resolve_repository_path
 from bayes_cep.statistics.axial_statistics import compute_axial_data_diff
 from single_runs.config import MapRunConfig, PriorRunConfig
 
@@ -84,11 +83,11 @@ def report_prior_run(config: PriorRunConfig, run_dir: Path) -> None:
     plots_dir.mkdir(exist_ok=True)
     import matplotlib.pyplot as plt
 
-    mesh = load_pyvista_mesh(resolve_path(config.raw_dir) / "mesh.vtu")
+    mesh = load_pyvista_mesh(resolve_repository_path(config.raw_dir) / "mesh.vtu")
     connectivity = mesh.cells.reshape(-1, 4)[:, 1:]
     to_simplices = NearestNeighborInterpolationStrategy().assemble_matrix(mesh.points, connectivity)
     results_dir = run_dir / "results"
-    metrics = RunDirectory(run_dir).metrics()
+    metrics = RunDirectory(run_dir).read_metrics()
     label = f"kappa={config.prior.kappa}, tau={config.prior.tau}"
 
     sample = np.load(results_dir / "sample.npy")
@@ -140,11 +139,11 @@ def report_map_run(config: MapRunConfig, run_dir: Path) -> None:
     plots_dir.mkdir(exist_ok=True)
     import matplotlib.pyplot as plt
 
-    mesh = load_pyvista_mesh(resolve_path(config.raw_dir) / "mesh.vtu")
+    mesh = load_pyvista_mesh(resolve_repository_path(config.raw_dir) / "mesh.vtu")
     connectivity = mesh.cells.reshape(-1, 4)[:, 1:]
     to_simplices = NearestNeighborInterpolationStrategy().assemble_matrix(mesh.points, connectivity)
     results_dir = run_dir / "results"
-    metrics = RunDirectory(run_dir).metrics()
+    metrics = RunDirectory(run_dir).read_metrics()
 
     ground_truth = np.load(results_dir / "ground_truth_angle_field.npy")
     map_estimate = np.load(results_dir / "map_estimate.npy")

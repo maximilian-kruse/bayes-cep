@@ -51,6 +51,7 @@ zarr = ">=3.4.0,<4"
 pandas = ">=3.0.6,<4"
 pyarrow = ">=23.0.0,<24"
 submitit = ">=1.5.4,<2"
+matplotlib = ">=3.11.2,<4"
 
 [tool.pixi.activation.env]
 # The concrete runs (`single_runs/`) and `studies/` live outside the installed package.
@@ -78,7 +79,6 @@ example-mcmc = "python scripts/run.py --overwrite --example-layout --stage mcmc 
 ruff = ">=0.16.7,<0.17"
 pre-commit = ">=4.6.2,<5"
 jupyter = ">=1.1.1,<2"
-matplotlib = ">=3.11.2,<4"
 seaborn = ">=0.13.2,<0.14"
 trame = ">=4.0.0,<5"
 trame-vtk = ">=2.11.16,<3"

@@ -81,9 +81,9 @@ through the `PYTHONPATH` set by the pixi activation. Modules of `run/`:
 - `executor.py`: `Executor` runs given `Run` objects in their run directories: `local` serially in
   this process, `slurm` as a `submitit` job array (records `SUBMITTED` first; `wait=False` queues
   and returns). Knows nothing about studies.
-- `study.py`: sweep nodes (`Axis`/`Zip`/`Product` over dotted config paths), `Study(run_type, base,
-  sweep)` (definition, resolves to `ResolvedRun`s) and `CreatedStudy` (named by its module and
-  `--root`: `create` writes `<root>/<name>/study/` atomically with `study.json`, run ids and
+- `study.py`: sweep nodes (`Axis`/`Zip`/`Product` over dotted config paths), `StudySetup(run_type, base,
+  sweep)` (what a study module defines as `STUDY`; resolves to `ResolvedRun`s) and `Study` (named by its module and
+  `--root`, which has no default: `create` writes `<root>/<name>/study/` atomically with `study.json`, run ids and
   environment; `load` re-resolves the module and requires the recorded run ids; `execute_runs`
   skips done runs and, unless `include_active`, submitted/running ones; `plot_finished_runs`;
   `build_run_table`/`write_run_table`).
@@ -107,7 +107,7 @@ the example data:
 Each run plots in its own `report` method. A new run kind = config + `Run` subclass in one module.
 `studies/*.py` define `STUDY`; they are not archived with a study (the recorded commit and patch
 cover them). A study of inference runs sweeps `problem.preprocessing_dir` over the run directories
-of a preprocessing study (`Study.run_directories()`), which must be created and run first.
+of a preprocessing study (`StudySetup.run_directories(root)`), which must be created and run first.
 
 ## Design & style
 - Priorities: numerical correctness > reproducibility > clear APIs > performance > convenience.

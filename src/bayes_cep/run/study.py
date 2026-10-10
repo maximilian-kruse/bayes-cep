@@ -1,15 +1,15 @@
 """Studies: the definition of a study, and a study written to disk.
 
-A study is a run type, a base configuration and a sweep over it. `Study` is what a study module
+A study is a run type, a base configuration and a sweep over it. `StudySetup` is what a study module
 (`studies/<name>.py`) defines as `STUDY`; it resolves into a fixed, ordered list of runs. A sweep is
 a tree of nodes, each expanding into a list of override dicts (dotted configuration path to value)
 that are applied to the base configuration.
 
-`CreatedStudy` is a study written to disk: creating it, executing its runs, plotting and
+`Study` is a study written to disk: creating it, executing its runs, plotting and
 summarizing them. A study is identified by its module and the root directory of all study
 directories; its directory is `<root>/<study name>` (see `directories` for the layout).
-`CreatedStudy.create` resolves the module into the fixed run list and writes the study directory,
-including the environment specification. Working on the created study resolves the module again;
+`Study.create` resolves the module into the fixed run list and writes the study directory,
+including the environment specification. Working on the study resolves the module again;
 the runs must have the ids recorded at creation, since the results in the directory belong to them.
 
 Classes:
@@ -18,8 +18,8 @@ Classes:
     Axis: One parameter and its values.
     Zip: Axes varied together.
     Product: All combinations of groups.
-    Study: Run type, base configuration, sweep and description.
-    CreatedStudy: A study directory together with the study definition it was created from.
+    StudySetup: Run type, base configuration, sweep and description.
+    Study: A study directory together with the study setup it was created from.
 """
 
 import importlib.util
@@ -192,7 +192,7 @@ class Product(SweepNode):
 
 # ==================================================================================================
 @dataclass(frozen=True)
-class Study:
+class StudySetup:
     """A run type, the base configuration of its runs, the sweep over it, and a description.
 
     Attributes:
@@ -244,7 +244,7 @@ class Study:
             Self: The study.
 
         Raises:
-            ValueError: If the file does not define a `Study` named `STUDY`.
+            ValueError: If the file does not define a `StudySetup` named `STUDY`.
         """
         spec = importlib.util.spec_from_file_location(f"study_{module_path.stem}", module_path)
         if spec is None or spec.loader is None:
@@ -283,6 +283,34 @@ class Study:
         return runs
 
     # ----------------------------------------------------------------------------------------------
+    def run_directories(self, root: Path) -> list[Path]:
+        """The run directories of all runs, in order, as they exist once the study is created.
+
+        This lets a study refer to the results of another one, e.g. a MAP study to the
+        preprocessing runs that produced its data. The paths are relative if `root` is.
+
+        Args:
+            root (Path): Directory holding all study directories.
+
+        Returns:
+            list[Path]: One run directory per run.
+        """
+        study_directory = StudyDirectory(root / self.name)
+        return [study_directory.run_directory(run.run_id).path for run in self.resolve_runs()]
+
+    # ----------------------------------------------------------------------------------------------
+    def run_directory(self, config: RunConfig, root: Path) -> Path:
+        """The run directory of the run with this configuration (see `run_directories`).
+
+        Raises:
+            ValueError: If the study has no run with this configuration.
+        """
+        for run, run_directory in zip(self.resolve_runs(), self.run_directories(root), strict=True):
+            if run.run_id == config.run_id:
+                return run_directory
+        raise ValueError(f"Study {self.name!r} has no run with the configuration {config.run_id}.")
+
+    # ----------------------------------------------------------------------------------------------
     def describe(self) -> str:
         """Text overview: description, run type, number of runs, base configuration and sweep."""
         return "\n".join(
@@ -303,15 +331,15 @@ class Study:
 
 
 # ==================================================================================================
-class CreatedStudy:
+class Study:
     """A study directory together with the study definition it was created from.
 
     Attributes:
         directory (StudyDirectory): The directory of the study.
-        definition (Study): The study as defined by its module.
+        definition (StudySetup): The study as defined by its module.
     """
 
-    def __init__(self, directory: StudyDirectory, definition: Study) -> None:
+    def __init__(self, directory: StudyDirectory, definition: StudySetup) -> None:
         """Bind a study definition to the directory created for it."""
         self.directory = directory
         self.definition = definition
@@ -335,7 +363,7 @@ class CreatedStudy:
             FileExistsError: If the study directory already exists.
             ValueError: If a configuration does not survive its JSON form.
         """
-        study = Study.load_from_module_file(module_path)
+        study = StudySetup.load_from_module_file(module_path)
         study_dir = (root / study.name).resolve()
         if study_dir.exists():
             raise FileExistsError(f"Study directory {study_dir} already exists.")
@@ -357,13 +385,13 @@ class CreatedStudy:
     # ----------------------------------------------------------------------------------------------
     @classmethod
     def load(cls, module_path: Path, root: Path) -> Self:
-        """Load a created study from its module and the root of the study directories.
+        """Load a study from its module and the root of the study directories.
 
         Raises:
             FileNotFoundError: If the study has not been created in `root`.
             ValueError: If the module no longer resolves to the runs recorded at creation.
         """
-        study = Study.load_from_module_file(module_path)
+        study = StudySetup.load_from_module_file(module_path)
         directory = StudyDirectory((root / study.name).resolve())
         if not directory.study_record_path.exists():
             raise FileNotFoundError(f"Study {study.name!r} has not been created in {root}.")
@@ -553,7 +581,7 @@ class CreatedStudy:
     # ----------------------------------------------------------------------------------------------
     @staticmethod
     def _write_description(
-        directory: StudyDirectory, study: Study, runs: list[ResolvedRun], module_path: Path
+        directory: StudyDirectory, study: StudySetup, runs: list[ResolvedRun], module_path: Path
     ) -> None:
         """Write the study description and the environment into `directory`."""
         environment = Environment.collect_from_current_process()

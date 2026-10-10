@@ -21,11 +21,11 @@ change → run checks → review diff.
 - No `tests/` yet, though `pyproject.toml` points `testpaths` there; create it following
   `ls_bayesian`'s layout (`unit/`, `integration/`, `helpers.py`, `conftest.py`).
 - Tasks (run from the repository root; relative config paths resolve against it): `single`
-  (`scripts/run.py`, one run), `study` (`run/cli.py`), `example` and `example-preprocessing`/`-map`/
-  `-mcmc` (regenerate the example data, all or one run; map and mcmc depend on preprocessing).
+  (`scripts/run.py`, one run), `study` (`run/study_cli.py`), `example` and `example-preprocessing`/`-map`/
+  `-mcmc` (regenerate the example data, all or one run; map depends on preprocessing, mcmc on map).
 - `example_data/` (git-tracked, not part of the package): `raw/` (mesh, fiber field, basis vectors)
   and the output of three reference runs, each an ordinary run directory with its records:
-  `preprocessing/`, `map/` and `mcmc/` (chain in `results/`, gitignored). `working_data/`
+  `preprocessing/`, `map/` and `mcmc/` (chain gitignored). `working_data/`
   (gitignored) holds study directories.
 
 ## Architecture
@@ -81,33 +81,38 @@ through the `PYTHONPATH` set by the pixi activation. Modules of `run/`:
 - `executor.py`: `Executor` runs given `Run` objects in their run directories: `local` serially in
   this process, `slurm` as a `submitit` job array (records `SUBMITTED` first; `wait=False` queues
   and returns). Knows nothing about studies.
-- `study.py`: sweep nodes (`Axis`/`Zip`/`Product` over dotted config paths), `StudySetup(run_type, base,
-  sweep)` (what a study module defines as `STUDY`; resolves to `ResolvedRun`s) and `Study` (named by its module and
-  `--root`, which has no default: `create` writes `<root>/<name>/study/` atomically with `study.json`, run ids and
-  environment; `load` re-resolves the module and requires the recorded run ids; `execute_runs`
-  skips done runs and, unless `include_active`, submitted/running ones; `plot_finished_runs`;
+- `study.py`: sweep nodes (`Axis`/`Zip`/`Product` over dotted config paths), `StudySetup(run_type,
+  base, sweep, executor)` (what a study module defines as `STUDY`: the runs and the `ExecutorSettings`
+  they execute with, local or SLURM resources; resolves to `ResolvedRun`s) and `Study` (named by its
+  module and `--root`, which has no default: `create` writes `<root>/<name>/study/` atomically with
+  `study.json`, run ids and environment, and requires the input files of all runs to exist; `load`
+  re-resolves the module and requires the recorded run ids; `execute_runs` skips done runs and,
+  unless `include_active`, submitted/running ones; `plot_finished_runs`;
   `build_run_table`/`write_run_table`).
 - `progress.py`: `StepReporter` (numbered, timed steps in the log) and `describe_array`.
-- `cli.py`: the `study` command (`create`, `show`, `run`, `status`, `collect`, `report`), each
-  taking the study module.
+- `study_cli.py`: the `study` command (`create`, `show`, `run`, `status`, `collect`, `report`), each
+  taking the study module and, except `show`, `--root`.
 
-`single_runs/` holds the concrete runs, each module with its own config and `reference_*` helper for
-the example data:
+`single_runs/` holds the concrete runs, each module with its own config. The configs have no
+defaults for scientific parameters: `reference.py` holds all of them (constants and
+`reference_*_config` factories of the example data), and presets and studies start from there:
 - `prior.py`: `PriorParameters`, `PriorRunConfig`, `PriorRun` (samples the prior; needs only the mesh).
 - `preprocessing.py`: `PreprocessingRun` is the only place where data is generated (ground truth,
-  prior mean, synthetic observations). `PreprocessedData` is its output in `results/` (including the
+  prior mean, synthetic observations). `PreprocessedData` is its output (including the
   noise variance); ground truth and observation settings have no defaults on purpose, studies vary
   them.
 - `inference.py`: `InferenceProblemConfig` (raw dir, `preprocessing_dir`, prior, eikonal,
   interpolation), embedded as `problem` in the MAP and MCMC configs, with `assemble_posterior`.
-- `map.py`: `MapRun` only optimizes, from the prior mean; `mcmc.py`: `McmcRun` only samples, from
-  the prior mean. Neither depends on the other; both read the preprocessed data and nothing else of
-  the data side, so many inference runs share one preprocessing run.
+- `map.py`: `MapRun` only optimizes, from the prior mean; `mcmc.py`: `McmcRun` only samples, from the
+  configured `initial_state` (`PriorMeanInitialState` or `MapEstimateInitialState`, which only reads
+  a MAP run's `map_estimate.npy`; the example data starts at the MAP). Both read the preprocessed
+  data and nothing else of the data side, so many inference runs share one preprocessing run.
 
 Each run plots in its own `report` method. A new run kind = config + `Run` subclass in one module.
 `studies/*.py` define `STUDY`; they are not archived with a study (the recorded commit and patch
 cover them). A study of inference runs sweeps `problem.preprocessing_dir` over the run directories
-of a preprocessing study (`StudySetup.run_directories(root)`), which must be created and run first.
+of a preprocessing study (`StudySetup.run_directories(root)`), whose root is the constant
+`PREPROCESSING_ROOT` of the module; that study must be created and run first.
 
 ## Design & style
 - Priorities: numerical correctness > reproducibility > clear APIs > performance > convenience.

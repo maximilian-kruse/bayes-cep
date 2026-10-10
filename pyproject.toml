@@ -67,10 +67,10 @@ tyro = ">=1.0.16,<2"
 
 [tool.pixi.tasks]
 single = "python scripts/run.py"
-study = "python -m bayes_cep.run.cli"
+study = "python -m bayes_cep.run.study_cli"
 example-preprocessing = "python scripts/run.py --overwrite --run-dir example_data/preprocessing config:reference-preprocessing-synthetic"
 example-map = { cmd = "python scripts/run.py --overwrite --run-dir example_data/map config:reference-map", depends-on = ["example-preprocessing"] }
-example-mcmc = { cmd = "python scripts/run.py --overwrite --run-dir example_data/mcmc config:reference-mcmc", depends-on = ["example-preprocessing"] }
+example-mcmc = { cmd = "python scripts/run.py --overwrite --run-dir example_data/mcmc config:reference-mcmc", depends-on = ["example-map"] }
 example = { depends-on = ["example-map", "example-mcmc"] }
 
 # --- Features -------------------------------------------------------------------------------------

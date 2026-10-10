@@ -1,26 +1,28 @@
 """Command line interface of simulation studies: create, run, inspect and summarize.
 
+This is the CLI of studies; a single run is started with `scripts/run.py` (`pixi run single`).
+
 A study is a Python module in `studies/` defining `STUDY`: a base run configuration plus the
-sweeps over it. Every command names the study by its module; the study directory is
-`<root>/<study name>`, with `--root` required for every command that acts on a study. `create`
-resolves the module into a fixed list of runs and writes the study directory; `run` executes the
-runs one after the other in this process (`local`) or on a SLURM cluster (`slurm`).
+sweeps over it, and the executor settings (local, or SLURM resources). Every command names the
+study by its module; the study directory is `<root>/<study name>`, with `--root` required for every
+command that acts on a study. `create` resolves the module into a fixed list of runs and writes the
+study directory; `run` executes the runs one after the other in this process (cluster `local`) or
+on a SLURM cluster (cluster `slurm`), as set in the module.
 
 Example:
 
     pixi run study create studies/prior_investigation.py --root working_data
     pixi run study show studies/prior_investigation.py
-    pixi run study run studies/prior_investigation.py --root working_data --executor.cluster local
+    pixi run study run studies/prior_investigation.py --root working_data
     pixi run study status studies/prior_investigation.py --root working_data
     pixi run study collect studies/prior_investigation.py --root working_data
     pixi run study report studies/prior_investigation.py --root working_data
 
-On a cluster, `--executor.cluster slurm` sends the unfinished runs to SLURM as one job array via
-`submitit` (one task per unfinished run); the tasks use this pixi environment, so it must be
-reachable from the compute nodes. With `--no-wait`, the command returns after queueing:
+With the cluster `slurm`, `run` sends the unfinished runs to SLURM as one job array via `submitit`
+(one task per unfinished run); the tasks use this pixi environment, so it must be reachable from
+the compute nodes. With `--no-wait`, the command returns after queueing:
 
-    pixi run study run studies/prior_investigation.py --root working_data \
-        --executor.cluster slurm --no-wait
+    pixi run study run studies/map_synthetic.py --root working_data --no-wait
 
 Finished runs are skipped, so running again only repeats failed or unstarted runs. Runs that are
 submitted or running are skipped too (a second job would delete the files of the first); after a
@@ -31,14 +33,14 @@ crash or an interrupted submission, `--include-active` restarts them. SLURM logs
 import json
 import sys
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated
 
 import tyro
 
 from bayes_cep.run.config import format_config_tree
-from bayes_cep.run.executor import ExecutorSettings, RunOutcome
+from bayes_cep.run.executor import RunOutcome
 from bayes_cep.run.study import Study, StudySetup
 
 
@@ -79,6 +81,8 @@ class ShowCommand:
 class RunCommand(StudyCommand):
     """Execute the unfinished runs, one after the other in this process or on SLURM.
 
+    The executor settings are those of the study module.
+
     Attributes:
         index (int | None): Only this run; all runs if `None`.
         force (bool): Whether to rerun finished runs.
@@ -86,14 +90,12 @@ class RunCommand(StudyCommand):
             crash.
         wait (bool): Whether to wait for the runs to finish; `False` (queue and return) is only
             possible with the `"slurm"` cluster, where the scheduler owns the jobs.
-        executor (ExecutorSettings): Where and with which resources the runs execute.
     """
 
     index: int | None = None
     force: bool = False
     include_active: bool = False
     wait: bool = True
-    executor: ExecutorSettings = field(default_factory=ExecutorSettings)
 
 
 # ==================================================================================================
@@ -149,7 +151,7 @@ def main(command: Command) -> None:
             # Execute unfinished runs (blocking), or queue them on SLURM and return (`--no-wait`).
             indices = None if command.index is None else [command.index]
             outcomes = Study.load(command.module, command.root).execute_runs(
-                command.executor, indices, command.force, command.include_active, command.wait
+                indices, command.force, command.include_active, command.wait
             )
             print(dict(Counter(str(outcome) for outcome in outcomes.values())))
             if RunOutcome.ACTIVE in outcomes.values():

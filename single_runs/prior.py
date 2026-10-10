@@ -1,27 +1,87 @@
 """Prior investigation run: sample the prior, estimate pointwise variance and correlation length.
 
+A run is a pure function of its configuration: everything it depends on (parameters, seeds, data
+source) is a field of its configuration, and nothing is hidden in module state. Configurations hold
+paths and settings only, never arrays, so they can be serialized, hashed and compared.
+
 Classes:
+    PriorParameters: Bilaplacian SPDE prior parameters; shared with the MAP run.
+    PriorRunConfig: Sample the prior and estimate its pointwise variance and correlation length.
     PriorRun: The prior investigation run.
 """
 
 import time
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import override
 
+import matplotlib.pyplot as plt
 import numpy as np
 from ls_bayesian.common.logging import BaseLogger
 
+from bayes_cep.mesh.interpolation import NearestNeighborInterpolationStrategy
 from bayes_cep.mesh.io import create_dolfinx_mesh, load_pyvista_mesh
+from bayes_cep.mesh.plotting import render_cell_field, render_point_field
 from bayes_cep.posterior.prior import PriorSettings, build_fiber_angle_prior
-from bayes_cep.run.directories import resolve_repository_path
-from bayes_cep.run.logging import StepReporter, describe_array
+from bayes_cep.run.config import RunConfig
+from bayes_cep.run.directories import RunDirectory, resolve_repository_path
+from bayes_cep.run.progress import StepReporter, describe_array
 from bayes_cep.run.template import Metrics, Run
 from bayes_cep.statistics.axial_statistics import (
     compute_axial_mean_and_variance,
     shift_angles_to_minimize_axial_variance,
+    wrap_axial_angles,
 )
-from bayes_cep.statistics.correlation_length import estimate_correlation_length
-from single_runs.config import PriorRunConfig
+from bayes_cep.statistics.correlation_length import (
+    CorrelationLengthSettings,
+    estimate_correlation_length,
+)
+
+REFERENCE_PRIOR_KAPPA = 0.05
+REFERENCE_PRIOR_TAU = 10.0
+
+
+# ==================================================================================================
+@dataclass(frozen=True)
+class PriorParameters:
+    r"""Bilaplacian SPDE prior parameters.
+
+    Attributes:
+        kappa (float): SPDE parameter $\kappa > 0$, controlling correlation length.
+        tau (float): SPDE parameter $\tau > 0$, controlling marginal variance.
+        seed (int): Random seed for prior sampling. Defaults to `0`.
+    """
+
+    kappa: float = REFERENCE_PRIOR_KAPPA
+    tau: float = REFERENCE_PRIOR_TAU
+    seed: int = 0
+
+
+# ==================================================================================================
+@dataclass(frozen=True)
+class PriorRunConfig(RunConfig):
+    """Sample a zero-mean prior and estimate its pointwise variance and correlation length.
+
+    Needs only the mesh: no data, likelihood or optimization is involved.
+
+    Attributes:
+        raw_dir (Path): Directory containing `mesh.vtu`.
+        correlation (CorrelationLengthSettings): Settings of the correlation length estimation.
+        prior (PriorParameters): Prior parameters.
+        num_samples (int): Number of samples for the variance and correlation length estimates.
+        keep_samples (bool): Whether to store the samples themselves as a result. Off by default,
+            since many runs of a study would otherwise add up to gigabytes.
+    """
+
+    raw_dir: Path
+    correlation: CorrelationLengthSettings
+    prior: PriorParameters = field(default_factory=PriorParameters)
+    num_samples: int = 1000
+    keep_samples: bool = False
+
+    def __post_init__(self) -> None:
+        if self.num_samples < 2:
+            raise ValueError(f"num_samples must be at least 2, got {self.num_samples}.")
 
 
 # ==================================================================================================
@@ -49,10 +109,61 @@ class PriorRun(Run[PriorRunConfig]):
 
     @override
     def report(self, run_dir: Path) -> None:
-        # Imported here: plotting needs pyvista and matplotlib, which are not needed to run.
-        from single_runs.plots import report_prior_run
+        config = self.config
+        plots_dir = run_dir / "plots"
+        plots_dir.mkdir(exist_ok=True)
+        results_dir = run_dir / "results"
+        metrics = RunDirectory(run_dir).read_metrics()
+        label = f"kappa={config.prior.kappa}, tau={config.prior.tau}"
 
-        report_prior_run(self.config, run_dir)
+        mesh = load_pyvista_mesh(resolve_repository_path(config.raw_dir) / "mesh.vtu")
+        connectivity = mesh.cells.reshape(-1, 4)[:, 1:]
+        to_simplices = NearestNeighborInterpolationStrategy().assemble_matrix(
+            mesh.points, connectivity
+        )
+        render_cell_field(
+            mesh,
+            wrap_axial_angles(to_simplices @ np.load(results_dir / "sample.npy")),
+            plots_dir / "sample.png",
+            f"prior sample ({label})",
+            "angle [rad]",
+            "hsv",
+            (-np.pi / 2, np.pi / 2),
+        )
+        render_point_field(
+            mesh,
+            np.load(results_dir / "pointwise_variance.npy"),
+            plots_dir / "pointwise_variance.png",
+            f"pointwise axial variance ({label}), mean {metrics['variance_mean']:.3g}",
+            "axial variance",
+            "viridis",
+        )
+
+        curve = np.load(results_dir / "correlation_curve.npz")
+        figure, axis = plt.subplots(figsize=(6, 4))
+        axis.plot(
+            curve["bin_distances"], curve["bin_correlations"], "o", label="binned correlation"
+        )
+        fit_mask = curve["fit_mask"]
+        axis.plot(
+            curve["bin_distances"][fit_mask],
+            curve["fitted_correlations"][fit_mask],
+            "-",
+            label=f"Matern fit, length {metrics['correlation_length']:.3g}",
+        )
+        axis.axhline(config.correlation.correlation_threshold, color="gray", linestyle=":")
+        distance = metrics["correlation_distance_threshold"]
+        if np.isfinite(distance):
+            axis.axvline(
+                distance, color="gray", linestyle="--", label=f"threshold at {distance:.3g}"
+            )
+        axis.set_xlabel("distance")
+        axis.set_ylabel("axial correlation")
+        axis.set_title(label)
+        axis.legend()
+        figure.tight_layout()
+        figure.savefig(plots_dir / "correlation_curve.png", dpi=150)
+        plt.close(figure)
 
     @override
     def _execute(self, run_dir: Path, logger: BaseLogger) -> Metrics:
@@ -60,7 +171,7 @@ class PriorRun(Run[PriorRunConfig]):
         results_dir = run_dir / "results"
         results_dir.mkdir(parents=True, exist_ok=True)
         config = self.config
-        steps = StepReporter(logger, total_steps=5)
+        steps = StepReporter(logger)
 
         raw_dir = resolve_repository_path(config.raw_dir)
         with steps.step(f"Loading the mesh from {raw_dir}"):

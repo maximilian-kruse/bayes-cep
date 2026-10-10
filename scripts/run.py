@@ -1,20 +1,18 @@
-"""Run one configuration (prior investigation or MAP estimation) into a run directory.
+"""Run one configuration into a run directory.
 
-Choose the kind of run as a subcommand: `prior`, `map`, or one of the presets that reproduce the
-example data, `example-synthetic` and `example-real` (synthetic or real-data ground truth; there is
-deliberately no default). Everything is written to `--run-dir`: `config.json`, `metadata.json`,
-`status.json`, `run.log`, `metrics.json` and `results/`.
+Choose the kind of run as a subcommand: `prior`, `preprocessing`, `map` or `mcmc`, or one of the
+presets that reproduce the example data: `reference-preprocessing-synthetic` and
+`reference-preprocessing-real` (synthetic or real-data ground truth; there is deliberately no
+default), `reference-map` and `reference-mcmc`. Everything is written to `--run-dir`:
+`config.json`, `metadata.json`, `status.json`, `run.log`, `metrics.json` and `results/`.
 
-With `--example-layout`, a run writes the plain example-data layout instead, without any JSON
-records: `preprocessing/` (ground truth, prior mean, observations), `map/` (MAP estimate and
-histories), `mcmc/` (chain) and `logs/`. Regenerate the example data like this (the raw data path
-of the preset is relative to the repository root), all at once or stage by stage; a stage reads the
-data of the earlier ones from `example_data`:
+The MAP and MCMC runs read the preprocessed data of a preprocessing run, given as
+`--config.problem.preprocessing-dir`. The example data is the output of three runs, each in its own
+run directory; they are made in sequence by `pixi run example`, or one by one:
 
-    pixi run example config:example-synthetic
-    pixi run example-preprocessing config:example-synthetic
-    pixi run example-map config:example-synthetic
-    pixi run example-mcmc config:example-synthetic
+    pixi run example-preprocessing
+    pixi run example-map
+    pixi run example-mcmc
 
 A single prior run, with every option listed by `--help`:
 
@@ -26,7 +24,7 @@ import shutil
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated
 
 import tyro
 
@@ -34,32 +32,52 @@ from bayes_cep.preprocessing.ground_truth import (
     RealDataGroundTruthStrategy,
     SyntheticGroundTruthStrategy,
 )
-from bayes_cep.run.directories import RunState
+from bayes_cep.run.config import RunConfig
+from bayes_cep.run.directories import STATUS_RECORD, RunState
 from bayes_cep.run.template import Run
-from single_runs.config import MapRunConfig, PriorRunConfig, reference_config
-from single_runs.map import MapRun
-from single_runs.prior import PriorRun
+from single_runs.map import MapRun, MapRunConfig, reference_map_config
+from single_runs.mcmc import McmcRun, McmcRunConfig, reference_mcmc_config
+from single_runs.preprocessing import (
+    PreprocessingRun,
+    PreprocessingRunConfig,
+    reference_preprocessing_config,
+)
+from single_runs.prior import PriorRun, PriorRunConfig
 
-STAGE_FOLDERS = {
-    "all": ("preprocessing", "map", "mcmc"),
-    "preprocessing": ("preprocessing",),
-    "map": ("map",),
-    "mcmc": ("mcmc",),
+EXAMPLE_PREPROCESSING_DIR = Path("example_data/preprocessing")
+RUN_TYPES: dict[type[RunConfig], type[Run]] = {
+    PriorRunConfig: PriorRun,
+    PreprocessingRunConfig: PreprocessingRun,
+    MapRunConfig: MapRun,
+    McmcRunConfig: McmcRun,
 }
 
 Prior = Annotated[PriorRunConfig, tyro.conf.subcommand("prior")]
+Preprocessing = Annotated[PreprocessingRunConfig, tyro.conf.subcommand("preprocessing")]
 Map = Annotated[MapRunConfig, tyro.conf.subcommand("map")]
-ExampleSynthetic = Annotated[
-    MapRunConfig,
+Mcmc = Annotated[McmcRunConfig, tyro.conf.subcommand("mcmc")]
+ReferencePreprocessingSynthetic = Annotated[
+    PreprocessingRunConfig,
     tyro.conf.subcommand(
-        "example-synthetic",
-        default=reference_config(SyntheticGroundTruthStrategy(), with_mcmc=True),
+        "reference-preprocessing-synthetic",
+        default=reference_preprocessing_config(SyntheticGroundTruthStrategy()),
     ),
 ]
-ExampleReal = Annotated[
-    MapRunConfig,
+ReferencePreprocessingReal = Annotated[
+    PreprocessingRunConfig,
     tyro.conf.subcommand(
-        "example-real", default=reference_config(RealDataGroundTruthStrategy(), with_mcmc=True)
+        "reference-preprocessing-real",
+        default=reference_preprocessing_config(RealDataGroundTruthStrategy()),
+    ),
+]
+ReferenceMap = Annotated[
+    MapRunConfig,
+    tyro.conf.subcommand("reference-map", default=reference_map_config(EXAMPLE_PREPROCESSING_DIR)),
+]
+ReferenceMcmc = Annotated[
+    McmcRunConfig,
+    tyro.conf.subcommand(
+        "reference-mcmc", default=reference_mcmc_config(EXAMPLE_PREPROCESSING_DIR)
     ),
 ]
 
@@ -71,49 +89,48 @@ class SingleRun:
 
     Attributes:
         run_dir (Path): Directory the run is written to; must not exist yet unless `overwrite`.
-        overwrite (bool): Whether to delete an existing run directory first (with the example
-            layout, only the folders of the stage).
-        example_layout (bool): Whether to write the plain example-data layout, without JSON records.
-        stage (Literal["all", "preprocessing", "map", "mcmc"]): Which part of a MAP run to perform
-            (example layout only); later stages read the data of earlier ones from `run_dir`.
-        config (PriorRunConfig | MapRunConfig): The run to execute, chosen as a subcommand.
+        overwrite (bool): Whether to delete an existing run directory first. Only a directory that
+            is a run directory (has a status record) is deleted.
+        config (RunConfig): The run to execute, chosen as a subcommand.
     """
 
     run_dir: Path
-    config: Prior | Map | ExampleSynthetic | ExampleReal
+    config: (
+        Prior
+        | Preprocessing
+        | Map
+        | Mcmc
+        | ReferencePreprocessingSynthetic
+        | ReferencePreprocessingReal
+        | ReferenceMap
+        | ReferenceMcmc
+    )
     overwrite: bool = False
-    example_layout: bool = False
-    stage: Literal["all", "preprocessing", "map", "mcmc"] = "all"
+
+
+# ==================================================================================================
+def _remove_previous_output(run_dir: Path, overwrite: bool) -> None:
+    """Delete what a previous run left in the run directory, if `overwrite` allows it.
+
+    Raises:
+        SystemExit: If there is previous output and `overwrite` is not set, or if the run
+            directory to delete is not one made by a run.
+    """
+    if (run_dir / STATUS_RECORD).exists():
+        if not overwrite:
+            raise SystemExit(f"{run_dir} exists; pass --overwrite to replace it.")
+        shutil.rmtree(run_dir)
+    elif run_dir.exists() and any(run_dir.iterdir()):
+        raise SystemExit(f"{run_dir} is not empty and not a run directory; not deleting it.")
 
 
 # ==================================================================================================
 def main(settings: SingleRun) -> None:
     """Execute the run; exit with status 1 if it failed."""
-    run_dir = settings.run_dir
-    stale = (
-        [run_dir / name for name in STAGE_FOLDERS[settings.stage] if (run_dir / name).exists()]
-        if settings.example_layout
-        else [run_dir] * run_dir.exists()
-    )
-    if stale and not settings.overwrite:
-        raise SystemExit(f"{stale[0]} exists; pass --overwrite to replace it.")
-    for path in stale:
-        shutil.rmtree(path)
-    config = settings.config
-    if settings.example_layout:
-        if not isinstance(config, MapRunConfig):
-            raise SystemExit("Example data is generated by MAP runs; use a map or example preset.")
-        try:
-            MapRun(config).generate_example_data(run_dir, settings.stage)
-        except Exception:
-            print(f"Run failed, see the logs in {run_dir / 'logs'}", file=sys.stderr)
-            sys.exit(1)
-        return
-    if settings.stage != "all":
-        raise SystemExit("--stage needs --example-layout.")
-    run: Run = MapRun(config) if isinstance(config, MapRunConfig) else PriorRun(config)
-    if run.execute(run_dir) == RunState.FAILED:
-        print(f"Run failed, see {run_dir / 'status.json'}", file=sys.stderr)
+    _remove_previous_output(settings.run_dir, settings.overwrite)
+    run = RUN_TYPES[type(settings.config)](settings.config)
+    if run.execute(settings.run_dir) == RunState.FAILED:
+        print(f"Run failed, see {settings.run_dir / STATUS_RECORD}", file=sys.stderr)
         sys.exit(1)
 
 

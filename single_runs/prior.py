@@ -14,7 +14,6 @@ from ls_bayesian.common.logging import BaseLogger
 from bayes_cep.mesh.io import create_dolfinx_mesh, load_pyvista_mesh
 from bayes_cep.posterior.prior import PriorSettings, build_fiber_angle_prior
 from bayes_cep.run.directories import resolve_repository_path
-from bayes_cep.run.logging import StepReporter, describe_array
 from bayes_cep.run.template import Metrics, Run
 from bayes_cep.statistics.axial_statistics import (
     compute_axial_mean_and_variance,
@@ -22,6 +21,7 @@ from bayes_cep.statistics.axial_statistics import (
 )
 from bayes_cep.statistics.correlation_length import estimate_correlation_length
 from single_runs.config import PriorRunConfig
+from single_runs.progress import StepReporter, describe_array
 
 
 # ==================================================================================================
@@ -60,7 +60,7 @@ class PriorRun(Run[PriorRunConfig]):
         results_dir = run_dir / "results"
         results_dir.mkdir(parents=True, exist_ok=True)
         config = self.config
-        steps = StepReporter(logger, total_steps=5)
+        steps = StepReporter(logger)
 
         raw_dir = resolve_repository_path(config.raw_dir)
         with steps.step(f"Loading the mesh from {raw_dir}"):

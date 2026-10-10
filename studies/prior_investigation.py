@@ -6,7 +6,8 @@ variance and the correlation length from 1000 samples.
 
 from pathlib import Path
 
-from bayes_cep.run.study import Axis, Product, Study
+from bayes_cep.run.study import Study
+from bayes_cep.run.sweep import Axis, Product
 from bayes_cep.statistics.correlation_length import CorrelationLengthSettings
 from single_runs.config import PriorParameters, PriorRunConfig
 from single_runs.prior import PriorRun

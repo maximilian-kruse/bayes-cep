@@ -9,7 +9,8 @@ from ls_bayesian.optimization.algorithms.scipy_lbfgs_b import ScipyLBFGSBSetting
 
 from bayes_cep.optimization.strategies import ScipyLBFGSBStrategy
 from bayes_cep.preprocessing.ground_truth import SyntheticGroundTruthStrategy
-from bayes_cep.run.study import Axis, Product, Study
+from bayes_cep.run.study import Study
+from bayes_cep.run.sweep import Axis, Product
 from single_runs.config import reference_config, reference_optimizer_strategy
 from single_runs.map import MapRun
 

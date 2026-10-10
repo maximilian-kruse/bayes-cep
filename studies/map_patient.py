@@ -4,7 +4,8 @@ Same sweep as `map_synthetic.py`, with the ground truth derived from the patient
 """
 
 from bayes_cep.preprocessing.ground_truth import RealDataGroundTruthStrategy
-from bayes_cep.run.study import Axis, Product, Study, Zip
+from bayes_cep.run.study import Study
+from bayes_cep.run.sweep import Axis, Product, Zip
 from single_runs.config import reference_config
 from single_runs.map import MapRun
 

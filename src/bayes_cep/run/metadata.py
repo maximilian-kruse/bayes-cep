@@ -24,7 +24,6 @@ import socket
 import subprocess
 import warnings
 from collections.abc import Sequence
-from contextlib import suppress
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from importlib import metadata as importlib_metadata
@@ -171,9 +170,13 @@ class EditablePackage:
         text = distribution.read_text("direct_url.json")
         if text is None:
             return None
-        direct_url = json.loads(text)
-        url = urlparse(direct_url["url"])
-        if url.scheme != "file" or not direct_url.get("dir_info", {}).get("editable", False):
+        try:
+            direct_url = json.loads(text)
+            url = urlparse(direct_url["url"])
+            editable = direct_url.get("dir_info", {}).get("editable", False)
+        except ValueError, KeyError, AttributeError:
+            return None  # malformed metadata of one package must not stop the collection
+        if url.scheme != "file" or not editable:
             return None
         return Path(unquote(url.path))
 
@@ -273,12 +276,15 @@ class RunMetadata:
     slurm_array_task_id: str | None
 
     @classmethod
-    def collect_for_run(cls, input_files: Sequence[Path]) -> Self:
+    def collect_for_run(cls, input_files: Sequence[Path], environment: Environment) -> Self:
         """Collect the metadata of a run about to start.
 
         Args:
             input_files (Sequence[Path]): Files the run reads; a missing file is recorded as
                 `None`.
+            environment (Environment): The environment the run executes in. Collected once by the
+                submitter instead of per run, since it costs several git calls and a scan of all
+                installed packages.
 
         Returns:
             Self: The environment, the content hashes of the input files, the machine, and the
@@ -286,7 +292,7 @@ class RunMetadata:
         """
         return cls(
             started=datetime.now().astimezone().isoformat(timespec="seconds"),
-            environment=Environment.collect_from_current_process(),
+            environment=environment,
             input_sha256=cls._hash_input_files(input_files),
             host=socket.gethostname(),
             cpu_count=os.cpu_count(),
@@ -305,9 +311,11 @@ class RunMetadata:
                 key = str(resolved.relative_to(REPOSITORY_ROOT))
             else:
                 key = str(resolved)
-            hashes[key] = (
-                hashlib.sha256(resolved.read_bytes()).hexdigest() if resolved.exists() else None
-            )
+            if not resolved.exists():
+                hashes[key] = None
+                continue
+            with resolved.open("rb") as file:
+                hashes[key] = hashlib.file_digest(file, "sha256").hexdigest()
         return hashes
 
 
@@ -387,7 +395,7 @@ class EnvironmentArchive:
             warnings.warn(
                 f"The archived {name} does not match the environment collected before: it "
                 "changed in between.",
-                stacklevel=4,
+                stacklevel=2,
             )
 
     # ----------------------------------------------------------------------------------------------
@@ -398,7 +406,7 @@ class EnvironmentArchive:
         issued and nothing is written.
         """
         if shutil.which("pixi") is None:
-            warnings.warn("pixi not found: no conda specification archived.", stacklevel=3)
+            warnings.warn("pixi not found: no conda specification archived.", stacklevel=2)
             return
         command = [
             "pixi",
@@ -410,8 +418,7 @@ class EnvironmentArchive:
             "--ignore-pypi-errors",
             "--ignore-source-errors",
         ]
-        error = ""
-        with suppress(OSError, subprocess.TimeoutExpired):
+        try:
             completed = subprocess.run(
                 command,
                 cwd=REPOSITORY_ROOT,
@@ -420,6 +427,8 @@ class EnvironmentArchive:
                 check=False,
                 timeout=EXPORT_TIMEOUT_SECONDS,
             )
-            error = completed.stderr.strip()
+            reason = completed.stderr.strip()
+        except OSError, subprocess.TimeoutExpired:
+            reason = "the export failed to run or timed out."
         if not any(self._target_dir.glob(CONDA_SPECIFICATION_PATTERN)):
-            warnings.warn(f"No conda specification archived. {error}", stacklevel=3)
+            warnings.warn(f"No conda specification archived. {reason}", stacklevel=2)

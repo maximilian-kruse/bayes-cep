@@ -11,6 +11,7 @@ Classes:
 
 import time
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 from typing import override
 
@@ -29,10 +30,20 @@ from bayes_cep.posterior.prior import PriorSettings
 from bayes_cep.preprocessing.prior_mean import build_constant_prior_mean
 from bayes_cep.preprocessing.synthetic_observations import generate_synthetic_observations
 from bayes_cep.run.directories import resolve_repository_path
-from bayes_cep.run.logging import StepReporter, describe_array
 from bayes_cep.run.template import Metrics, Run
 from bayes_cep.statistics.axial_statistics import compute_axial_data_diff
-from single_runs.config import MapRunConfig
+from single_runs.config import MapRunConfig, McmcRunSettings
+from single_runs.progress import StepReporter, describe_array
+
+
+# ==================================================================================================
+class MapStage(StrEnum):
+    """The parts of a MAP run that `MapRun.generate_example_data` can produce separately."""
+
+    ALL = "all"
+    PREPROCESSING = "preprocessing"
+    MAP = "map"
+    MCMC = "mcmc"
 
 
 # ==================================================================================================
@@ -80,7 +91,6 @@ class _Data:
 class MapRun(Run[MapRunConfig]):
     """Generate synthetic observations from a ground truth, then compute the MAP estimate."""
 
-    stages = ("all", "preprocessing", "map", "mcmc")
     outputs = {
         "results/ground_truth_angle_field.npy": "Ground-truth fiber angle [rad] per vertex.",
         "results/prior_mean_angle_field.npy": "Constant prior mean [rad] per vertex: the axial "
@@ -116,7 +126,7 @@ class MapRun(Run[MapRunConfig]):
         report_map_run(self.config, run_dir)
 
     # ----------------------------------------------------------------------------------------------
-    def generate_example_data(self, example_dir: Path, stage: str = "all") -> None:
+    def generate_example_data(self, example_dir: Path, stage: MapStage = MapStage.ALL) -> None:
         """Write the example data, without the records of a run: one folder per stage.
 
         The data goes to `preprocessing/`, `map/` and `mcmc/` of `example_dir`, the logs to
@@ -125,35 +135,47 @@ class MapRun(Run[MapRunConfig]):
 
         Args:
             example_dir (Path): Directory of the example data; created if missing.
-            stage (str): The part to generate, one of `stages`. Defaults to `"all"`.
+            stage (MapStage): The part to generate. Defaults to all parts (the MCMC part only if
+                the configuration has MCMC settings).
 
         Raises:
-            ValueError: If `stage` is not one of `stages`, or `mcmc` is requested without MCMC
-                settings in the configuration.
+            ValueError: If the `mcmc` stage is requested without MCMC settings in the configuration.
         """
-        if stage not in self.stages:
-            raise ValueError(f"stage must be one of {self.stages}, got {stage!r}.")
+        stages = self._stages_to_run(stage)
         example_dir.mkdir(parents=True, exist_ok=True)
-        log_path = example_dir / "logs" / f"{'run' if stage == 'all' else stage}.log"
+        log_path = example_dir / "logs" / f"{'run' if stage == MapStage.ALL else stage}.log"
         with self._logged(log_path) as logger:
-            self._run_stages(logger, _Paths.for_example_data(example_dir), stage)
+            self._run_stages(logger, _Paths.for_example_data(example_dir), stages)
 
     # ----------------------------------------------------------------------------------------------
     @override
     def _execute(self, run_dir: Path, logger: BaseLogger) -> Metrics:
-        return self._run_stages(logger, _Paths.for_run(run_dir), "all")
+        return self._run_stages(logger, _Paths.for_run(run_dir), self._stages_to_run(MapStage.ALL))
 
     # ----------------------------------------------------------------------------------------------
-    def _run_stages(self, logger: BaseLogger, paths: _Paths, stage: str) -> Metrics:
-        """Perform a stage, or all of them: preprocessing, MAP estimation, and MCMC sampling."""
-        config = self.config
-        if stage == "mcmc" and config.mcmc is None:
+    def _stages_to_run(self, stage: MapStage) -> frozenset[MapStage]:
+        """The concrete stages behind `stage`; `ALL` includes MCMC only if it is configured.
+
+        Raises:
+            ValueError: If the `mcmc` stage is requested without MCMC settings.
+        """
+        if stage == MapStage.MCMC and self.config.mcmc is None:
             raise ValueError("The mcmc stage needs MCMC settings in the configuration.")
-        sample = stage == "mcmc" or (stage == "all" and config.mcmc is not None)
-        total = {"preprocessing": 3, "map": 5, "mcmc": 6, "all": 6}[stage] + 2 * (
-            stage == "all" and sample
-        )
-        steps = StepReporter(logger, total)
+        if stage == MapStage.ALL:
+            stages = {MapStage.PREPROCESSING, MapStage.MAP}
+            if self.config.mcmc is not None:
+                stages.add(MapStage.MCMC)
+            return frozenset(stages)
+        return frozenset({stage})
+
+    # ----------------------------------------------------------------------------------------------
+    def _run_stages(
+        self, logger: BaseLogger, paths: _Paths, stages: frozenset[MapStage]
+    ) -> Metrics:
+        """Perform the stages; what a stage needs from an earlier one that is not among them is
+        read from the paths."""
+        config = self.config
+        steps = StepReporter(logger)
         metrics: Metrics = {}
 
         raw_dir = resolve_repository_path(config.raw_dir)
@@ -162,25 +184,32 @@ class MapRun(Run[MapRunConfig]):
             basis_vectors = np.load(raw_dir / "basis_vecs.npy")
         logger.info(f"      mesh: {mesh.n_points} vertices, {mesh.n_cells} triangles")
 
-        if stage in ("all", "preprocessing"):
+        if MapStage.PREPROCESSING in stages:
             data = self._preprocess(mesh, basis_vectors, paths, steps, logger)
         else:
             with steps.step(f"Loading the preprocessing data from {paths.data_dir}"):
                 data = _load_data(paths.data_dir)
-        if stage == "preprocessing":
+        if stages == {MapStage.PREPROCESSING}:
             return metrics
 
         posterior_builder, log_posterior = self._build_posterior(mesh, basis_vectors, data, steps)
-        if stage in ("all", "map"):
+        if MapStage.MAP in stages:
             map_estimate = self._estimate_map(
                 posterior_builder, log_posterior, data, paths, steps, logger, metrics
             )
         else:
             with steps.step(f"Loading the MAP estimate from {paths.map_dir}"):
                 map_estimate = np.load(paths.map_dir / "map_estimate.npy")
-        if sample:
+        if MapStage.MCMC in stages and config.mcmc is not None:
             self._sample(
-                posterior_builder, log_posterior, map_estimate, paths, steps, logger, metrics
+                posterior_builder,
+                log_posterior,
+                config.mcmc,
+                map_estimate,
+                paths,
+                steps,
+                logger,
+                metrics,
             )
         return metrics
 
@@ -312,6 +341,7 @@ class MapRun(Run[MapRunConfig]):
         self,
         posterior_builder: PosteriorBuilder,
         log_posterior: LogPosterior,
+        settings: McmcRunSettings,
         initial_state: np.ndarray,
         paths: _Paths,
         steps: StepReporter,
@@ -319,8 +349,6 @@ class MapRun(Run[MapRunConfig]):
         metrics: Metrics,
     ) -> None:
         """Run the MCMC chain from `initial_state`, storing it as a zarr store; add its metrics."""
-        settings = self.config.mcmc
-        assert settings is not None
         paths.mcmc_dir.mkdir(parents=True, exist_ok=True)
         mcmc_builder = MCMCBuilder(
             MCMCSettings(

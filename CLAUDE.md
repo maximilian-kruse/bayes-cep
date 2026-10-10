@@ -71,31 +71,36 @@ generic (no domain imports); the concrete runs live outside the package, in `sin
 studies in `studies/`), found through `PYTHONPATH` set by the pixi activation.
 - `run/config.py`: `RunConfig` base (frozen dataclass; `to_json_dict`/`from_json_dict` JSON round trip driven
   by type hints and `__type__` tags, `run_id`, `describe()`). `run/template.py`: `Run[ConfigT]` ABC;
-  `execute(run_dir)` is the wrapper (writes `config.json`, `metadata.json`, `status.json`
-  (`RunState`: `running`/`done`/`failed`; no directory = pending), `run.log`, `metrics.json`;
-  records failures, also those while recording, through `RunDirectory.record_*`; `execute` is the
-  only public way to run). A subclass names its config as the generic argument (`MapRun(Run[MapRunConfig])`
-  gives `config_type`), sets `outputs`, implements `_execute`, `report` (plots; separate local step,
-  so cluster runs stay headless), and optionally `input_files`. Stages and the example-data layout
-  are specific to `MapRun.generate_example_data`.
+  `execute(run_dir, environment=None)` is the wrapper (writes `config.json`, `metadata.json`,
+  `status.json` (`RunState`: `submitted`/`running`/`done`/`failed`; no directory = pending),
+  `run.log`, `metrics.json`; records failures and interruptions, also those while recording,
+  through `RunDirectory.record_*`; `execute` is the only public way to run). A subclass names its
+  config as the generic argument (`MapRun(Run[MapRunConfig])` gives `config_type`), sets `outputs`,
+  implements `_execute`, `report` (plots; separate local step, so cluster runs stay headless), and
+  optionally `input_files`. `MapRun.generate_example_data(stage: MapStage)` is the example-data
+  layout without records, composed from the same stage methods.
 - `single_runs/` (repository root): `config.py` (`PriorRunConfig`, `MapRunConfig`; the MAP ground truth and
   observation settings have no defaults on purpose: studies vary them), `prior.py` (`PriorRun`),
-  `map.py` (`MapRun`), `plots.py`. A new run kind = config + `Run` subclass.
-- Study side, all in `run/`: `study.py` (nestable `Axis`/`Zip`/`Product` sweep nodes over dotted
-  config paths; `Study(run_type, base, sweep, collector)` is the definition, and
-  `create_directory` writes `study/`: description, `runs.json` with all configs, environment,
-  archived definition and environment specification (`pixi.lock`, `pyproject.toml`, conda spec,
-  patch of uncommitted changes); a created study is loaded from the archived definition
-  (`load_from_directory`), must resolve to the recorded run ids, and `execute_runs` runs the
-  unfinished runs and `plot_finished_runs` plots the finished ones; workers get pickled `Run`
-  objects and never import the definition), `executor.py` (generic `Executor`: runs given `Run` objects in their run
-  directories; `debug` in process, `local` and `slurm` over `submitit`; knows nothing about
-  studies; `wait=False` queues on SLURM and returns; `RunOutcome`),
-  `directories.py` (the on-disk layout: repository root, `RunDirectory`/`StudyDirectory`, atomic JSON records, recorded config, run state),
-  `collector.py` (`Collector` ABC: run table in Parquet, then a study-specific `_analyze`),
-  `cli.py` (the `study` command).
-- `studies/*.py` define `STUDY`; they must be self-contained apart from `bayes_cep` (they are
-  archived with the study). `statistics/` holds the sample statistics used by the runs.
+  `map.py` (`MapRun`, `MapStage`), `progress.py` (`StepReporter`, `describe_array`), `plots.py`.
+  A new run kind = config + `Run` subclass.
+- Study side, all in `run/`: `sweep.py` (nestable `Axis`/`Zip`/`Product` nodes over dotted config
+  paths), `study.py` (`Study(run_type, base, sweep)`: the definition, resolving to `ResolvedRun`s),
+  `created_study.py` (`CreatedStudy`: `create_from_module` writes `study/` atomically: description,
+  `runs.json` with all configs, environment, archived definition and environment specification
+  (`pixi.lock`, `pyproject.toml`, conda spec, patch of uncommitted changes); a created study is
+  loaded from the archived definition (`load`) but its runs are the recorded configurations, with a
+  warning if code or environment drifted; `execute_runs` runs the unfinished runs, skips active
+  ones unless `include_active`, and `plot_finished_runs` plots the finished ones; workers get
+  pickled `Run` objects and never import the definition), `executor.py` (generic `Executor`: runs
+  given `Run` objects in their run directories; `debug` in process, `local` (sliding window of
+  `max_parallel`) and `slurm` (job array) over `submitit`; records `SUBMITTED` before a job may
+  start; knows nothing about studies; `wait=False` queues on SLURM and returns; `RunOutcome`),
+  `directories.py` (the on-disk layout: repository root, `RunDirectory`/`StudyDirectory`, atomic
+  JSON records, run state), `metadata.py` (environment capture, once per submission),
+  `run_table.py` (run table in Parquet), `cli.py` (the `study` command).
+- `studies/*.py` define `STUDY`; they import `bayes_cep` and the run kinds of `single_runs/`, which
+  are *not* archived with the study (the commit and patch in the recorded environment cover them).
+  `statistics/` holds the sample statistics used by the runs.
 
 ## Design & style
 - Priorities: numerical correctness > reproducibility > clear APIs > performance > convenience.

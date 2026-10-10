@@ -10,20 +10,21 @@ Type aliases:
     Metrics: The scalar metrics of a run.
 """
 
+import sys
 import traceback
 from abc import ABC, abstractmethod
 from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import asdict
+from datetime import datetime
 from pathlib import Path
 from typing import ClassVar, get_args, get_origin
 
-from ls_bayesian.common.logging import BaseLogger
+from ls_bayesian.common.logging import BaseLogger, LoggerSettings
 
 from bayes_cep.run.config import RunConfig
 from bayes_cep.run.directories import RunDirectory, RunState
-from bayes_cep.run.logging import run_logger
-from bayes_cep.run.metadata import RunMetadata
+from bayes_cep.run.metadata import Environment, RunMetadata
 
 type Metrics = dict[str, float | bool | int | str]
 
@@ -112,29 +113,48 @@ class Run[ConfigT: RunConfig](ABC):
     def _logged(self, log_path: Path) -> Generator[BaseLogger]:
         """Provide the logger of the run, after logging which run it is and its configuration.
 
+        The log file is overwritten and its missing parent directories are created.
+
         Args:
-            log_path (Path): Log file; its missing parent directories are created.
+            log_path (Path): Log file.
 
         Yields:
-            BaseLogger: The logger. An exception in the body is logged and propagates.
+            BaseLogger: The logger, closed on exit. An exception in the body is logged (with its
+                traceback in the log file only) and propagates.
         """
-        with run_logger(log_path, print_to_console=self.console) as logger:
+        settings = LoggerSettings(print_to_console=self.console, logfile_path=log_path)
+        with BaseLogger(settings) as logger:
+            started = datetime.now().astimezone().isoformat(timespec="seconds")
+            logger.info(f"Run started {started}")
+            logger.info(f"Command: {' '.join(sys.argv)}")
+            logger.info(f"Log file: {log_path}")
+            logger.info("")
             logger.info(f"{type(self).__name__} {self.config.run_id}")
             logger.info(self.config.describe())
             logger.info("")
-            yield logger
+            try:
+                yield logger
+            except BaseException as error:
+                logger.error(f"Run failed: {type(error).__name__}: {error}")
+                logger.debug(traceback.format_exc())
+                raise
 
     # ----------------------------------------------------------------------------------------------
-    def execute(self, run_dir: Path) -> RunState:
+    def execute(self, run_dir: Path, environment: Environment | None = None) -> RunState:
         """Run in `run_dir` and record everything about the run there.
 
         Records `config.json` and `metadata.json` first, then runs with the log in `run.log`, and
         finally records `metrics.json` and the end state. An exception, including one while
         recording, is recorded as the `failed` state with its traceback, and not raised, so that a
-        study can continue.
+        study can continue. An interruption (`KeyboardInterrupt`, `SystemExit`) is recorded the
+        same way and then raised again. A run that is killed without a chance to record (out of
+        memory, `SIGKILL`) stays `running`.
 
         Args:
-            run_dir (Path): Run directory; its previous content is the caller's responsibility.
+            run_dir (Path): Run directory. Files of an earlier attempt are the caller's
+                responsibility, except the status and metrics, which are replaced.
+            environment (Environment | None): The environment to record. Collected here if `None`;
+                a submitter that executes many runs collects it once and passes it on.
 
         Returns:
             RunState: The final state, `DONE` or `FAILED`.
@@ -142,12 +162,16 @@ class Run[ConfigT: RunConfig](ABC):
         run_dir.mkdir(parents=True, exist_ok=True)
         directory = RunDirectory(run_dir)
         try:
-            metadata = RunMetadata.collect_for_run(self.input_files())
+            if environment is None:
+                environment = Environment.collect_from_current_process()
+            metadata = RunMetadata.collect_for_run(self.input_files(), environment)
             directory.record_start(self.config, asdict(metadata))
             with self._logged(directory.log_path) as logger:
                 metrics = self._execute(run_dir, logger)
             directory.record_success(metrics)
-        except Exception as error:
+        except BaseException as error:
             directory.record_failure(error, traceback.format_exc())
+            if not isinstance(error, Exception):
+                raise
             return RunState.FAILED
         return RunState.DONE

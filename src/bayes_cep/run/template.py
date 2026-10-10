@@ -44,7 +44,7 @@ class Run[ConfigT: RunConfig](ABC):
         outputs (dict[str, str]): Description of the files a run writes, by path relative to the
             run directory; documented in the study description.
         config (ConfigT): The configuration of this run.
-        console (bool): Whether progress is also printed to the console.
+        write_to_console (bool): Whether progress is also printed to the console.
     """
 
     config_type: ClassVar[type[RunConfig]]
@@ -64,7 +64,8 @@ class Run[ConfigT: RunConfig](ABC):
 
         Args:
             config (ConfigT): Run configuration; must be an instance of `config_type`.
-            console (bool): Whether progress is also printed to the console. Defaults to `True`.
+            write_to_console (bool): Whether progress is also printed to the console. Defaults to
+                `True`.
 
         Raises:
             TypeError: If the subclass does not define `config_type` (through its generic

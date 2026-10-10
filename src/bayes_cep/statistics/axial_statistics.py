@@ -12,6 +12,7 @@ Functions:
     compute_axial_mean_and_variance: Axial mean and variance of angle samples, read block by block.
     shift_angles_to_minimize_axial_variance: Re-branch an angle field around its own axial mean.
     compute_axial_data_diff: Signed axial angle difference between two fields.
+    wrap_axial_angles: Wrap angles onto the principal branch $(-\pi/2, \pi/2]$.
 """
 
 import numpy as np
@@ -83,5 +84,19 @@ def compute_axial_data_diff(
     Returns:
         np.ndarray: Signed axial difference `angle_field_one - angle_field_two`.
     """
-    raw_diff = angle_field_one - angle_field_two
-    return np.angle(np.exp(2j * raw_diff)) / 2
+    return wrap_axial_angles(angle_field_one - angle_field_two)
+
+
+# --------------------------------------------------------------------------------------------------
+def wrap_axial_angles(
+    angles: np.ndarray[tuple[int], np.dtype[np.float64]],
+) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
+    r"""Wrap angles onto $(-\pi/2, \pi/2]$, the principal branch of axial data.
+
+    Args:
+        angles (np.ndarray): Angles in radians.
+
+    Returns:
+        np.ndarray: The angles modulo $\pi$, in $(-\pi/2, \pi/2]$.
+    """
+    return np.angle(np.exp(2j * angles)) / 2

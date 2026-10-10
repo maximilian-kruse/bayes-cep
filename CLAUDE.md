@@ -18,9 +18,9 @@ change → run checks → review diff.
 - Envs: `default` (numpy/scipy/pandas/pyarrow/submitit/beartype/dolfinx/scifem/jax/pyvista/meshio/matplotlib), `dev` (+ruff,
   pre-commit, jupyter, plotting), `test` (+pytest, pytest-xdist, pytest-mock, nbclient). Tools need
   `-e`: `pixi run -e dev ruff check src` / `ruff format src`; `pixi run -e test pytest`.
-- No `tests/` directory exists yet, though `pyproject.toml` already points `testpaths` at it —
-  create it following `ls_bayesian`'s layout (`unit/`, `integration/`, `helpers.py`, `conftest.py`)
-  for the first tests.
+- `tests/` follows `ls_bayesian`'s layout (`unit/<subpackage>/`, `integration/`, `helpers.py`,
+  `conftest.py` for fixtures); so far only `unit/statistics/` exists. The arviz comparison test
+  skips itself while `arviz` is not in the `test` env.
 - `example_data/` (git-tracked) holds one small reference patient's data: `raw/` (mesh, fiber field,
   basis vectors) and the output of the reference MAP run — `preprocessing/` (ground truth, prior mean,
   observations), `map/` (MAP estimate, histories), `mcmc/` (chain, gitignored), `logs/`, no JSON records (regenerate with
@@ -95,7 +95,13 @@ studies in `studies/`), found through `PYTHONPATH` set by the pixi activation.
   `collector.py` (`Collector` ABC: run table in Parquet, then a study-specific `_analyze`),
   `cli.py` (the `study` command).
 - `studies/*.py` define `STUDY`; they must be self-contained apart from `bayes_cep` (they are
-  archived with the study). `statistics/` holds the sample statistics used by the runs.
+  archived with the study). `statistics/` holds the sample statistics used by the runs, all
+  reading the (zarr) chain block by block through `sample_blocks.SampleStore`.
+  `axial_diagnostics.py` gives per-vertex effective sample size and autocorrelation time of angle
+  chains: it maps the angles to `sin(2(theta - axial mean))` (invariant under `theta + pi`) with a
+  lazy `MappedSampleStore` and delegates the generic, streaming estimator to
+  `ls_bayesian.mcmc.diagnostics` (open a finished chain with
+  `ls_bayesian.mcmc.storage.open_zarr_samples`).
 
 ## Design & style
 - Priorities: numerical correctness > reproducibility > clear APIs > performance > convenience.

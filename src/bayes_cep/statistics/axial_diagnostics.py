@@ -18,12 +18,14 @@ time of $s$ are estimated by `ls_bayesian.mcmc.diagnostics` (Vehtari et al., 202
 
 Functions:
     compute_axial_effective_sample_size: Effective sample size and autocorrelation time per vertex.
+    compute_axial_autocorrelation: Autocorrelation function per vertex.
 """
 
 import numpy as np
 from ls_bayesian.mcmc.diagnostics import (
     DEFAULT_BLOCK_SIZE,
     EffectiveSampleSizeResult,
+    compute_autocorrelation,
     estimate_effective_sample_size,
 )
 
@@ -64,8 +66,51 @@ def compute_axial_effective_sample_size(
     Raises:
         ValueError: If `burn_in`, `max_lag` or `block_size` are invalid for the samples.
     """
-    axial_mean, _ = compute_axial_mean_and_variance(samples, burn_in, block_size)
-    centered_sine = MappedSampleStore(samples, lambda block: np.sin(2 * (block - axial_mean)))
+    centered_sine = _build_centered_sine_store(samples, burn_in, block_size)
     return estimate_effective_sample_size(
         centered_sine, max_lag=max_lag, burn_in=burn_in, block_size=block_size
     )
+
+
+# ==================================================================================================
+def compute_axial_autocorrelation(
+    samples: SampleStore,
+    max_lag: int,
+    burn_in: int = 0,
+    block_size: int = DEFAULT_BLOCK_SIZE,
+) -> np.ndarray[tuple[int, int], np.dtype[np.float64]]:
+    r"""Compute the autocorrelation function of angle samples, per vertex.
+
+    The ordinary autocorrelation (see `ls_bayesian.mcmc.diagnostics.compute_autocorrelation`) of
+    $s = \sin(2(\theta - \mu))$ over the whole chain after the burn-in, not of the raw angle, which
+    is meaningless modulo $\pi$. Reads the store block by block, in three passes: the axial mean,
+    and the mean and the autocovariance of $s$.
+
+    Args:
+        samples (SampleStore): Angle samples in radians, shape `(num_samples, num_vertices)`,
+            e.g. a `numpy` or `zarr` array.
+        max_lag (int): Largest lag, smaller than the number of samples after the burn-in.
+        burn_in (int): Number of leading samples to discard. Defaults to `0`.
+        block_size (int): Number of samples read at once. Defaults to `DEFAULT_BLOCK_SIZE`.
+
+    Returns:
+        np.ndarray: Autocorrelation for the lags `0, ..., max_lag`, shape
+            `(max_lag + 1, num_vertices)`; `nan` for a vertex whose angle is constant.
+
+    Raises:
+        ValueError: If `burn_in`, `max_lag` or `block_size` are invalid for the samples.
+    """
+    centered_sine = _build_centered_sine_store(samples, burn_in, block_size)
+    return compute_autocorrelation(
+        centered_sine, max_lag=max_lag, start=burn_in, block_size=block_size
+    )
+
+
+# ==================================================================================================
+def _build_centered_sine_store(
+    samples: SampleStore, burn_in: int, block_size: int
+) -> MappedSampleStore:
+    r"""Lazy view of the samples as $\sin(2(\theta - \mu))$, with $\mu$ the axial mean after the
+    burn-in."""
+    axial_mean, _ = compute_axial_mean_and_variance(samples, burn_in, block_size)
+    return MappedSampleStore(samples, lambda block: np.sin(2 * (block - axial_mean)))

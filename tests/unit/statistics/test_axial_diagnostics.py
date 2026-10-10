@@ -5,7 +5,10 @@ import pytest
 from ls_bayesian.mcmc.diagnostics import estimate_effective_sample_size
 from ls_bayesian.mcmc.storage import ZarrStorage, open_zarr_samples
 
-from bayes_cep.statistics.axial_diagnostics import compute_axial_effective_sample_size
+from bayes_cep.statistics.axial_diagnostics import (
+    compute_axial_autocorrelation,
+    compute_axial_effective_sample_size,
+)
 from bayes_cep.statistics.sample_blocks import MappedSampleStore
 from tests.helpers import generate_ar1_chain
 
@@ -138,3 +141,46 @@ def test_invalid_burn_in_is_rejected() -> None:
 
     with pytest.raises(ValueError, match="burn_in"):
         compute_axial_effective_sample_size(chain, max_lag=5, burn_in=100)
+
+
+# ==================================================================================================
+def test_axial_autocorrelation_of_a_concentrated_ar1_angle_decays_geometrically() -> None:
+    chain = make_angle_chain(0.3, 100_000, 2, np.random.default_rng(8))
+
+    autocorrelation = compute_axial_autocorrelation(chain, max_lag=5, block_size=9_000)
+
+    analytic = AUTOREGRESSION_COEFFICIENT ** np.arange(6)
+    assert autocorrelation.shape == (6, 2)
+    np.testing.assert_allclose(autocorrelation[0], 1.0)
+    np.testing.assert_allclose(autocorrelation, np.tile(analytic[:, None], (1, 2)), atol=0.03)
+
+
+# --------------------------------------------------------------------------------------------------
+def test_axial_autocorrelation_is_invariant_under_shifting_samples_by_multiples_of_pi() -> None:
+    rng = np.random.default_rng(9)
+    chain = make_angle_chain(np.pi / 2 - 0.02, 5_000, 2, rng)
+    shifted_chain = chain + np.pi * rng.integers(-2, 3, size=chain.shape)
+
+    np.testing.assert_allclose(
+        compute_axial_autocorrelation(shifted_chain, max_lag=20),
+        compute_axial_autocorrelation(chain, max_lag=20),
+        atol=1e-8,
+    )
+
+
+# --------------------------------------------------------------------------------------------------
+def test_axial_autocorrelation_applies_the_burn_in_and_agrees_with_disk(tmp_path: Path) -> None:
+    chain = make_angle_chain(0.2, 1_200, 2, np.random.default_rng(10))
+    chain[:200] += 0.5  # transient
+    storage = ZarrStorage(tmp_path / "samples.zarr", chunk_size=64, buffer_size=40)
+    for sample in chain:
+        storage.store(sample)
+    storage.flush()
+
+    from_disk = compute_axial_autocorrelation(
+        open_zarr_samples(tmp_path / "samples.zarr"), max_lag=15, burn_in=200, block_size=77
+    )
+
+    np.testing.assert_allclose(
+        from_disk, compute_axial_autocorrelation(chain[200:], max_lag=15), atol=1e-10
+    )

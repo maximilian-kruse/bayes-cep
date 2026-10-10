@@ -11,6 +11,7 @@ magnitude measures concentration (`1`: all samples identical, `0`: uniformly spr
 Functions:
     compute_axial_mean_and_variance: Axial mean and variance of angle samples, read block by block.
     shift_angles_to_minimize_axial_variance: Re-branch an angle field around its own axial mean.
+    wrap_axial_angles: Wrap angles onto the principal branch.
     compute_axial_data_diff: Signed axial angle difference between two fields.
 """
 
@@ -67,6 +68,19 @@ def shift_angles_to_minimize_axial_variance(
     centered_angles = angle_samples - axial_mean
     wrapped_angles = (centered_angles + np.pi / 2) % np.pi - np.pi / 2
     return wrapped_angles + axial_mean
+
+
+# --------------------------------------------------------------------------------------------------
+def wrap_axial_angles(angles: np.ndarray) -> np.ndarray:
+    r"""Wrap angles onto $(-\pi/2, \pi/2]$, the principal branch of axial data.
+
+    Args:
+        angles (np.ndarray): Angles in radians, any shape.
+
+    Returns:
+        np.ndarray: The same axial angles, on the principal branch, same shape.
+    """
+    return np.angle(np.exp(2j * angles)) / 2
 
 
 # --------------------------------------------------------------------------------------------------

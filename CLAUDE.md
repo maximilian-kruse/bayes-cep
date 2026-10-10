@@ -80,7 +80,10 @@ studies in `studies/`), found through `PYTHONPATH` set by the pixi activation.
   are specific to `MapRun.generate_example_data`.
 - `single_runs/` (repository root): `config.py` (`PriorRunConfig`, `MapRunConfig`; the MAP ground truth and
   observation settings have no defaults on purpose: studies vary them), `prior.py` (`PriorRun`),
-  `map.py` (`MapRun`), `plots.py`. A new run kind = config + `Run` subclass.
+  `map.py` (`MapRun`), `plots.py` (what to plot per run kind; all generic plotting utilities —
+  mesh fields, autocorrelation, optimization history — live in `bayes_cep.postprocessing`, which
+  takes arrays and paths, never configs, and is imported only by the report step). A new run kind =
+  config + `Run` subclass.
 - Study side, all in `run/`: `study.py` (nestable `Axis`/`Zip`/`Product` sweep nodes over dotted
   config paths; `Study(run_type, base, sweep, collector)` is the definition, and
   `create_directory` writes `study/`: description, `runs.json` with all configs, environment,
@@ -100,7 +103,8 @@ studies in `studies/`), found through `PYTHONPATH` set by the pixi activation.
   `axial_diagnostics.py` gives per-vertex effective sample size and autocorrelation time of angle
   chains: it maps the angles to `sin(2(theta - axial mean))` (invariant under `theta + pi`) with a
   lazy `MappedSampleStore` and delegates the generic, streaming estimator to
-  `ls_bayesian.mcmc.diagnostics` (open a finished chain with
+  `ls_bayesian.mcmc.diagnostics`; `compute_axial_autocorrelation` gives the autocorrelation
+  function the same way (open a finished chain with
   `ls_bayesian.mcmc.storage.open_zarr_samples`).
 
 ## Design & style

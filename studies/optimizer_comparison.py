@@ -1,4 +1,4 @@
-"""Study 4: optimizer comparison.
+"""Optimizer comparison.
 
 One fixed problem (the reference one: prior kappa 0.05, tau 10, and the preprocessing run of
 `preprocessing_synthetic` with 1000 observations and noise variance 1e-3), solved with the
@@ -11,21 +11,20 @@ from pathlib import Path
 from ls_bayesian.optimization.algorithms.scipy_lbfgs_b import ScipyLBFGSBSettings
 
 from bayes_cep.optimization.strategies import ScipyLBFGSBStrategy
-from bayes_cep.preprocessing.ground_truth import SyntheticGroundTruthStrategy
-from bayes_cep.run.executor import ExecutorSettings
+from bayes_cep.run.executor import SlurmExecutorSettings
 from bayes_cep.run.study import Axis, Product, StudySetup
 from single_runs.map import MapRun
 from single_runs.reference import (
     reference_map_config,
     reference_optimizer_strategy,
-    reference_preprocessing_config,
+    reference_synthetic_preprocessing_config,
 )
 from studies.preprocessing_synthetic import STUDY as PREPROCESSING_STUDY
 
 RAW_DIR = Path("example_data/raw")  # the raw data all runs of this study work on
 
 REFERENCE_DATA_DIR = PREPROCESSING_STUDY.results_directory(
-    reference_preprocessing_config(RAW_DIR, SyntheticGroundTruthStrategy())
+    reference_synthetic_preprocessing_config(RAW_DIR)
 )
 
 STUDY = StudySetup(
@@ -43,5 +42,5 @@ STUDY = StudySetup(
         )
     ),
     root=Path("working_data/optimizer_comparison"),
-    executor=ExecutorSettings(cluster="slurm", time_min=240, cpus_per_task=4),
+    executor=SlurmExecutorSettings(time_min=240, cpus_per_task=4),
 )

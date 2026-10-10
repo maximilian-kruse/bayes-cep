@@ -47,7 +47,13 @@ from bayes_cep.run.directories import (
     format_current_time,
     write_json_record,
 )
-from bayes_cep.run.executor import Executor, ExecutorSettings, RunOutcome
+from bayes_cep.run.executor import (
+    ExecutorSettings,
+    LocalExecutorSettings,
+    RunOutcome,
+    create_executor,
+    describe_executor_settings,
+)
 from bayes_cep.run.provenance import Environment, EnvironmentArchive
 from bayes_cep.run.template import Run
 
@@ -216,7 +222,7 @@ class StudySetup:
     base: RunConfig
     sweep: SweepNode
     root: Path
-    executor: ExecutorSettings = field(default_factory=ExecutorSettings)
+    executor: ExecutorSettings = field(default_factory=LocalExecutorSettings)
 
     def __post_init__(self) -> None:
         if not STUDY_NAME_PATTERN.fullmatch(self.name):
@@ -343,7 +349,10 @@ class StudySetup:
                 f"run type  : {self.run_type_path}",
                 f"num runs  : {len(self.resolve_runs())}",
                 "executor  : "
-                + ", ".join(f"{key} = {value}" for key, value in asdict(self.executor).items()),
+                + ", ".join(
+                    f"{key} = {value}"
+                    for key, value in describe_executor_settings(self.executor).items()
+                ),
                 "",
                 "Base configuration",
                 format_config_tree(self.base.to_json_dict()),
@@ -498,7 +507,7 @@ class Study:
         if pending:
             environment = Environment.collect_from_current_process()
             self._warn_if_environment_changed(environment)
-            executor = Executor(
+            executor = create_executor(
                 self.definition.executor, self.directory.job_dir, self.directory.path.name
             )
             results = executor.run(
@@ -635,7 +644,7 @@ class Study:
                 "description": study.description,
                 "created": format_current_time(),
                 "module": str(module),
-                "executor": asdict(study.executor),
+                "executor": describe_executor_settings(study.executor),
                 "run_type": study.run_type_path,
                 "run_ids": [run.run_id for run in runs],
                 "sweep": study.sweep.to_json_dict(),

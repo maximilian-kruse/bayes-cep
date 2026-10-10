@@ -1,4 +1,4 @@
-"""Study 1: prior investigation.
+"""Prior investigation.
 
 Samples a zero-mean Bilaplacian SPDE prior for a grid of kappa and tau, and estimates the pointwise
 variance and the correlation length from 1000 samples.

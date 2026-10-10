@@ -68,7 +68,7 @@ class PosteriorBuilder:
     def __init__(
         self,
         settings: PosteriorSettings,
-        interpolation_strategy: InterpolationStrategy | None = None,
+        interpolation_strategy: InterpolationStrategy,
         prior_logger: BaseLogger | None = None,
         posterior_logger: BaseLogger | None = None,
     ) -> None:
@@ -76,9 +76,8 @@ class PosteriorBuilder:
 
         Args:
             settings (PosteriorSettings): Mesh, prior, eikonal solver, and likelihood settings.
-            interpolation_strategy (InterpolationStrategy | None, optional): Strategy for
-                interpolating the vertex-based parameter onto simplices for the forward map.
-                Defaults to `NearestNeighborInterpolationStrategy` if `None`.
+            interpolation_strategy (InterpolationStrategy): Strategy for interpolating the
+                vertex-based parameter onto simplices for the forward map.
             prior_logger (BaseLogger | None, optional): Logger for the prior's evaluation
                 diagnostics, passed to `build_fiber_angle_prior`. Nothing is logged if `None`.
                 Defaults to `None`.

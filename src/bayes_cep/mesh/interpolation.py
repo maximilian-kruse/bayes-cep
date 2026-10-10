@@ -56,7 +56,8 @@ class LinearInterpolationStrategy(InterpolationStrategy):
     """Average a triangle's three vertex values.
 
     This is the exact value of the linear (P1) interpolant of the vertex field at the triangle's
-    centroid. Does not use `vertex_coordinates`; only the connectivity determines the weights.
+    centroid. Only the connectivity determines the weights; `vertex_coordinates` gives the number
+    of vertices, so that vertices without a triangle do not change the shape of the matrix.
     """
 
     # ----------------------------------------------------------------------------------------------
@@ -66,7 +67,7 @@ class LinearInterpolationStrategy(InterpolationStrategy):
         connectivity: np.ndarray[tuple[int, int], np.dtype[np.integer]],
     ) -> sp.coo_array:
         """Assemble the interpolation matrix, with weight `1/3` per triangle vertex."""
-        num_vertices = int(np.max(connectivity)) + 1
+        num_vertices = vertex_coordinates.shape[0]
         num_simplices = connectivity.shape[0]
         row_inds = np.repeat(np.arange(num_simplices), 3)
         col_inds = connectivity.flatten()

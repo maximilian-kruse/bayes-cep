@@ -1,7 +1,8 @@
 r"""Adapts `ls_bayesian`'s SPDE prior to a fiber-angle `GaussianPrior`.
 
 Classes:
-    PriorSettings: Bilaplacian SPDE prior parameters for the fiber-angle field.
+    SpdePriorParameters: Bilaplacian SPDE parameters of the fiber-angle field.
+    PriorSettings: Mean and SPDE parameters of the fiber-angle prior.
     FiberAnglePrior: `GaussianPrior` adapter delegating to an `ls_bayesian` `SPDEPrior`.
 
 Functions:
@@ -20,20 +21,34 @@ from ls_bayesian.spde_prior import builder, spde_prior, strategies
 
 # ==================================================================================================
 @dataclass(frozen=True)
+class SpdePriorParameters:
+    r"""Bilaplacian SPDE parameters of the fiber-angle field.
+
+    There are no defaults: the reference values are in `single_runs.reference`.
+
+    Attributes:
+        kappa (float): SPDE parameter $\kappa > 0$, controlling correlation length.
+        tau (float): SPDE parameter $\tau > 0$, controlling marginal variance.
+        seed (int): Random seed for prior sampling.
+    """
+
+    kappa: float
+    tau: float
+    seed: int
+
+
+# ==================================================================================================
+@dataclass(frozen=True)
 class PriorSettings:
-    r"""Bilaplacian SPDE prior parameters for the fiber-angle field.
+    """Mean and SPDE parameters of the fiber-angle prior.
 
     Attributes:
         mean_vector (np.ndarray): Prior mean angle field, given on mesh vertices.
-        kappa (float): SPDE parameter $\kappa > 0$, controlling correlation length.
-        tau (float): SPDE parameter $\tau > 0$, controlling marginal variance.
-        seed (int): Random seed for prior sampling. Defaults to `0`.
+        parameters (SpdePriorParameters): Bilaplacian SPDE parameters.
     """
 
     mean_vector: np.ndarray[tuple[int], np.dtype[np.float64]]
-    kappa: float
-    tau: float
-    seed: int = 0
+    parameters: SpdePriorParameters
 
 
 # ==================================================================================================
@@ -130,9 +145,9 @@ def build_fiber_angle_prior(
     prior_settings = builder.SPDEPriorSettings(
         mesh=dlx_mesh,
         mean_vector=settings.mean_vector,
-        kappa=settings.kappa,
-        tau=settings.tau,
-        seed=settings.seed,
+        kappa=settings.parameters.kappa,
+        tau=settings.parameters.tau,
+        seed=settings.parameters.seed,
     )
     prior_builder = builder.SPDEPriorBuilder(
         prior_settings, strategies.BilaplacianComponentStrategy(), logger=logger

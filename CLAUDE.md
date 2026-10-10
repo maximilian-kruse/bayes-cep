@@ -18,9 +18,9 @@ change → run checks → review diff.
 - Envs: `default` (numpy/scipy/pandas/pyarrow/submitit/dolfinx/scifem/jax/pyvista/matplotlib/...),
   `dev` (+ruff, pre-commit, jupyter), `test` (+pytest). Tools need `-e`:
   `pixi run -e dev ruff check src` / `ruff format src`; `pixi run -e test pytest`.
-- `tests/` follows `ls_bayesian`'s layout (`unit/<subpackage>/`, `integration/`, `helpers.py`,
-  `conftest.py` for fixtures); so far only `unit/statistics/` and `unit/postprocessing/` exist. The
-  arviz comparison test skips itself while `arviz` is not in the `test` env.
+- There is currently no test suite: the tests were removed on purpose (commit `92fb8f1`). The
+  `test` env and the pytest settings in `pyproject.toml` stay for a future one; do not recreate
+  tests unasked.
 - Tasks (run from the repository root; relative config paths resolve against it): `single`
   (`scripts/run.py`, one run), `study` (`run/study_cli.py`), `example` and `example-preprocessing`/`-map`/
   `-mcmc` (regenerate the example data, all or one run; map depends on preprocessing, mcmc on
@@ -38,16 +38,23 @@ interfaces (`Likelihood`/`ParameterToSolutionMap`/`GaussianPrior`) with domain i
 parameter $m$ is a fiber-orientation angle per mesh vertex.
 
 - `mesh/io.py`: pyvista → dolfinx mesh conversion matching vertex order; `load_pyvista_mesh`
-  validates triangle-only. `mesh/interpolation.py`: `InterpolationStrategy` ABC assembling the
-  sparse vertex→simplex matrix (linear-average or nearest-neighbor).- `posterior/prior.py`: `FiberAnglePrior` adapts an `ls_bayesian` bilaplacian `SPDEPrior` to
-  `GaussianPrior` by delegation (the decoupling pattern `ls_bayesian` uses internally).
+  validates triangle-only; `get_triangle_connectivity` is the one place that reads the triangles
+  of a pyvista mesh. `mesh/interpolation.py`: `InterpolationStrategy` ABC assembling the sparse
+  vertex→simplex matrix (linear-average or nearest-neighbor); the strategy is always passed
+  explicitly.
+- `posterior/prior.py`: `SpdePriorParameters` (kappa, tau, seed; the one class for them, used by
+  the runs, the ground truth and `PriorSettings`), `FiberAnglePrior` adapts an `ls_bayesian`
+  bilaplacian `SPDEPrior` to `GaussianPrior` by delegation (the decoupling pattern `ls_bayesian`
+  uses internally).
 - `posterior/fiber_tensor.py`: `FiberTensor` (an `eikonax` `AbstractSimplexTensor`) builds the
   per-simplex anisotropic conductivity from the fiber angle in each simplex's tangent-plane basis
   and the longitudinal/transversal velocities; derivative via `jax.jacfwd`.
 - `posterior/eikonal_map.py`: `EikonalParameterToSolutionMap` wraps `eikonax`'s solver (forward) and
   discrete adjoint (gradient); Jacobian-/Hessian-vector products raise `NotImplementedError` (not
-  needed for MAP). `_DerivativeCache` skips reassembling the adjoint when gradient follows forward
-  at the same parameter.
+  needed for MAP). `_DerivativeCache` reuses the adjoint only for exactly the same parameter
+  vector (`np.array_equal` on a copy; a tolerance would let nearby MCMC proposals reuse another
+  state's adjoint), so it helps for repeated gradient calls at one parameter, not across steps.
+  `FiberTensor` and eikonax work in single precision, the posterior in double.
 - `posterior/likelihood.py`: `GaussianLogLikelihood` (i.i.d. homoscedastic noise) for sparse
   activation-time observations. `posterior/builder.py`: `PosteriorBuilder` wires the pieces from a
   `PosteriorSettings`; everything is built in `build()`, never `__init__` (a `LogPosterior` is tied
@@ -59,8 +66,13 @@ parameter $m$ is a fiber-orientation angle per mesh vertex.
   (`CustomLBFGSStrategy`/`ScipyLBFGSBStrategy`) builds a backend together with its matching model
   as one pair, never mix them; callers use `strategy.build(log_posterior, prior, logger)` directly.
 - `preprocessing/` (ground-truth strategies, constant prior mean, synthetic observations),
-  `mcmc/` (sampler builder) and `statistics/` (axial statistics, correlation length) serve the
-  runs. `statistics/` reads the (zarr) chain block by block through `sample_blocks.SampleStore`;
+  `mcmc/` (sampler builder; `MCMCSettings` has no default algorithm or step width) and
+  `statistics/` (axial statistics, correlation length) serve the runs. Settings in `src/` carry no
+  defaults for scientific parameters either; the reference values are in `single_runs/reference.py`.
+  `axial_statistics.py` holds the axial helpers: `compute_axial_mean` (in-memory),
+  `compute_axial_mean_and_variance` (streamed), `compute_axial_sine_deviation`
+  (`sin(2(theta - mean))`, shared by the diagnostics and the correlation length) and the
+  shape-preserving `shift_angles_to_minimize_axial_variance`. `statistics/` reads the (zarr) chain block by block through `sample_blocks.SampleStore`;
   `axial_diagnostics.py` gives per-vertex effective sample size, autocorrelation time
   (`compute_axial_effective_sample_size`) and autocorrelation function
   (`compute_axial_autocorrelation`) of angle chains: it maps the angles to
@@ -69,7 +81,9 @@ parameter $m$ is a fiber-orientation angle per mesh vertex.
   chain with `ls_bayesian.mcmc.storage.open_zarr_samples`).
 - `postprocessing/`: all generic plotting utilities, taking arrays and paths, never configs, and
   imported only by the report step: `mesh_plots.py` (off-screen pyvista rendering of per-simplex
-  and per-vertex fields into PNGs) and `curve_plots.py` (autocorrelation, optimization history).
+  and per-vertex fields into PNGs, including `render_axial_angle_field`) and `curve_plots.py`
+  (autocorrelation, correlation curve, optimization history). Reports use these helpers; no
+  `pyplot` in the runs.
 
 ## Runs and studies
 A **run** is a pure function of one frozen config, identified by an 8-hex content hash of its
@@ -81,21 +95,25 @@ through the `PYTHONPATH` set by the pixi activation. Modules of `run/`:
 - `template.py`: `Run[ConfigT]` ABC. `execute(run_dir, environment=None)` is the only way to run: it
   records `config.json`, `metadata.json`, `status.json`, `run.log`, `metrics.json` and failures or
   interruptions (state `RunState`: submitted/running/done/failed; no directory = pending). A subclass
-  names its config as the generic argument (gives `config_type`), sets `outputs`, implements
-  `_execute`, `report` (plots; separate local step, so cluster runs stay headless) and
-  `input_files` (hashed into the metadata). `open_run_logger` is public for partial runs.
+  names its config as the generic argument and sets `config_type` (explicitly, to the same class)
+  and `outputs`, and implements `_execute`, `report` (plots; separate local step, so cluster runs
+  stay headless) and `input_files` (hashed into the metadata). A run's id is its config alone;
+  the content of the input files and the code state are in `metadata.json`.
 - `directories.py`: on-disk layout (`RunDirectory`, `StudyDirectory`), atomic JSON records,
   repository root and `resolve_repository_path`, the time format.
 - `provenance.py`: `Environment` (git states, editable packages, `pixi.lock` hash; collected once
   per submission), `RunMetadata` (time, host, SLURM ids, input hashes), `EnvironmentArchive`
   (lock/pyproject/conda spec/patch of uncommitted changes, copied into the study directory).
-- `executor.py`: `Executor` runs given `Run` objects in their run directories: `local` serially in
-  this process, `slurm` as a `submitit` job array (records `SUBMITTED` first; `wait=False` queues
-  and returns). Knows nothing about studies.
+- `executor.py`: `ExecutorSettings = LocalExecutorSettings | SlurmExecutorSettings` (the resources
+  exist only on the SLURM one), `create_executor` gives the `Executor`: `LocalExecutor` runs the
+  `Run` objects serially in this process, `SlurmExecutor` as a `submitit` job array (records
+  `SUBMITTED` first; `wait=False` queues and returns). The executor is the only one that removes
+  the files of an earlier attempt (`scripts/run.py` only decides whether it may). Knows nothing
+  about studies.
 - `study.py`: sweep nodes (`Axis`/`Zip`/`Product` over dotted config paths), `StudySetup(run_type,
   base, sweep, root, executor)` (what a study module defines as `STUDY`: the runs, the `root`
-  (the study directory, named after the study), and the `ExecutorSettings` they execute with, local or SLURM
-  resources; resolves to `ResolvedRun`s; `run_directories()`/`results_directories()` give the
+  (the study directory, named after the study), and the `ExecutorSettings` they execute with
+  (`LocalExecutorSettings()` or `SlurmExecutorSettings(...)` with its resources); resolves to `ResolvedRun`s; `run_directories()`/`results_directories()` give the
   paths of the created study, for other studies to read) and `Study` (`create` writes `<root>/study/`
   atomically with `study.json`, run ids and environment, and requires the input files of all runs
   to exist; `load` re-resolves the module and requires the recorded run ids; `execute_runs` skips
@@ -107,20 +125,33 @@ through the `PYTHONPATH` set by the pixi activation. Modules of `run/`:
 
 `single_runs/` holds the concrete runs, each module with its own config. The configs have no
 defaults for scientific parameters: `reference.py` holds all of them (constants and
-`reference_*_config` factories of the example data), and presets and studies start from there:
-- `prior.py`: `PriorParameters`, `PriorRunConfig`, `PriorRun` (samples the prior; needs only the mesh).
+`reference_*_config` factories of the example data, including the synthetic and the patient
+preprocessing), and presets and studies start from there:
+- `data.py`: the file layout of the data, defined once: `RawDataDirectory` (mesh, basis vectors,
+  fiber field: paths and loaders), `ArrayRecord` (a frozen dataclass stored as one `.npy` per field
+  from its `FILE_NAMES` mapping; `save`/`load`/`file_paths`) and `PreprocessedData` (the output of
+  the preprocessing run, including the noise variance).
+- `prior.py`: `PriorRunConfig`, `PriorRun` (samples the prior; needs only the mesh).
 - `preprocessing.py`: `PreprocessingRun` is the only place where data is generated (ground truth,
-  prior mean, synthetic observations). `PreprocessedData` is its output (including the
-  noise variance); ground truth and observation settings have no defaults on purpose, studies vary
-  them.
-- `inference.py`: `InferenceProblemConfig` (raw dir, `data_dir`, prior, eikonal,
-  interpolation), embedded as `problem` in the MAP and MCMC configs, with `assemble_posterior`.
-- `map.py`: `MapRun` only optimizes, from the prior mean; `mcmc.py`: `McmcRun` only samples, from the
-  `initial_state_path`, a `.npy` file (the prior mean of the preprocessing run, or a MAP run's
-  `map_estimate.npy`; the example data starts at the MAP). Both read the preprocessed data and
-  nothing else of the data side, so many inference runs share one preprocessing run.
+  prior mean, synthetic observations); ground truth and observation settings have no defaults on
+  purpose, studies vary them.
+- `inference.py`: `InferenceProblemConfig` (raw dir, `data_dir`, prior, eikonal, interpolation; a
+  pure description with `input_files`), embedded as `problem` in the MAP and MCMC configs, and
+  `assemble_posterior(problem, steps, logger)`, which loads the files, checks that data and mesh
+  agree and builds the posterior.
+- `map.py`: `MapRun` only optimizes, from the prior mean (`MapResults` is its `ArrayRecord`);
+  `mcmc.py`: `McmcRun` only samples, from the `initial_state_path`, a `.npy` file (the prior mean of
+  the preprocessing run, or a MAP run's `map_estimate.npy`; the example data starts at the MAP), with
+  the sampler as an embedded `MCMCSettings`. Both read the preprocessed data and nothing else of
+  the data side, so many inference runs share one preprocessing run.
+- `registry.py`: `RUN_KINDS` (subcommand name to run type) and `RUN_TYPE_BY_CONFIG_TYPE`;
+  `scripts/run.py` builds its subcommands and dispatch from them. `scripts/run.py` takes the run's
+  executor as a second subcommand (`executor:local` by default, `executor:slurm`).
 
-Each run plots in its own `report` method. A new run kind = config + `Run` subclass in one module.
+Each run plots in its own `report` method, using the `postprocessing/` helpers. A new run kind =
+config + `Run` subclass in one module, plus one line in `registry.py`; file names of results are
+defined once per run (an `ArrayRecord` or module constants) and used by `outputs`, `_execute` and
+`report`.
 `studies/*.py` define `STUDY`; they are not archived with a study (the recorded commit and patch
 cover them), and set their own `root`. The reference factories of `single_runs/reference.py`
 take the raw and preprocessed data directories as arguments (no defaults); each study module

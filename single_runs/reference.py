@@ -16,24 +16,29 @@ Constants:
 
 Functions:
     reference_prior_parameters: Parameters of the Bilaplacian SPDE prior.
+    reference_synthetic_ground_truth: Synthetic ground truth sampled from the reference prior.
     reference_eikonal_settings: Eikonal forward-solver settings of the reference patient.
     reference_optimizer_strategy: Cameron-Martin L-BFGS with the loose reference tolerance.
     reference_correlation_length_settings: Estimation of the correlation length of the prior.
     reference_inference_problem: The posterior of the example data.
     reference_prior_config: The prior investigation run.
     reference_preprocessing_config: The preprocessing run, for a given ground truth.
+    reference_synthetic_preprocessing_config: The preprocessing run with a synthetic ground truth.
+    reference_patient_preprocessing_config: The preprocessing run with the real patient fibers.
     reference_map_config: The MAP run.
     reference_mcmc_config: The MCMC run, for a given initial state.
 """
 
 from pathlib import Path
 
+import numpy as np
 from ls_bayesian.optimization.algorithms.custom_lbfgs import CustomLBFGSSettings
 
-from bayes_cep.mcmc.builder import MCMCAlgorithmName
+from bayes_cep.mcmc.builder import MCMCAlgorithmName, MCMCSettings, ZarrStorageSettings
 from bayes_cep.mesh.interpolation import NearestNeighborInterpolationStrategy
 from bayes_cep.optimization.strategies import CustomLBFGSStrategy
 from bayes_cep.posterior.eikonal_map import EikonalSolverSettings
+from bayes_cep.posterior.prior import SpdePriorParameters
 from bayes_cep.preprocessing.ground_truth import (
     RealDataGroundTruthStrategy,
     SyntheticGroundTruthStrategy,
@@ -44,16 +49,23 @@ from single_runs.inference import InferenceProblemConfig
 from single_runs.map import MapRunConfig
 from single_runs.mcmc import McmcRunConfig
 from single_runs.preprocessing import PreprocessingRunConfig
-from single_runs.prior import PriorParameters, PriorRunConfig
+from single_runs.prior import PriorRunConfig
 
 # Data
 NUM_OBSERVATIONS = 1000
 NOISE_VARIANCE = 1e-3
+OBSERVATION_SEED = 0
 
 # Eikonal forward model of the patient mesh
 EIKONAL_INITIAL_SITE_INDEX = 12650
 EIKONAL_LONGITUDINAL_VELOCITY = 1.5
 EIKONAL_TRANSVERSAL_VELOCITY = 1.0
+EIKONAL_SOLVER_TOLERANCE = 1e-6
+EIKONAL_MAX_NUM_ITERATIONS = 1000
+EIKONAL_MAX_VALUE = 1000.0
+EIKONAL_USE_SOFT_UPDATE = True
+EIKONAL_SOFTMINMAX_ORDER = 20
+EIKONAL_SOFTMINMAX_CUTOFF = 0.01
 
 # Bilaplacian SPDE prior
 PRIOR_KAPPA = 0.05
@@ -62,22 +74,36 @@ PRIOR_SEED = 0
 
 # Prior investigation
 PRIOR_RUN_NUM_SAMPLES = 1000
+PRIOR_RUN_KEEP_SAMPLES = False
 CORRELATION_MAX_DISTANCE = 40.0
 CORRELATION_BOUNDARY_MARGIN = 10.0
+CORRELATION_NUM_BASE_VERTICES = 200
+CORRELATION_NUM_BINS = 40
+CORRELATION_NOISE_FLOOR_SCALE = 2.0
+CORRELATION_THRESHOLD = float(np.exp(-1.0))
+CORRELATION_BURN_IN = 0
+CORRELATION_SEED = 0
 
 # MAP optimizer
 MAP_MAX_NUM_ITERATIONS = 1000
 MAP_GRADIENT_NORM_TOLERANCE = 100.0
 
-# MCMC sampler
+# MCMC sampler. The data (many observations, tiny noise variance) make the likelihood potential
+# very sharp relative to the broad prior, so large proposal steps are practically never accepted;
+# the step width is a conservative starting point, not a tuned value. The acceptance rate falls
+# further once the chain leaves the neighborhood of the MAP.
+MCMC_ALGORITHM = MCMCAlgorithmName.MALA
 MCMC_STEP_WIDTH = 1e-7
 MCMC_NUM_SAMPLES = 1000
+MCMC_SEED = 0
+MCMC_CHUNK_SIZE = 100
+MCMC_LOG_INTERVAL = 1
 
 
 # ==================================================================================================
-def reference_prior_parameters() -> PriorParameters:
+def reference_prior_parameters() -> SpdePriorParameters:
     """Parameters of the Bilaplacian SPDE prior."""
-    return PriorParameters(kappa=PRIOR_KAPPA, tau=PRIOR_TAU, seed=PRIOR_SEED)
+    return SpdePriorParameters(kappa=PRIOR_KAPPA, tau=PRIOR_TAU, seed=PRIOR_SEED)
 
 
 # ==================================================================================================
@@ -87,6 +113,12 @@ def reference_eikonal_settings() -> EikonalSolverSettings:
         initial_site_ind=EIKONAL_INITIAL_SITE_INDEX,
         longitudinal_velocity=EIKONAL_LONGITUDINAL_VELOCITY,
         transversal_velocity=EIKONAL_TRANSVERSAL_VELOCITY,
+        solver_tolerance=EIKONAL_SOLVER_TOLERANCE,
+        max_num_iterations=EIKONAL_MAX_NUM_ITERATIONS,
+        max_value=EIKONAL_MAX_VALUE,
+        use_soft_update=EIKONAL_USE_SOFT_UPDATE,
+        softminmax_order=EIKONAL_SOFTMINMAX_ORDER,
+        softminmax_cutoff=EIKONAL_SOFTMINMAX_CUTOFF,
     )
 
 
@@ -105,7 +137,14 @@ def reference_optimizer_strategy() -> CustomLBFGSStrategy:
 def reference_correlation_length_settings() -> CorrelationLengthSettings:
     """Estimation of the correlation length of the prior."""
     return CorrelationLengthSettings(
-        max_distance=CORRELATION_MAX_DISTANCE, boundary_margin=CORRELATION_BOUNDARY_MARGIN
+        max_distance=CORRELATION_MAX_DISTANCE,
+        num_base_vertices=CORRELATION_NUM_BASE_VERTICES,
+        num_bins=CORRELATION_NUM_BINS,
+        boundary_margin=CORRELATION_BOUNDARY_MARGIN,
+        noise_floor_scale=CORRELATION_NOISE_FLOOR_SCALE,
+        correlation_threshold=CORRELATION_THRESHOLD,
+        burn_in=CORRELATION_BURN_IN,
+        seed=CORRELATION_SEED,
     )
 
 
@@ -132,6 +171,12 @@ def reference_inference_problem(raw_dir: Path, data_dir: Path) -> InferenceProbl
 
 
 # ==================================================================================================
+def reference_synthetic_ground_truth() -> SyntheticGroundTruthStrategy:
+    """Synthetic ground truth: a sample of the reference prior."""
+    return SyntheticGroundTruthStrategy(prior=reference_prior_parameters())
+
+
+# ==================================================================================================
 def reference_prior_config(raw_dir: Path) -> PriorRunConfig:
     """The prior investigation run.
 
@@ -143,6 +188,7 @@ def reference_prior_config(raw_dir: Path) -> PriorRunConfig:
         correlation=reference_correlation_length_settings(),
         prior=reference_prior_parameters(),
         num_samples=PRIOR_RUN_NUM_SAMPLES,
+        keep_samples=PRIOR_RUN_KEEP_SAMPLES,
     )
 
 
@@ -165,11 +211,33 @@ def reference_preprocessing_config(
         raw_dir=raw_dir,
         ground_truth=ground_truth,
         observations=ObservationSamplingSettings(
-            num_observations=NUM_OBSERVATIONS, noise_variance=NOISE_VARIANCE
+            num_observations=NUM_OBSERVATIONS,
+            noise_variance=NOISE_VARIANCE,
+            seed=OBSERVATION_SEED,
         ),
         eikonal=reference_eikonal_settings(),
         interpolation=NearestNeighborInterpolationStrategy(),
     )
+
+
+# ==================================================================================================
+def reference_synthetic_preprocessing_config(raw_dir: Path) -> PreprocessingRunConfig:
+    """The preprocessing run with the reference synthetic ground truth.
+
+    Args:
+        raw_dir (Path): Directory containing the raw data; there is deliberately no default.
+    """
+    return reference_preprocessing_config(raw_dir, reference_synthetic_ground_truth())
+
+
+# ==================================================================================================
+def reference_patient_preprocessing_config(raw_dir: Path) -> PreprocessingRunConfig:
+    """The preprocessing run with the fiber field of the real patient as ground truth.
+
+    Args:
+        raw_dir (Path): Directory containing the raw data; there is deliberately no default.
+    """
+    return reference_preprocessing_config(raw_dir, RealDataGroundTruthStrategy())
 
 
 # ==================================================================================================
@@ -213,7 +281,12 @@ def reference_mcmc_config(
     return McmcRunConfig(
         problem=reference_inference_problem(raw_dir, data_dir),
         initial_state_path=initial_state_path,
-        algorithm=MCMCAlgorithmName.MALA,
-        step_width=MCMC_STEP_WIDTH,
+        sampler=MCMCSettings(
+            algorithm=MCMC_ALGORITHM,
+            step_width=MCMC_STEP_WIDTH,
+            storage=ZarrStorageSettings(chunk_size=MCMC_CHUNK_SIZE),
+        ),
         num_samples=MCMC_NUM_SAMPLES,
+        seed=MCMC_SEED,
+        log_interval=MCMC_LOG_INTERVAL,
     )

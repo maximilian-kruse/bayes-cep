@@ -228,3 +228,6 @@ working_data/
 
 # MCMC sample stores (large; regenerate via `pixi run example-mcmc`)
 example_data/mcmc/
+
+# Claude Code worktrees
+.claude/worktrees/

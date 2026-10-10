@@ -9,7 +9,9 @@ angle (halved) is the axial mean, already on the principal branch $(-\pi/2, \pi/
 magnitude measures concentration (`1`: all samples identical, `0`: uniformly spread).
 
 Functions:
+    compute_axial_mean: Axial mean of an in-memory array of angles.
     compute_axial_mean_and_variance: Axial mean and variance of angle samples, read block by block.
+    compute_axial_sine_deviation: Sine of the doubled deviation from an axial mean.
     shift_angles_to_minimize_axial_variance: Re-branch an angle field around its own axial mean.
     compute_axial_data_diff: Signed axial angle difference between two fields.
     wrap_axial_angles: Wrap angles onto the principal branch $(-\pi/2, \pi/2]$.
@@ -50,22 +52,63 @@ def compute_axial_mean_and_variance(
 
 
 # --------------------------------------------------------------------------------------------------
-def shift_angles_to_minimize_axial_variance(
-    angle_samples: np.ndarray[tuple[int, int], np.dtype[np.float64]], axis: int = 1
-) -> np.ndarray[tuple[int, int], np.dtype[np.float64]]:
-    """Re-branch an angle field around its own axial mean, minimizing its axial variance.
+def compute_axial_mean(
+    angles: np.ndarray[tuple[int, ...], np.dtype[np.float64]],
+    axis: int | None = None,
+    keepdims: bool = False,
+) -> np.ndarray[tuple[int, ...], np.dtype[np.float64]]:
+    r"""Compute the axial (mod-$\pi$) mean of an in-memory array of angles.
 
     Args:
-        angle_samples (np.ndarray): Angle samples in radians, at least 2D.
-        axis (int): Axis to compute the axial mean over. Defaults to `1`.
+        angles (np.ndarray): Angles in radians.
+        axis (int | None): Axis to average over; all entries if `None`. Defaults to `None`.
+        keepdims (bool): Whether to keep the averaged axis with length one. Defaults to `False`.
 
     Returns:
-        np.ndarray: `angle_samples`, wrapped onto a single $\\pi$-branch around the axial mean.
+        np.ndarray: Axial mean in $(-\pi/2, \pi/2]$.
     """
-    angle_samples = np.atleast_2d(angle_samples)
-    mean_resultant = np.mean(np.exp(2j * angle_samples), axis=axis, keepdims=True)
-    axial_mean = np.angle(mean_resultant) / 2
-    centered_angles = angle_samples - axial_mean
+    mean_resultant = np.mean(np.exp(2j * angles), axis=axis, keepdims=keepdims)
+    return np.angle(mean_resultant) / 2
+
+
+# --------------------------------------------------------------------------------------------------
+def compute_axial_sine_deviation(
+    angles: np.ndarray[tuple[int, ...], np.dtype[np.float64]],
+    axial_mean: np.ndarray[tuple[int, ...], np.dtype[np.float64]],
+) -> np.ndarray[tuple[int, ...], np.dtype[np.float64]]:
+    r"""Compute $\sin(2(\theta - \mu))$, the deviation of angles from their axial mean.
+
+    The result is invariant under $\theta \to \theta + \pi$ and, for a concentrated field, close
+    to $2(\theta - \mu)$, so it can be treated like an ordinary real variable (autocorrelation,
+    correlation).
+
+    Args:
+        angles (np.ndarray): Angles in radians.
+        axial_mean (np.ndarray): Axial mean $\mu$ in radians, broadcastable against `angles`.
+
+    Returns:
+        np.ndarray: The sine deviation, same shape as `angles`.
+    """
+    return np.sin(2.0 * (angles - axial_mean))
+
+
+# --------------------------------------------------------------------------------------------------
+def shift_angles_to_minimize_axial_variance(
+    angles: np.ndarray[tuple[int, ...], np.dtype[np.float64]], axis: int | None = None
+) -> np.ndarray[tuple[int, ...], np.dtype[np.float64]]:
+    r"""Re-branch angles around their axial mean, minimizing their axial variance.
+
+    Args:
+        angles (np.ndarray): Angles in radians, any shape.
+        axis (int | None): Axis to compute the axial mean over; all entries if `None`. Defaults to
+            `None`.
+
+    Returns:
+        np.ndarray: `angles`, same shape, each shifted by a multiple of $\pi$ onto the branch
+            $(\mu - \pi/2, \mu + \pi/2]$ around its axial mean $\mu$.
+    """
+    axial_mean = compute_axial_mean(angles, axis=axis, keepdims=True)
+    centered_angles = angles - axial_mean
     wrapped_angles = (centered_angles + np.pi / 2) % np.pi - np.pi / 2
     return wrapped_angles + axial_mean
 

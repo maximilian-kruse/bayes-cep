@@ -1,4 +1,4 @@
-"""Study 2: MAP estimate from a synthetic ground truth.
+"""MAP estimate from a synthetic ground truth.
 
 The MAP estimate is computed for prior parameter pairs (kappa and tau varied together) and for each
 preprocessing run of `preprocessing_synthetic` (number of observations and noise variance), all
@@ -7,7 +7,7 @@ combinations. Create and run the `preprocessing_synthetic` study first.
 
 from pathlib import Path
 
-from bayes_cep.run.executor import ExecutorSettings
+from bayes_cep.run.executor import SlurmExecutorSettings
 from bayes_cep.run.study import Axis, Product, StudySetup, Zip
 from single_runs.map import MapRun
 from single_runs.reference import reference_map_config
@@ -33,5 +33,5 @@ STUDY = StudySetup(
         Axis("problem.data_dir", tuple(DATA_DIRS)),
     ),
     root=Path("working_data/map_synthetic"),
-    executor=ExecutorSettings(cluster="slurm", time_min=240, cpus_per_task=4),
+    executor=SlurmExecutorSettings(time_min=240, cpus_per_task=4),
 )

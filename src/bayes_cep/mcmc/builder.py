@@ -27,14 +27,6 @@ from ls_bayesian.posterior.posterior import LogPosterior
 
 from bayes_cep.mcmc.measures import LikelihoodTargetMeasure, PriorGaussianMeasure
 
-# Default proposal step width for both samplers. Far smaller than the usual `O(0.1)` choices: the
-# data (many observations, tiny noise variance) make the likelihood potential very sharp relative
-# to the broad prior, so larger steps are practically never accepted. For pCN on the example
-# patient, started at the MAP estimate, short chains gave an acceptance rate of about 90% at `1e-4`
-# and about 15% at `1e-3`. The problem is highly nonlinear, so acceptance falls further once the
-# chain leaves the MAP's neighborhood; this is a conservative starting point, not a tuned value.
-DEFAULT_STEP_WIDTH = 1e-4
-
 
 # ==================================================================================================
 class MCMCAlgorithmName(Enum):
@@ -77,8 +69,11 @@ class ZarrStorageSettings:
 class MCMCSettings:
     r"""Settings for `MCMCBuilder`.
 
+    There are no defaults for the algorithm and the step width: the reference values are in
+    `single_runs.reference`.
+
     Attributes:
-        algorithm (MCMCAlgorithmName): Sampling algorithm. Defaults to pCN.
+        algorithm (MCMCAlgorithmName): Sampling algorithm.
         step_width (float): Proposal step width $\delta$. Smaller values give higher acceptance
             but slower exploration. Must lie in $(0, 1)$ for pCN and be positive for MALA.
         tracked_components (tuple[int, ...]): Indices of state components (mesh vertices) whose
@@ -89,8 +84,8 @@ class MCMCSettings:
         storage (ZarrStorageSettings): Sample storage settings.
     """
 
-    algorithm: MCMCAlgorithmName = MCMCAlgorithmName.PCN
-    step_width: float = DEFAULT_STEP_WIDTH
+    algorithm: MCMCAlgorithmName
+    step_width: float
     tracked_components: tuple[int, ...] = ()
     storage: ZarrStorageSettings = field(default_factory=ZarrStorageSettings)
 

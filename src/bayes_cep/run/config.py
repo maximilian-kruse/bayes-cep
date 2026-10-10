@@ -199,6 +199,11 @@ class RunConfig:
     The JSON form round-trips: `Config.from_json_dict(config.to_json_dict()) == config`. Equal
     configurations have equal run ids, independent of how they were constructed (the id is
     computed from the decoded form, so `1` and `1.0` in a `float` field give the same id).
+
+    The identity of a run is its configuration alone: the paths in it, not the content of the
+    files behind them, nor the code. Input contents and code state are recorded per run in
+    `metadata.json` (see `Run.input_files` and `Environment`); two runs with the same id but
+    different input contents are told apart there.
     """
 
     def to_json_dict(self) -> JsonDict:

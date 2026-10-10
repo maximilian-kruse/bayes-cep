@@ -6,8 +6,8 @@ A study is a Python module in `studies/` defining `STUDY`: a base run configurat
 sweeps over it, and the executor settings (local, or SLURM resources). Every command names the
 study by its module; the study directory is the `root` set in the module.
 `create` resolves the module into a fixed list of runs and writes the
-study directory; `run` executes the runs one after the other in this process (cluster `local`) or
-on a SLURM cluster (cluster `slurm`), as set in the module.
+study directory; `run` executes the runs one after the other in this process
+(`LocalExecutorSettings`) or on a SLURM cluster (`SlurmExecutorSettings`), as set in the module.
 
 Example:
 
@@ -18,9 +18,9 @@ Example:
     pixi run study collect studies/prior_investigation.py
     pixi run study report studies/prior_investigation.py
 
-With the cluster `slurm`, `run` sends the unfinished runs to SLURM as one job array via `submitit`
-(one task per unfinished run); the tasks use this pixi environment, so it must be reachable from
-the compute nodes. With `--no-wait`, the command returns after queueing:
+With `SlurmExecutorSettings`, `run` sends the unfinished runs to SLURM as one job array via
+`submitit` (one task per unfinished run); the tasks use this pixi environment, so it must be
+reachable from the compute nodes. With `--no-wait`, the command returns after queueing:
 
     pixi run study run studies/map_synthetic.py --no-wait
 
@@ -87,7 +87,7 @@ class RunCommand(StudyCommand):
         include_active (bool): Whether to restart runs that are submitted or running, e.g. after a
             crash.
         wait (bool): Whether to wait for the runs to finish; `False` (queue and return) is only
-            possible with the `"slurm"` cluster, where the scheduler owns the jobs.
+            possible with `SlurmExecutorSettings`, where the scheduler owns the jobs.
     """
 
     index: int | None = None

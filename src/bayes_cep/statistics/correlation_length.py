@@ -37,7 +37,10 @@ from bayes_cep.mesh.geodesic import (
     compute_graph_distances,
     find_boundary_vertices,
 )
-from bayes_cep.statistics.axial_statistics import compute_axial_mean_and_variance
+from bayes_cep.statistics.axial_statistics import (
+    compute_axial_mean_and_variance,
+    compute_axial_sine_deviation,
+)
 from bayes_cep.statistics.sample_blocks import SampleStore, iterate_sample_blocks
 
 
@@ -46,32 +49,35 @@ from bayes_cep.statistics.sample_blocks import SampleStore, iterate_sample_block
 class CorrelationLengthSettings:
     """Parameters of the correlation length estimation.
 
+    There are no defaults for the scientific parameters: the reference values are in
+    `single_runs.reference`.
+
     Attributes:
         max_distance (float): Largest pair distance considered, in mesh units; a few times the
             expected correlation length.
-        num_base_vertices (int): Number of randomly drawn base vertices. Defaults to `200`.
-        num_bins (int): Number of distance bins in `[0, max_distance]`. Defaults to `40`.
+        num_base_vertices (int): Number of randomly drawn base vertices.
+        num_bins (int): Number of distance bins in `[0, max_distance]`.
         boundary_margin (float): Base vertices closer than this to the mesh boundary are excluded,
-            since boundary effects distort the correlation there. Defaults to `0.0`.
+            since boundary effects distort the correlation there.
         noise_floor_scale (float): The fit uses only the bins before the binned correlation first
             drops below `noise_floor_scale / sqrt(num_samples)`, beyond which it is dominated by
-            sampling noise. Defaults to `2.0`.
+            sampling noise.
         correlation_threshold (float): Correlation value whose crossing distance is reported as the
-            model-free `correlation_distance_threshold`. Defaults to `1/e`.
-        burn_in (int): Number of leading samples to discard. Defaults to `0`.
+            model-free `correlation_distance_threshold`.
+        burn_in (int): Number of leading samples to discard.
+        seed (int): Seed for drawing the base vertices.
         block_size (int): Number of samples read at once. Defaults to `100`.
-        seed (int): Seed for drawing the base vertices. Defaults to `0`.
     """
 
     max_distance: float
-    num_base_vertices: int = 200
-    num_bins: int = 40
-    boundary_margin: float = 0.0
-    noise_floor_scale: float = 2.0
-    correlation_threshold: float = float(np.exp(-1.0))
-    burn_in: int = 0
+    num_base_vertices: int
+    num_bins: int
+    boundary_margin: float
+    noise_floor_scale: float
+    correlation_threshold: float
+    burn_in: int
+    seed: int
     block_size: int = 100
-    seed: int = 0
 
     def __post_init__(self) -> None:
         """Validate the settings."""
@@ -154,7 +160,7 @@ def _accumulate_axial_correlation_moments(
     sum_sine_deviation_squared = np.zeros(num_components)
     sum_base_cross_products = np.zeros((base_vertices.size, num_components))
     for block in iterate_sample_blocks(samples, settings.burn_in, settings.block_size):
-        sine_deviation = np.sin(2.0 * (block - axial_mean))
+        sine_deviation = compute_axial_sine_deviation(block, axial_mean)
         sum_sine_deviation += sine_deviation.sum(axis=0)
         sum_sine_deviation_squared += (sine_deviation**2).sum(axis=0)
         sum_base_cross_products += sine_deviation[:, base_vertices].T @ sine_deviation

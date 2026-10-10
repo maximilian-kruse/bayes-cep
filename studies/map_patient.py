@@ -1,4 +1,4 @@
-"""Study 3: MAP estimate from the fiber field of the real patient.
+"""MAP estimate from the fiber field of the real patient.
 
 Same sweep as `map_synthetic.py`, over the preprocessing runs of `preprocessing_patient`. Create and
 run the `preprocessing_patient` study first.
@@ -6,7 +6,7 @@ run the `preprocessing_patient` study first.
 
 from pathlib import Path
 
-from bayes_cep.run.executor import ExecutorSettings
+from bayes_cep.run.executor import SlurmExecutorSettings
 from bayes_cep.run.study import Axis, Product, StudySetup, Zip
 from single_runs.map import MapRun
 from single_runs.reference import reference_map_config
@@ -32,5 +32,5 @@ STUDY = StudySetup(
         Axis("problem.data_dir", tuple(DATA_DIRS)),
     ),
     root=Path("working_data/map_patient"),
-    executor=ExecutorSettings(cluster="slurm", time_min=240, cpus_per_task=4),
+    executor=SlurmExecutorSettings(time_min=240, cpus_per_task=4),
 )

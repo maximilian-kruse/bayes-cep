@@ -14,10 +14,8 @@ import scipy.sparse as sp
 from eikonax import derivator, linalg, preprocessing, solver, tensorfield
 from ls_bayesian.posterior import interfaces
 
-from bayes_cep.mesh.interpolation import (
-    InterpolationStrategy,
-    NearestNeighborInterpolationStrategy,
-)
+from bayes_cep.mesh.interpolation import InterpolationStrategy
+from bayes_cep.mesh.io import get_triangle_connectivity
 from bayes_cep.posterior.fiber_tensor import FiberTensor, FiberTensorSettings
 
 
@@ -25,6 +23,8 @@ from bayes_cep.posterior.fiber_tensor import FiberTensor, FiberTensorSettings
 @dataclass(frozen=True)
 class EikonalSolverSettings:
     """Settings for the eikonax forward solver, derivator, and anisotropic tensor field.
+
+    There are no defaults: the reference values are in `single_runs.reference`.
 
     Attributes:
         initial_site_ind (int): Vertex index of the (single) pacing/activation site.
@@ -42,20 +42,23 @@ class EikonalSolverSettings:
     initial_site_ind: int
     longitudinal_velocity: float
     transversal_velocity: float
-    solver_tolerance: float = 1e-6
-    max_num_iterations: int = 1000
-    max_value: float = 1000.0
-    use_soft_update: bool = True
-    softminmax_order: int = 20
-    softminmax_cutoff: float = 0.01
+    solver_tolerance: float
+    max_num_iterations: int
+    max_value: float
+    use_soft_update: bool
+    softminmax_order: int
+    softminmax_cutoff: float
 
 
 # ==================================================================================================
 class _DerivativeCache:
-    """Caches the eikonax adjoint solver for the most recently seen parameter vector.
+    """Caches the eikonax adjoint solver for the most recently used parameter vector.
 
-    `LogPosterior` evaluates the forward map and then its gradient at the same parameter vector in
-    consecutive calls; this avoids repeating the adjoint system assembly in that case.
+    Repeated gradient evaluations at exactly the same parameter vector (e.g. a gradient requested
+    twice by the caller) reuse the adjoint system instead of assembling it again. The match is
+    exact (`np.array_equal` on a private copy): a tolerance would let a nearby parameter vector,
+    such as an MCMC proposal with a small step width, reuse the adjoint of another state, and
+    storing the caller's array itself would let an in-place update of that array look like a hit.
     """
 
     def __init__(self) -> None:
@@ -66,8 +69,8 @@ class _DerivativeCache:
     def get(
         self, parameter_vector: np.ndarray
     ) -> tuple[derivator.DerivativeSolver, sp.coo_array] | None:
-        """Return the cached derivative structures if they match `parameter_vector`, else `None`."""
-        if self._parameter_vector is None or not np.allclose(
+        """Return the cached derivative structures if they belong to exactly `parameter_vector`."""
+        if self._parameter_vector is None or not np.array_equal(
             parameter_vector, self._parameter_vector
         ):
             return None
@@ -79,8 +82,8 @@ class _DerivativeCache:
         derivative_solver: derivator.DerivativeSolver,
         sparse_partial_parameter: sp.coo_array,
     ) -> None:
-        """Cache the derivative structures for `parameter_vector`."""
-        self._parameter_vector = parameter_vector
+        """Cache the derivative structures for (a copy of) `parameter_vector`."""
+        self._parameter_vector = np.array(parameter_vector, copy=True)
         self._derivative_solver = derivative_solver
         self._sparse_partial_parameter = sparse_partial_parameter
 
@@ -101,7 +104,7 @@ class EikonalParameterToSolutionMap(interfaces.ParameterToSolutionMap):
         pv_mesh: pv.UnstructuredGrid,
         basis_vectors: np.ndarray[tuple[int, int, int], np.dtype[np.float64]],
         settings: EikonalSolverSettings,
-        interpolation_strategy: InterpolationStrategy | None = None,
+        interpolation_strategy: InterpolationStrategy,
     ) -> None:
         r"""Build the eikonax solver/derivator and the vertex-to-simplex fiber tensor field.
 
@@ -112,13 +115,11 @@ class EikonalParameterToSolutionMap(interfaces.ParameterToSolutionMap):
                 `(num_simplices, 3, 2)`; `basis_vectors[..., 0]`/`basis_vectors[..., 1]` are the
                 two basis vectors a fiber angle is measured against.
             settings (EikonalSolverSettings): Forward solver and tensor field settings.
-            interpolation_strategy (InterpolationStrategy | None, optional): Strategy for
-                interpolating the vertex-based parameter onto simplices. Defaults to
-                `NearestNeighborInterpolationStrategy` if `None`.
+            interpolation_strategy (InterpolationStrategy): Strategy for interpolating the
+                vertex-based parameter onto simplices.
         """
         vertices = pv_mesh.points
-        simplices = pv_mesh.cells.reshape(-1, 4)[:, 1:]
-        interpolation_strategy = interpolation_strategy or NearestNeighborInterpolationStrategy()
+        simplices = get_triangle_connectivity(pv_mesh)
         self._vertex_to_simplex_matrix = interpolation_strategy.assemble_matrix(vertices, simplices)
 
         num_simplices = simplices.shape[0]
@@ -161,7 +162,9 @@ class EikonalParameterToSolutionMap(interfaces.ParameterToSolutionMap):
         self, parameter_vector: np.ndarray[tuple[int], np.dtype[np.float64]]
     ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
         """Solve the eikonal equation for the activation-time field $u = F(m)$."""
-        tensor_field_instance = self._assemble_tensor_field(parameter_vector)
+        tensor_field_instance = self._tensor_field.assemble_field(
+            self._vertex_to_simplex_matrix @ parameter_vector
+        )
         solution = self._solver.run(tensor_field_instance)
         return np.asarray(solution.values, dtype=np.float64)
 
@@ -213,14 +216,6 @@ class EikonalParameterToSolutionMap(interfaces.ParameterToSolutionMap):
         raise NotImplementedError(
             "EikonalParameterToSolutionMap does not support Hessian-vector products."
         )
-
-    # ----------------------------------------------------------------------------------------------
-    def _assemble_tensor_field(
-        self, parameter_vector: np.ndarray[tuple[int], np.dtype[np.float64]]
-    ) -> np.ndarray:
-        """Interpolate the vertex-based parameter to cells and assemble the conductivity tensor."""
-        parameter_vector_on_cells = self._vertex_to_simplex_matrix @ parameter_vector
-        return self._tensor_field.assemble_field(parameter_vector_on_cells)
 
     # ----------------------------------------------------------------------------------------------
     def _get_derivative_structures(

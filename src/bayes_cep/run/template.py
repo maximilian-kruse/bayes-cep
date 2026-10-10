@@ -17,7 +17,7 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import asdict
 from pathlib import Path
-from typing import ClassVar, get_args, get_origin
+from typing import ClassVar
 
 import numpy as np
 from ls_bayesian.common.logging import BaseLogger, LoggerSettings
@@ -40,12 +40,12 @@ class Run[ConfigT: RunConfig](ABC):
 
     `execute` is the template method: it records the configuration, metadata, status, log and
     metrics, and calls `_execute` for the actual computation. A subclass names its configuration
-    type as the generic argument (`class MyRun(Run[MyConfig])`), sets `outputs`, implements
-    `_execute`, `report` and `input_files`.
+    type as the generic argument (`class MyRun(Run[MyConfig])`), sets `config_type` to the same
+    class and `outputs`, and implements `_execute`, `report` and `input_files`.
 
     Attributes:
-        config_type (type[RunConfig]): The configuration class this run is paired with; taken from
-            the generic argument of the subclass.
+        config_type (type[RunConfig]): The configuration class this run is paired with; set by the
+            subclass, next to the generic argument that types `config`.
         outputs (dict[str, str]): Description of the files a run writes, by path relative to the
             run directory; documented in the study description. Result files are listed with
             their `results/` prefix, which is dropped with `flat_results`.
@@ -58,15 +58,6 @@ class Run[ConfigT: RunConfig](ABC):
 
     config_type: ClassVar[type[RunConfig]]
     outputs: ClassVar[dict[str, str]]
-
-    def __init_subclass__(cls, **kwargs: object) -> None:
-        """Take `config_type` from the generic argument, e.g. `MyRun(Run[MyConfig])`."""
-        super().__init_subclass__(**kwargs)
-        for base in getattr(cls, "__orig_bases__", ()):
-            if get_origin(base) is Run:
-                (config_type,) = get_args(base)
-                if isinstance(config_type, type):
-                    cls.config_type = config_type
 
     def __init__(
         self, config: ConfigT, write_to_console: bool = True, flat_results: bool = False
@@ -81,8 +72,8 @@ class Run[ConfigT: RunConfig](ABC):
                 of `results/`. Defaults to `False`.
 
         Raises:
-            TypeError: If the subclass does not define `config_type` (through its generic
-                argument) and `outputs`, or if `config` is not an instance of `config_type`.
+            TypeError: If the subclass does not define `config_type` and `outputs`, or if
+                `config` is not an instance of `config_type`.
         """
         for name in ("config_type", "outputs"):
             if not hasattr(type(self), name):
@@ -190,8 +181,8 @@ class Run[ConfigT: RunConfig](ABC):
         memory, `SIGKILL`) stays `running`.
 
         Args:
-            run_dir (Path): Run directory. Files of an earlier attempt are the caller's
-                responsibility, except the status and metrics, which are replaced.
+            run_dir (Path): Run directory. Removing the files of an earlier attempt is the
+                executor's job (`Executor`), except for the status and metrics, which are replaced.
             environment (Environment | None): The environment to record. Collected here if `None`;
                 a submitter that executes many runs collects it once and passes it on.
 

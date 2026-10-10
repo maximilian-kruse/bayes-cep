@@ -2,6 +2,7 @@
 
 Functions:
     load_pyvista_mesh: Load and validate a triangular surface mesh from disk.
+    get_triangle_connectivity: Vertex indices of the triangles of a triangular surface mesh.
     create_dolfinx_mesh: Convert a pyvista mesh to a dolfinx mesh, in matching vertex order.
 """
 
@@ -35,6 +36,24 @@ def load_pyvista_mesh(mesh_path: Path) -> pv.UnstructuredGrid:
 
 
 # --------------------------------------------------------------------------------------------------
+def get_triangle_connectivity(
+    pv_mesh: pv.UnstructuredGrid,
+) -> np.ndarray[tuple[int, int], np.dtype[np.integer]]:
+    """Vertex indices of the triangles of a triangular surface mesh.
+
+    Assumes `pv_mesh` has already been validated as purely triangular, e.g. via
+    [`load_pyvista_mesh`][bayes_cep.mesh.io.load_pyvista_mesh].
+
+    Args:
+        pv_mesh (pv.UnstructuredGrid): Triangular surface mesh.
+
+    Returns:
+        np.ndarray: Connectivity, shape `(num_simplices, 3)`.
+    """
+    return pv_mesh.cells.reshape(-1, 4)[:, 1:]
+
+
+# --------------------------------------------------------------------------------------------------
 def create_dolfinx_mesh(pv_mesh: pv.UnstructuredGrid) -> dlx.mesh.Mesh:
     """Convert a pyvista mesh to a dolfinx mesh, in matching (input-node) vertex order.
 
@@ -48,6 +67,6 @@ def create_dolfinx_mesh(pv_mesh: pv.UnstructuredGrid) -> dlx.mesh.Mesh:
         dlx.mesh.Mesh: Equivalent dolfinx mesh, for use with `ls_bayesian.spde_prior`.
     """
     points = pv_mesh.points
-    cells = pv_mesh.cells.reshape(-1, 4)[:, 1:]
+    cells = get_triangle_connectivity(pv_mesh)
     ufl_cell_type = ufl.Mesh(basix.ufl.element("Lagrange", "triangle", 1, shape=(3,)))
     return dlx.mesh.create_mesh(MPI.COMM_WORLD, cells, ufl_cell_type, points)

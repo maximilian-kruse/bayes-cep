@@ -1,9 +1,10 @@
 """Run one configuration into a run directory.
 
-Choose the kind of run as a subcommand: `prior`, `preprocessing`, `map` or `mcmc` (every option
-given as a flag), or `reference-preprocessing`, `reference-map` and `reference-mcmc`: the reference
-settings of `single_runs.reference`, with the data directories (and the ground truth, and the
-initial state file of the chain) as arguments (`--config.raw-dir`, ...); no path is a default.
+Choose the kind of run as a subcommand: one of the kinds in `single_runs.registry` (`prior`,
+`preprocessing`, `map`, `mcmc`; every option given as a flag), or one of the reference setups of
+`single_runs.reference`: `reference-synthetic-preprocessing`, `reference-patient-preprocessing`,
+`reference-map` and `reference-mcmc`, with the data directories (and the initial state file of the
+chain) as arguments (`--config.raw-dir`, ...); no path is a default.
 Everything is written to `--run-dir`: `config.json`, `metadata.json`, `status.json`, `run.log`,
 `metrics.json` and the outputs of the run.
 
@@ -20,8 +21,12 @@ change a value; the run then gets a new run id):
 
     pixi run single --run-dir working_data/debug config:from-file path/to/config.json
 
-Add `--executor.cluster slurm` (and `--no-wait` to return after queueing) to run on SLURM; the
-resource options are listed by `--help`, as for `study run`.
+The run executes in this process unless a second subcommand, after the one of the run, selects
+SLURM: `executor:slurm` (and `--no-wait` before the first subcommand to return after queueing);
+its resource options are listed by `--help`. `executor:local` is the default.
+
+    pixi run single --run-dir working_data/test config:reference-map ... \
+        executor:slurm --executor.time-min 60
 
 A single prior run, with every option listed by `--help`:
 
@@ -30,9 +35,10 @@ A single prior run, with every option listed by `--help`:
 """
 
 import json
-import shutil
 import sys
 from dataclasses import dataclass
+from functools import reduce
+from operator import or_
 from pathlib import Path
 from typing import Annotated
 
@@ -40,25 +46,20 @@ import tyro
 
 from bayes_cep.run.config import TYPE_KEY, RunConfig
 from bayes_cep.run.directories import STATUS_RECORD
-from bayes_cep.run.executor import Executor, ExecutorSettings, RunOutcome
+from bayes_cep.run.executor import (
+    LocalExecutorSettings,
+    RunOutcome,
+    SlurmExecutorSettings,
+    create_executor,
+)
 from bayes_cep.run.provenance import Environment
-from bayes_cep.run.template import Run
-from single_runs.map import MapRun, MapRunConfig
-from single_runs.mcmc import McmcRun, McmcRunConfig
-from single_runs.preprocessing import PreprocessingRun, PreprocessingRunConfig
-from single_runs.prior import PriorRun, PriorRunConfig
 from single_runs.reference import (
     reference_map_config,
     reference_mcmc_config,
-    reference_preprocessing_config,
+    reference_patient_preprocessing_config,
+    reference_synthetic_preprocessing_config,
 )
-
-RUN_TYPES: dict[type[RunConfig], type[Run]] = {
-    PriorRunConfig: PriorRun,
-    PreprocessingRunConfig: PreprocessingRun,
-    MapRunConfig: MapRun,
-    McmcRunConfig: McmcRun,
-}
+from single_runs.registry import RUN_KINDS, RUN_TYPE_BY_CONFIG_TYPE
 
 
 # ==================================================================================================
@@ -72,29 +73,43 @@ def load_config_file(path: tyro.conf.Positional[Path]) -> RunConfig:
         SystemExit: If the file is not the configuration of one of the run kinds.
     """
     data = json.loads(path.read_text())
-    config_types = {config_type.__name__: config_type for config_type in RUN_TYPES}
+    config_types = {config_type.__name__: config_type for config_type in RUN_TYPE_BY_CONFIG_TYPE}
     config_type = config_types.get(data.get(TYPE_KEY) if isinstance(data, dict) else None)
     if config_type is None:
         raise SystemExit(f"{path} is not a run configuration; known: {sorted(config_types)}")
     return config_type.from_json_dict(data)
 
 
-# The subcommands: a config class takes all its fields as flags; a function builds the config
-# from its arguments.
-Config = (
-    Annotated[PriorRunConfig, tyro.conf.subcommand("prior")]
-    | Annotated[PreprocessingRunConfig, tyro.conf.subcommand("preprocessing")]
-    | Annotated[MapRunConfig, tyro.conf.subcommand("map")]
-    | Annotated[McmcRunConfig, tyro.conf.subcommand("mcmc")]
-    | Annotated[RunConfig, tyro.conf.subcommand("from-file", constructor=load_config_file)]
-    | Annotated[
+# The subcommands: the config class of every registered run kind takes all its fields as flags;
+# a function builds the other configs from its arguments.
+_CONFIG_SUBCOMMANDS = [
+    *(
+        Annotated[run_type.config_type, tyro.conf.subcommand(name)]
+        for name, run_type in RUN_KINDS.items()
+    ),
+    Annotated[RunConfig, tyro.conf.subcommand("from-file", constructor=load_config_file)],
+    Annotated[
         RunConfig,
-        tyro.conf.subcommand("reference-preprocessing", constructor=reference_preprocessing_config),
-    ]
-    | Annotated[RunConfig, tyro.conf.subcommand("reference-map", constructor=reference_map_config)]
-    | Annotated[
-        RunConfig, tyro.conf.subcommand("reference-mcmc", constructor=reference_mcmc_config)
-    ]
+        tyro.conf.subcommand(
+            "reference-synthetic-preprocessing",
+            constructor=reference_synthetic_preprocessing_config,
+        ),
+    ],
+    Annotated[
+        RunConfig,
+        tyro.conf.subcommand(
+            "reference-patient-preprocessing",
+            constructor=reference_patient_preprocessing_config,
+        ),
+    ],
+    Annotated[RunConfig, tyro.conf.subcommand("reference-map", constructor=reference_map_config)],
+    Annotated[RunConfig, tyro.conf.subcommand("reference-mcmc", constructor=reference_mcmc_config)],
+]
+Config = reduce(or_, _CONFIG_SUBCOMMANDS)
+
+Executor = (
+    Annotated[LocalExecutorSettings, tyro.conf.subcommand("local")]
+    | Annotated[SlurmExecutorSettings, tyro.conf.subcommand("slurm")]
 )
 
 
@@ -106,14 +121,15 @@ class SingleRun:
     Attributes:
         run_dir (Path): Directory the run is written to; must not exist yet unless `overwrite`.
         config (RunConfig): The run to execute, chosen as a subcommand.
-        overwrite (bool): Whether to delete an existing run directory first. Only a directory that
-            is a run directory (has a status record) is deleted.
+        overwrite (bool): Whether to replace an existing run directory. Only a directory that is a
+            run directory (has a status record) is replaced; the executor removes its files.
         flat_results (bool): Whether to write the result files directly into the run directory
             instead of its `results/` subdirectory, as the example data does.
         wait (bool): Whether to wait for the run to finish. `--no-wait` queues the run on SLURM
             and returns.
-        executor (ExecutorSettings): Where and with which resources to run; `--executor.cluster
-            slurm` submits the run as a SLURM job, whose logs go to `<run-dir>-jobs`.
+        executor (LocalExecutorSettings | SlurmExecutorSettings): Where and with which resources
+            to run, chosen as a second subcommand; `executor:slurm` submits the run as a SLURM job,
+            whose logs go to `<run-dir>-jobs`.
     """
 
     run_dir: Path
@@ -121,32 +137,38 @@ class SingleRun:
     overwrite: bool = False
     flat_results: bool = False
     wait: bool = True
-    executor: ExecutorSettings = ExecutorSettings()
+    executor: Executor = LocalExecutorSettings()
 
 
 # ==================================================================================================
-def _remove_previous_output(run_dir: Path, overwrite: bool) -> None:
-    """Delete what a previous run left in the run directory, if `overwrite` allows it.
+def _check_run_directory_is_replaceable(run_dir: Path, overwrite: bool) -> None:
+    """Refuse to start in a directory that holds something else than the run to replace.
+
+    Removing the files of the earlier run is the executor's job; this only decides whether it may
+    do that here.
 
     Raises:
-        SystemExit: If there is previous output and `overwrite` is not set, or if the run
-            directory to delete is not one made by a run.
+        SystemExit: If there is a previous run and `overwrite` is not set, or if the run directory
+            is not empty and not one made by a run.
     """
     if (run_dir / STATUS_RECORD).exists():
         if not overwrite:
             raise SystemExit(f"{run_dir} exists; pass --overwrite to replace it.")
-        shutil.rmtree(run_dir)
     elif run_dir.exists() and any(run_dir.iterdir()):
-        raise SystemExit(f"{run_dir} is not empty and not a run directory; not deleting it.")
+        raise SystemExit(f"{run_dir} is not empty and not a run directory; not replacing it.")
 
 
 # ==================================================================================================
 def main(settings: SingleRun) -> None:
     """Execute the run; exit with status 1 if it failed."""
-    _remove_previous_output(settings.run_dir, settings.overwrite)
-    run = RUN_TYPES[type(settings.config)](settings.config, flat_results=settings.flat_results)
     run_dir = settings.run_dir
-    executor = Executor(
+    if not settings.wait and not isinstance(settings.executor, SlurmExecutorSettings):
+        raise SystemExit("--no-wait needs the SLURM executor (subcommand executor:slurm).")
+    _check_run_directory_is_replaceable(run_dir, settings.overwrite)
+    run = RUN_TYPE_BY_CONFIG_TYPE[type(settings.config)](
+        settings.config, flat_results=settings.flat_results
+    )
+    executor = create_executor(
         settings.executor, run_dir.parent / f"{run_dir.name}-jobs", job_name=run_dir.name
     )
     environment = Environment.collect_from_current_process()

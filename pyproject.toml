@@ -73,9 +73,8 @@ example = { depends-on = ["example-map", "example-mcmc"] }
 [tool.pixi.tasks.example-preprocessing]
 cmd = """python scripts/run.py --overwrite --flat-results \
     --run-dir example_data/preprocessing \
-    config:reference-preprocessing \
-    --config.raw-dir example_data/raw \
-    config.ground-truth:synthetic-ground-truth-strategy"""
+    config:reference-synthetic-preprocessing \
+    --config.raw-dir example_data/raw"""
 
 [tool.pixi.tasks.example-map]
 cmd = """python scripts/run.py --overwrite --flat-results \
@@ -130,6 +129,7 @@ test = { features = ["dev", "test"], solve-group = "default" }
 [tool.ruff]
 line-length = 100
 src = ["src", "."]
+extend-exclude = [".claude/worktrees"]
 
 [tool.ruff.lint]
 select = [

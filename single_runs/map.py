@@ -7,29 +7,32 @@ metrics only.
 
 Classes:
     MapRunConfig: Which posterior to maximize, and with which optimizer.
+    MapResults: The arrays a MAP run writes.
     MapRun: The MAP estimation run.
 """
 
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import override
+from typing import ClassVar, override
 
 import numpy as np
 from ls_bayesian.common.logging import BaseLogger, LoggerSettings
 
-from bayes_cep.mesh.interpolation import NearestNeighborInterpolationStrategy
-from bayes_cep.mesh.io import load_pyvista_mesh
 from bayes_cep.optimization.strategies import CustomLBFGSStrategy, ScipyLBFGSBStrategy
 from bayes_cep.postprocessing.curve_plots import plot_optimization_history
-from bayes_cep.postprocessing.mesh_plots import render_cell_field
+from bayes_cep.postprocessing.mesh_plots import (
+    render_axial_angle_field,
+    render_vertex_field_on_simplices,
+)
 from bayes_cep.run.config import RunConfig
 from bayes_cep.run.directories import RunDirectory, resolve_repository_path
 from bayes_cep.run.progress import StepReporter
 from bayes_cep.run.template import Metrics, Run
-from bayes_cep.statistics.axial_statistics import compute_axial_data_diff, wrap_axial_angles
-from single_runs.inference import InferenceProblemConfig
-from single_runs.preprocessing import PreprocessedData
+from bayes_cep.statistics.axial_statistics import compute_axial_data_diff
+from single_runs.data import ArrayRecord, PreprocessedData, RawDataDirectory
+from single_runs.inference import InferenceProblemConfig, assemble_posterior
 
 
 # ==================================================================================================
@@ -47,13 +50,39 @@ class MapRunConfig(RunConfig):
 
 
 # ==================================================================================================
+@dataclass(frozen=True)
+class MapResults(ArrayRecord):
+    """The arrays a MAP run writes.
+
+    Attributes:
+        estimate (np.ndarray): MAP estimate of the fiber angle [rad] per vertex.
+        loss_history (np.ndarray): Loss at every accepted optimizer iterate.
+        gradient_norm_history (np.ndarray): Gradient norm at every accepted iterate.
+    """
+
+    FILE_NAMES: ClassVar[Mapping[str, str]] = {
+        "estimate": "map_estimate.npy",
+        "loss_history": "map_loss_history.npy",
+        "gradient_norm_history": "map_gradient_norm_history.npy",
+    }
+
+    estimate: np.ndarray
+    loss_history: np.ndarray
+    gradient_norm_history: np.ndarray
+
+
+# ==================================================================================================
 class MapRun(Run[MapRunConfig]):
     """Compute the MAP estimate of the posterior of the preprocessed data."""
 
+    config_type = MapRunConfig
     outputs = {
-        "results/map_estimate.npy": "MAP estimate of the fiber angle [rad] per vertex.",
-        "results/map_loss_history.npy": "Loss at every accepted optimizer iterate.",
-        "results/map_gradient_norm_history.npy": "Gradient norm at every accepted iterate.",
+        f"results/{MapResults.FILE_NAMES['estimate']}": "MAP estimate of the fiber angle [rad] "
+        "per vertex.",
+        f"results/{MapResults.FILE_NAMES['loss_history']}": "Loss at every accepted optimizer "
+        "iterate.",
+        f"results/{MapResults.FILE_NAMES['gradient_norm_history']}": "Gradient norm at every "
+        "accepted iterate.",
         "metrics.json": "Optimization statistics (success, num_iterations, loss and gradient norm "
         "first/last, seconds_optimization) and axial error [rad] of the MAP estimate against the "
         "ground truth (error_mean_abs/median_abs/max_abs/rmse), plus the mean absolute error of "
@@ -75,28 +104,15 @@ class MapRun(Run[MapRunConfig]):
         plots_dir = run_dir / "plots"
         plots_dir.mkdir(exist_ok=True)
         metrics = RunDirectory(run_dir).read_metrics()
-        data_dir = resolve_repository_path(problem.data_dir)
-        ground_truth = PreprocessedData.load(data_dir).ground_truth
-        results_dir = self.results_dir(run_dir)
-        map_estimate = np.load(results_dir / "map_estimate.npy")
-
-        mesh = load_pyvista_mesh(resolve_repository_path(problem.raw_dir) / "mesh.vtu")
-        connectivity = mesh.cells.reshape(-1, 4)[:, 1:]
-        to_simplices = NearestNeighborInterpolationStrategy().assemble_matrix(
-            mesh.points, connectivity
+        ground_truth = PreprocessedData.load(resolve_repository_path(problem.data_dir)).ground_truth
+        results = MapResults.load(self.results_dir(run_dir))
+        mesh = RawDataDirectory.from_configured_path(problem.raw_dir).load_mesh()
+        render_axial_angle_field(
+            mesh, results.estimate, plots_dir / "map_estimate.png", "map estimate"
         )
-        render_cell_field(
-            mesh,
-            wrap_axial_angles(to_simplices @ map_estimate),
-            plots_dir / "map_estimate.png",
-            "map estimate",
-            "angle [rad]",
-            "hsv",
-            (-np.pi / 2, np.pi / 2),
-        )
-        difference = to_simplices @ compute_axial_data_diff(map_estimate, ground_truth)
+        difference = compute_axial_data_diff(results.estimate, ground_truth)
         limit = float(np.abs(difference).max())
-        render_cell_field(
+        render_vertex_field_on_simplices(
             mesh,
             difference,
             plots_dir / "difference_to_truth.png",
@@ -105,10 +121,9 @@ class MapRun(Run[MapRunConfig]):
             "coolwarm",
             (-limit, limit),
         )
-
         plot_optimization_history(
-            np.load(results_dir / "map_loss_history.npy"),
-            np.load(results_dir / "map_gradient_norm_history.npy"),
+            results.loss_history,
+            results.gradient_norm_history,
             plots_dir / "optimization_history.png",
         )
 
@@ -116,9 +131,8 @@ class MapRun(Run[MapRunConfig]):
     @override
     def _execute(self, run_dir: Path, logger: BaseLogger) -> Metrics:
         steps = StepReporter(logger)
-        assembled = self.config.problem.assemble_posterior(steps, logger)
+        assembled = assemble_posterior(self.config.problem, steps, logger)
         data = assembled.data
-
         optimizer_logger_settings = LoggerSettings(
             print_to_console=self.write_to_console, logfile_path=run_dir / "optimizer.log"
         )
@@ -132,22 +146,18 @@ class MapRun(Run[MapRunConfig]):
             with steps.step("Running MAP estimation"):
                 result = optimizer.run(initial_guess=data.prior_mean, model=model)
             optimization_seconds = time.perf_counter() - optimization_start
-
         outcome = "converged" if result.success else "did not converge"
         logger.info(f"      MAP estimation {outcome} after {result.num_iterations} iterations")
         logger.info(f"      status: {result.status_message}")
         logger.info(f"      loss: {result.loss_history[0]:.6e} -> {result.loss_history[-1]:.6e}")
-
         map_error = np.abs(compute_axial_data_diff(result.result, data.ground_truth))
         prior_mean_error = np.abs(compute_axial_data_diff(data.prior_mean, data.ground_truth))
         logger.info(f"      axial error of the MAP: mean {map_error.mean():.4f} rad")
-
-        results_dir = self.results_dir(run_dir)
-        results_dir.mkdir(parents=True, exist_ok=True)
-        np.save(results_dir / "map_estimate.npy", result.result)
-        np.save(results_dir / "map_loss_history.npy", result.loss_history)
-        np.save(results_dir / "map_gradient_norm_history.npy", result.gradient_norm_history)
-
+        MapResults(
+            estimate=result.result,
+            loss_history=result.loss_history,
+            gradient_norm_history=result.gradient_norm_history,
+        ).save(self.results_dir(run_dir))
         return {
             "success": bool(result.success),
             "num_iterations": int(result.num_iterations),

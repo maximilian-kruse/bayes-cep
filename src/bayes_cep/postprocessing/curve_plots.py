@@ -5,6 +5,7 @@ backend, so the functions are safe on a headless machine and in parallel.
 
 Functions:
     plot_autocorrelation: Autocorrelation functions of a few chains.
+    plot_correlation_curve: Binned correlation against distance, with the fitted curve.
     plot_optimization_history: Loss and gradient norm over the iterations of an optimizer.
 """
 
@@ -51,6 +52,56 @@ def plot_autocorrelation(
     axis.set_xlabel("lag")
     axis.set_ylabel("autocorrelation")
     axis.set_title(title)
+    _save(figure, path)
+
+
+# --------------------------------------------------------------------------------------------------
+def plot_correlation_curve(
+    bin_distances: np.ndarray[tuple[int], np.dtype[np.float64]],
+    bin_correlations: np.ndarray[tuple[int], np.dtype[np.float64]],
+    fit_mask: np.ndarray[tuple[int], np.dtype[np.bool_]],
+    fitted_correlations: np.ndarray[tuple[int], np.dtype[np.float64]],
+    fitted_length: float,
+    correlation_threshold: float,
+    distance_threshold: float,
+    path: Path,
+    title: str = "",
+) -> None:
+    """Plot the binned correlation against the distance, with the fit and the threshold.
+
+    Args:
+        bin_distances (np.ndarray): Mean pair distance per bin, shape `(num_bins,)`.
+        bin_correlations (np.ndarray): Mean correlation per bin, shape `(num_bins,)`.
+        fit_mask (np.ndarray): Which bins entered the fit, shape `(num_bins,)`.
+        fitted_correlations (np.ndarray): The fitted correlation at `bin_distances`.
+        fitted_length (float): Correlation length of the fit, for the legend.
+        correlation_threshold (float): Correlation level of the horizontal reference line.
+        distance_threshold (float): Distance where the correlation drops below the level; no
+            vertical line is drawn if it is not finite.
+        path (Path): Output PNG file.
+        title (str): Title of the plot. Defaults to none.
+    """
+    figure = Figure(figsize=(6, 4))
+    axis = figure.subplots()
+    axis.plot(bin_distances, bin_correlations, "o", label="binned correlation")
+    axis.plot(
+        bin_distances[fit_mask],
+        fitted_correlations[fit_mask],
+        "-",
+        label=f"Matern fit, length {fitted_length:.3g}",
+    )
+    axis.axhline(correlation_threshold, color="gray", linestyle=":")
+    if np.isfinite(distance_threshold):
+        axis.axvline(
+            distance_threshold,
+            color="gray",
+            linestyle="--",
+            label=f"threshold at {distance_threshold:.3g}",
+        )
+    axis.set_xlabel("distance")
+    axis.set_ylabel("axial correlation")
+    axis.set_title(title)
+    axis.legend()
     _save(figure, path)
 
 

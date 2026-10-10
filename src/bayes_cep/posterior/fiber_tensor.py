@@ -15,7 +15,7 @@ from eikonax import tensorfield
 
 
 # ==================================================================================================
-@dataclass
+@dataclass(frozen=True)
 class FiberTensorSettings:
     """Settings for `FiberTensor`.
 
@@ -53,6 +53,12 @@ class FiberTensor(tensorfield.AbstractSimplexTensor):
     $$
 
     for longitudinal/transversal conduction velocities $v_\parallel, v_\perp$.
+
+    Note:
+        The data are held in single precision (`float32`), like everything inside eikonax's solver
+        and derivator. The forward map is therefore accurate to single precision only, while the
+        likelihood and the optimizers work in double precision; gradient checks against finite
+        differences need steps well above the single-precision resolution.
     """
 
     _basis_vectors_one: jax.Array

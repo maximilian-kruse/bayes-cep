@@ -62,7 +62,7 @@ db.sqlite3
 db.sqlite3-journal
 
 # Run logs of the tracked reference example are checked in (see example_data/)
-!example_data/logs/*.log
+!example_data/**/*.log
 
 # Flask stuff:
 instance/
@@ -226,5 +226,5 @@ __marimo__/
 # Local simulation-study data (see example_data/ for the tracked reference example)
 working_data/
 
-# MCMC sample stores (large; regenerate via notebooks/mcmc.ipynb)
+# MCMC sample stores (large; regenerate via `pixi run example-mcmc`)
 example_data/mcmc/

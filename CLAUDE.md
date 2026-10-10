@@ -22,11 +22,11 @@ change → run checks → review diff.
   `ls_bayesian`'s layout (`unit/`, `integration/`, `helpers.py`, `conftest.py`).
 - Tasks (run from the repository root; relative config paths resolve against it): `single`
   (`scripts/run.py`, one run), `study` (`run/cli.py`), `example` and `example-preprocessing`/`-map`/
-  `-mcmc` (regenerate the example data, all or one stage; later stages read earlier ones, e.g.
-  `pixi run example config:example-synthetic`).
+  `-mcmc` (regenerate the example data, all or one run; map and mcmc depend on preprocessing).
 - `example_data/` (git-tracked, not part of the package): `raw/` (mesh, fiber field, basis vectors)
-  and the reference MAP run in the plain layout without JSON records (`preprocessing/`, `map/`,
-  `mcmc/` gitignored, `logs/`). `working_data/` (gitignored) holds study directories.
+  and the output of three reference runs, each an ordinary run directory with its records:
+  `preprocessing/`, `map/` and `mcmc/` (chain in `results/`, gitignored). `working_data/`
+  (gitignored) holds study directories.
 
 ## Architecture
 Builds one `ls_bayesian.posterior.posterior.LogPosterior` by supplying `ls_bayesian`'s three
@@ -35,7 +35,8 @@ parameter $m$ is a fiber-orientation angle per mesh vertex.
 
 - `mesh/io.py`: pyvista → dolfinx mesh conversion matching vertex order; `load_pyvista_mesh`
   validates triangle-only. `mesh/interpolation.py`: `InterpolationStrategy` ABC assembling the
-  sparse vertex→simplex matrix (linear-average or nearest-neighbor).
+  sparse vertex→simplex matrix (linear-average or nearest-neighbor). `mesh/plotting.py`:
+  off-screen pyvista rendering of per-simplex and per-vertex fields into PNGs.
 - `posterior/prior.py`: `FiberAnglePrior` adapts an `ls_bayesian` bilaplacian `SPDEPrior` to
   `GaussianPrior` by delegation (the decoupling pattern `ls_bayesian` uses internally).
 - `posterior/fiber_tensor.py`: `FiberTensor` (an `eikonax` `AbstractSimplexTensor`) builds the
@@ -56,7 +57,8 @@ parameter $m$ is a fiber-orientation angle per mesh vertex.
   (`CustomLBFGSStrategy`/`ScipyLBFGSBStrategy`) builds a backend together with its matching model
   as one pair, never mix them; callers use `strategy.build(log_posterior, prior, logger)` directly.
 - `preprocessing/` (ground-truth strategies, constant prior mean, synthetic observations),
-  `mcmc/` (sampler builder), `statistics/` (axial statistics, correlation length) serve the runs.
+  `mcmc/` (sampler builder) and `statistics/` (axial statistics, correlation length) serve the
+  runs.
 
 ## Runs and studies
 A **run** is a pure function of one frozen config, identified by an 8-hex content hash of its
@@ -85,15 +87,27 @@ through the `PYTHONPATH` set by the pixi activation. Modules of `run/`:
   environment; `load` re-resolves the module and requires the recorded run ids; `execute_runs`
   skips done runs and, unless `include_active`, submitted/running ones; `plot_finished_runs`;
   `build_run_table`/`write_run_table`).
+- `progress.py`: `StepReporter` (numbered, timed steps in the log) and `describe_array`.
 - `cli.py`: the `study` command (`create`, `show`, `run`, `status`, `collect`, `report`), each
   taking the study module.
 
-`single_runs/` holds the concrete runs: `config.py` (`PriorRunConfig`, `MapRunConfig`; MAP ground
-truth and observation settings have no defaults on purpose, studies vary them), `prior.py`
-(`PriorRun`), `map.py` (`MapRun`, `MapStage`, `MapPaths`; `run_stages` performs stages separately),
-`example_data.py` (example layout without run records, built from `run_stages`), `progress.py`,
-`plots.py`. A new run kind = config + `Run` subclass. `studies/*.py` define `STUDY`; they are not
-archived with a study (the recorded commit and patch cover them).
+`single_runs/` holds the concrete runs, each module with its own config and `reference_*` helper for
+the example data:
+- `prior.py`: `PriorParameters`, `PriorRunConfig`, `PriorRun` (samples the prior; needs only the mesh).
+- `preprocessing.py`: `PreprocessingRun` is the only place where data is generated (ground truth,
+  prior mean, synthetic observations). `PreprocessedData` is its output in `results/` (including the
+  noise variance); ground truth and observation settings have no defaults on purpose, studies vary
+  them.
+- `inference.py`: `InferenceProblemConfig` (raw dir, `preprocessing_dir`, prior, eikonal,
+  interpolation), embedded as `problem` in the MAP and MCMC configs, with `assemble_posterior`.
+- `map.py`: `MapRun` only optimizes, from the prior mean; `mcmc.py`: `McmcRun` only samples, from
+  the prior mean. Neither depends on the other; both read the preprocessed data and nothing else of
+  the data side, so many inference runs share one preprocessing run.
+
+Each run plots in its own `report` method. A new run kind = config + `Run` subclass in one module.
+`studies/*.py` define `STUDY`; they are not archived with a study (the recorded commit and patch
+cover them). A study of inference runs sweeps `problem.preprocessing_dir` over the run directories
+of a preprocessing study (`Study.run_directories()`), which must be created and run first.
 
 ## Design & style
 - Priorities: numerical correctness > reproducibility > clear APIs > performance > convenience.

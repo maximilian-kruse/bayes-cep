@@ -1,43 +1,73 @@
-"""A study: a run type, a base configuration and sweeps, resolved into a fixed list of runs.
+"""Studies: the definition of a study, and a study written to disk.
 
-`Study` is the definition, written in a study module. `create_directory` resolves it and writes the
-study directory (see `directories` for its layout), including a copy of the module. Working on a
-created study means loading that archived module (`load_from_directory`); its runs must resolve to
-the ids recorded at creation. `execute_runs` executes the unfinished runs, `plot_finished_runs`
-plots the finished ones.
+A study is a run type, a base configuration and a sweep over it. `Study` is what a study module
+(`studies/<name>.py`) defines as `STUDY`; it resolves into a fixed, ordered list of runs. A sweep is
+a tree of nodes, each expanding into a list of override dicts (dotted configuration path to value)
+that are applied to the base configuration.
+
+`CreatedStudy` is a study written to disk: creating it, executing its runs, plotting and
+summarizing them. A study is identified by its module and the root directory of all study
+directories; its directory is `<root>/<study name>` (see `directories` for the layout).
+`CreatedStudy.create` resolves the module into the fixed run list and writes the study directory,
+including the environment specification. Working on the created study resolves the module again;
+the runs must have the ids recorded at creation, since the results in the directory belong to them.
 
 Classes:
+    ResolvedRun: One run of a resolved study.
     SweepNode: A variation of configuration parameters, expanding into override dicts.
     Axis: One parameter and its values.
     Zip: Axes varied together.
     Product: All combinations of groups.
-    ResolvedRun: One run of a resolved study.
-    StudyRecord: The description of a study, stored as `study/study.json`.
-    Study: Run type, base configuration, sweep, description and collector.
+    Study: Run type, base configuration, sweep and description.
+    CreatedStudy: A study directory together with the study definition it was created from.
 """
 
-import hashlib
-import importlib
 import importlib.util
 import itertools
+import json
 import re
 import shutil
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass, is_dataclass
-from datetime import datetime
+from functools import cached_property
 from pathlib import Path
 from typing import Any, Self, override
 
-from bayes_cep.run.collector import Collector, RunTableCollector
-from bayes_cep.run.config import ConfigCodec, RunConfig, format_config_tree
-from bayes_cep.run.directories import RunState, StudyDirectory
+import pandas as pd
+
+from bayes_cep.run.config import TYPE_KEY, ConfigCodec, RunConfig, format_config_tree
+from bayes_cep.run.directories import (
+    REPOSITORY_ROOT,
+    RunState,
+    StudyDirectory,
+    format_current_time,
+    write_json_record,
+)
 from bayes_cep.run.executor import Executor, ExecutorSettings, RunOutcome
-from bayes_cep.run.metadata import Environment, EnvironmentArchive
+from bayes_cep.run.provenance import Environment, EnvironmentArchive
 from bayes_cep.run.template import Run
 
 STUDY_NAME_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]*")
+
+
+# ==================================================================================================
+@dataclass(frozen=True)
+class ResolvedRun:
+    """One run of a resolved study.
+
+    Attributes:
+        index (int): Position in the run list.
+        run_id (str): Content hash of `config`.
+        config (RunConfig): Complete configuration of the run.
+        overrides (dict[str, Any]): The swept parameters of this run, by dotted path.
+    """
+
+    index: int
+    run_id: str
+    config: RunConfig
+    overrides: dict[str, Any]
 
 
 # ==================================================================================================
@@ -136,8 +166,8 @@ class Zip(SweepNode):
 class Product(SweepNode):
     """All combinations of its groups; the last group varies fastest. No groups: a single run."""
 
-    def __init__(self, *groups: Axis | Zip) -> None:
-        """Combine axes and zips."""
+    def __init__(self, *groups: SweepNode) -> None:
+        """Combine axes, zips and further products."""
         self.groups = groups
 
     @override
@@ -162,57 +192,6 @@ class Product(SweepNode):
 
 # ==================================================================================================
 @dataclass(frozen=True)
-class ResolvedRun:
-    """One run of a resolved study.
-
-    Attributes:
-        index (int): Position in the run list.
-        run_id (str): Content hash of `config`.
-        config (RunConfig): Complete configuration of the run.
-        overrides (dict[str, Any]): The swept parameters of this run, by dotted path.
-    """
-
-    index: int
-    run_id: str
-    config: RunConfig
-    overrides: dict[str, Any]
-
-
-# ==================================================================================================
-@dataclass(frozen=True)
-class StudyRecord:
-    """The description of a study, stored as `study/study.json`.
-
-    Attributes:
-        name (str): Name of the study.
-        description (str): What the study investigates and computes.
-        created (str): Creation time, ISO 8601 with time zone.
-        run_type (str): The run type as `module:Class`.
-        collector (str): Class name of the study's collector.
-        num_runs (int): Number of runs.
-        sweep (dict[str, Any]): The sweep in JSON form.
-        base_config (dict[str, Any]): The base configuration in JSON form.
-        outputs (dict[str, str]): The files a run writes, as described by the run type.
-        definition_sha256 (str): Hash of the archived study module.
-        environment_files (list[str]): The archived environment specification, see
-            `EnvironmentArchive`.
-    """
-
-    name: str
-    description: str
-    created: str
-    run_type: str
-    collector: str
-    num_runs: int
-    sweep: dict[str, Any]
-    base_config: dict[str, Any]
-    outputs: dict[str, str]
-    definition_sha256: str
-    environment_files: list[str]
-
-
-# ==================================================================================================
-@dataclass(frozen=True)
 class Study:
     """A run type, the base configuration of its runs, the sweep over it, and a description.
 
@@ -223,8 +202,6 @@ class Study:
         base (RunConfig): Configuration of all runs before the sweep is applied; fixes all
             parameters that are common to the runs.
         sweep (SweepNode): The parameter variations.
-        collector (type[Collector]): Analysis of the finished runs, matching this study. Defaults
-            to writing the run table only.
     """
 
     name: str
@@ -232,7 +209,6 @@ class Study:
     run_type: type[Run]
     base: RunConfig
     sweep: SweepNode
-    collector: type[Collector] = RunTableCollector
 
     def __post_init__(self) -> None:
         if not STUDY_NAME_PATTERN.fullmatch(self.name):
@@ -240,17 +216,26 @@ class Study:
                 f"Study name must match {STUDY_NAME_PATTERN.pattern}, got {self.name!r}."
             )
         if not isinstance(self.base, self.run_type.config_type):
-            raise ValueError(
+            raise TypeError(
                 f"{self.run_type.__name__} needs a {self.run_type.config_type.__name__} as base, "
                 f"got {type(self.base).__name__}."
             )
+
+    # ----------------------------------------------------------------------------------------------
+    @property
+    def run_type_path(self) -> str:
+        """The run type as `module:Class`."""
+        return f"{self.run_type.__module__}:{self.run_type.__qualname__}"
 
     # ----------------------------------------------------------------------------------------------
     @classmethod
     def load_from_module_file(cls, module_path: Path) -> Self:
         """Load the `STUDY` attribute of a study module file.
 
-        The module is executed as a script and must be self-contained apart from `bayes_cep`.
+        The module is executed as a script. It should import only from `bayes_cep` and from the
+        run kinds of `single_runs`, which are found through the `PYTHONPATH` of the pixi
+        environment; those are not archived with a study (the commit and the patch of
+        uncommitted changes in the recorded environment cover them).
 
         Args:
             module_path (Path): Python file defining `STUDY`.
@@ -281,6 +266,7 @@ class Study:
         Raises:
             ValueError: If two runs resolve to the same configuration, or an override path is
                 invalid.
+            TypeError: If an override value does not fit the type of its field.
         """
         runs: list[ResolvedRun] = []
         seen: dict[str, int] = {}
@@ -288,7 +274,10 @@ class Study:
             config = self.base.with_overrides(overrides)
             run_id = config.run_id
             if run_id in seen:
-                raise ValueError(f"Runs {seen[run_id]} and {index} are identical.")
+                raise ValueError(
+                    f"Runs {seen[run_id]} and {index} have the same run id {run_id}: identical "
+                    "configurations (or, very unlikely, a hash collision)."
+                )
             seen[run_id] = index
             runs.append(ResolvedRun(index, run_id, config, overrides))
         return runs
@@ -301,8 +290,7 @@ class Study:
                 f"Study {self.name}",
                 self.description,
                 "",
-                f"run type  : {self._run_type_path}",
-                f"collector : {self.collector.__name__}",
+                f"run type  : {self.run_type_path}",
                 f"num runs  : {len(self.resolve_runs())}",
                 "",
                 "Base configuration",
@@ -313,76 +301,120 @@ class Study:
             ]
         )
 
-    # ----------------------------------------------------------------------------------------------
-    def create_directory(self, definition_path: Path, root: Path) -> Path:
-        """Resolve the study and write its study directory, before any run starts.
 
-        The directory holds the study description, the configurations of all runs, the archived
-        study module and the environment specification (see `EnvironmentArchive`), so that the
-        study can be reproduced elsewhere.
+# ==================================================================================================
+class CreatedStudy:
+    """A study directory together with the study definition it was created from.
+
+    Attributes:
+        directory (StudyDirectory): The directory of the study.
+        definition (Study): The study as defined by its module.
+    """
+
+    def __init__(self, directory: StudyDirectory, definition: Study) -> None:
+        """Bind a study definition to the directory created for it."""
+        self.directory = directory
+        self.definition = definition
+
+    # ----------------------------------------------------------------------------------------------
+    @classmethod
+    def create(cls, module_path: Path, root: Path) -> Self:
+        """Resolve a study module and write its study directory, before any run starts.
+
+        The directory is built under a temporary name and moved into place at the end, so a failure
+        or an interruption never leaves a half-written study behind.
 
         Args:
-            definition_path (Path): The module file that defines the study; archived with it.
-            root (Path): Directory holding all study directories.
+            module_path (Path): Python file defining `STUDY`.
+            root (Path): Directory holding all study directories; created if missing.
 
         Returns:
-            Path: The new study directory.
+            Self: The new study.
 
         Raises:
             FileExistsError: If the study directory already exists.
             ValueError: If a configuration does not survive its JSON form.
         """
-        study_dir = (root / self.name).resolve()
+        study = Study.load_from_module_file(module_path)
+        study_dir = (root / study.name).resolve()
         if study_dir.exists():
             raise FileExistsError(f"Study directory {study_dir} already exists.")
-        runs = self.resolve_runs()
-        self._check_configurations_survive_json(runs)
+        runs = study.resolve_runs()
+        for run in runs:
+            if study.run_type.config_type.from_json_dict(run.config.to_json_dict()) != run.config:
+                raise ValueError(f"The configuration of run {run.index} does not survive JSON.")
 
-        directory = StudyDirectory(study_dir)
-        directory.definition_path.parent.mkdir(parents=True)
-        shutil.copy(definition_path, directory.definition_path)
-        environment = Environment.collect_from_current_process()
-        environment_files = EnvironmentArchive(
-            environment, directory.environment_dir
-        ).write_specification()
-        directory.description_records.write_record(
-            "study.json",
-            asdict(self._describe_for_record(runs, definition_path, environment_files)),
-        )
-        directory.description_records.write_record("runs.json", self._index_runs(runs))
-        directory.description_records.write_record("environment.json", asdict(environment))
-        return study_dir
+        temporary_dir = study_dir.with_name(f".{study.name}.creating")
+        shutil.rmtree(temporary_dir, ignore_errors=True)
+        try:
+            cls._write_description(StudyDirectory(temporary_dir), study, runs, module_path)
+            temporary_dir.rename(study_dir)
+        except BaseException:
+            shutil.rmtree(temporary_dir, ignore_errors=True)
+            raise
+        return cls(StudyDirectory(study_dir), study)
 
     # ----------------------------------------------------------------------------------------------
     @classmethod
-    def load_from_directory(cls, study_dir: Path) -> Self:
-        """Load the study from the module archived in its study directory."""
-        return cls.load_from_module_file(StudyDirectory(study_dir).definition_path)
+    def load(cls, module_path: Path, root: Path) -> Self:
+        """Load a created study from its module and the root of the study directories.
+
+        Raises:
+            FileNotFoundError: If the study has not been created in `root`.
+            ValueError: If the module no longer resolves to the runs recorded at creation.
+        """
+        study = Study.load_from_module_file(module_path)
+        directory = StudyDirectory((root / study.name).resolve())
+        if not directory.study_record_path.exists():
+            raise FileNotFoundError(f"Study {study.name!r} has not been created in {root}.")
+        recorded_ids = json.loads(directory.study_record_path.read_text())["run_ids"]
+        if [run.run_id for run in study.resolve_runs()] != recorded_ids:
+            raise ValueError(
+                f"{module_path} no longer resolves to the runs recorded in {directory.path}: the "
+                "study module or the configuration classes changed since it was created."
+            )
+        return cls(directory, study)
+
+    # ----------------------------------------------------------------------------------------------
+    @cached_property
+    def runs(self) -> list[ResolvedRun]:
+        """The runs of the study, in order."""
+        return self.definition.resolve_runs()
+
+    # ----------------------------------------------------------------------------------------------
+    def read_states(self) -> dict[int, RunState]:
+        """The state of every run, by run index."""
+        return {
+            run.index: self.directory.run_directory(run.run_id).read_state() for run in self.runs
+        }
 
     # ----------------------------------------------------------------------------------------------
     def execute_runs(
         self,
-        study_dir: Path,
         settings: ExecutorSettings,
         indices: list[int] | None = None,
         force: bool = False,
+        include_active: bool = False,
         wait: bool = True,
     ) -> dict[int, RunOutcome]:
-        """Execute the unfinished runs of a created study.
+        """Execute the unfinished runs.
 
-        Finished runs are skipped unless forced, so executing again after failures or timeouts
-        only repeats the others.
+        Finished runs are skipped unless forced, so executing again after failures only repeats
+        the others. Runs that are submitted or running are skipped as well, because a second job
+        would delete the files of the first; if their jobs have died (killed, node failure,
+        interrupted submission), `include_active` restarts them.
 
         If the code or the environment differs from the one recorded at creation (commit,
         uncommitted changes, `pixi.lock`, editable packages), a warning lists the differences before
         any run starts; every run records the environment it actually executed in.
 
         Args:
-            study_dir (Path): Directory of the created study.
             settings (ExecutorSettings): Where and with which resources the runs execute.
             indices (list[int] | None): Runs to consider (repeated indices count once); all runs if
                 `None`.
             force (bool): Whether to also rerun finished runs. Defaults to `False`.
+            include_active (bool): Whether to also restart submitted or running runs. Defaults to
+                `False`.
             wait (bool): Whether to wait for the runs to finish; see `Executor.run`. Defaults to
                 `True`.
 
@@ -390,135 +422,163 @@ class Study:
             dict[int, RunOutcome]: Outcome by run index.
 
         Raises:
-            ValueError: If an index is out of range, or if the study no longer resolves to the runs
-                recorded in `study_dir`.
+            ValueError: If an index is out of range.
         """
-        directory = StudyDirectory(study_dir)
-        runs = self._resolve_recorded_runs(directory)
-        selected = list(range(len(runs))) if indices is None else list(dict.fromkeys(indices))
+        selected = list(range(len(self.runs))) if indices is None else list(dict.fromkeys(indices))
         for index in selected:
-            if not 0 <= index < len(runs):
-                raise ValueError(f"Run index {index} is out of range for {len(runs)} runs.")
+            if not 0 <= index < len(self.runs):
+                raise ValueError(f"Run index {index} is out of range for {len(self.runs)} runs.")
         outcomes: dict[int, RunOutcome] = {}
         pending: list[int] = []
         for index in selected:
-            run_directory = directory.run_directory(runs[index].run_id)
-            if not force and run_directory.read_state() == RunState.DONE:
+            state = self.directory.run_directory(self.runs[index].run_id).read_state()
+            if state == RunState.DONE and not force:
                 outcomes[index] = RunOutcome.SKIPPED
+            elif state.is_active and not include_active:
+                outcomes[index] = RunOutcome.ACTIVE
             else:
                 pending.append(index)
         if pending:
-            self._warn_if_environment_changed(directory)
-        executor = Executor(settings, directory.job_dir, study_dir.resolve().name)
-        results = executor.run(
-            [self.run_type(runs[index].config) for index in pending],
-            [directory.run_directory(runs[index].run_id).path for index in pending],
-            wait,
-        )
-        outcomes.update(zip(pending, results, strict=True))
+            environment = Environment.collect_from_current_process()
+            self._warn_if_environment_changed(environment)
+            executor = Executor(settings, self.directory.job_dir, self.directory.path.name)
+            results = executor.run(
+                [self.definition.run_type(self.runs[index].config) for index in pending],
+                [self.directory.run_directory(self.runs[index].run_id).path for index in pending],
+                environment,
+                wait,
+            )
+            outcomes.update(zip(pending, results, strict=True))
         return dict(sorted(outcomes.items()))
 
     # ----------------------------------------------------------------------------------------------
-    def plot_finished_runs(self, study_dir: Path, index: int | None = None) -> list[int]:
-        """Plot the finished runs of a created study; unfinished ones are skipped.
+    def plot_finished_runs(self, index: int | None = None) -> list[int]:
+        """Plot the finished runs; unfinished ones are skipped.
+
+        A run whose plotting fails is reported and does not stop the others.
 
         Args:
-            study_dir (Path): Directory of the created study.
             index (int | None): Only this run; all runs if `None`.
 
         Returns:
             list[int]: The indices of the runs that were plotted.
 
         Raises:
-            ValueError: If the study no longer resolves to the runs recorded in `study_dir`.
+            ValueError: If `index` is out of range.
         """
-        directory = StudyDirectory(study_dir)
+        if index is not None and not 0 <= index < len(self.runs):
+            raise ValueError(f"Run index {index} is out of range for {len(self.runs)} runs.")
         plotted = []
-        for run in self._resolve_recorded_runs(directory):
+        for run in self.runs:
             if index is not None and run.index != index:
                 continue
-            run_directory = directory.run_directory(run.run_id)
+            run_directory = self.directory.run_directory(run.run_id)
             if run_directory.read_state() != RunState.DONE:
                 continue
             print(f"Plotting run {run.index} ({run.run_id})")
-            self.run_type(run.config).report(run_directory.path)
+            try:
+                self.definition.run_type(run.config).report(run_directory.path)
+            except Exception as error:
+                print(f"Plotting run {run.index} failed: {error!r}")
+                continue
             plotted.append(run.index)
         return plotted
 
     # ----------------------------------------------------------------------------------------------
-    def _resolve_recorded_runs(self, directory: StudyDirectory) -> list[ResolvedRun]:
-        """Resolve the runs, checking that they are the ones recorded when the study was created."""
-        runs = self.resolve_runs()
-        recorded_ids = [entry["id"] for entry in directory.read_run_index()]
-        if [run.run_id for run in runs] != recorded_ids:
-            raise ValueError(
-                f"The study no longer resolves to the runs recorded in {directory.path}: the study "
-                "definition or the configuration classes changed since it was created."
-            )
-        return runs
+    def build_run_table(self) -> pd.DataFrame:
+        """The cross-run table: one row per run with `index`, `run_id`, `state`, the swept
+        parameters and the metrics.
+
+        Swept parameters are columns named by their dotted path (config objects by class name),
+        metrics are columns of their own. Runs that are not `done` have empty metrics. The table is
+        regenerated from the run directories whenever it is wanted.
+
+        Raises:
+            ValueError: If a metric has the name of another column.
+        """
+        states = self.read_states()
+        rows = []
+        for run in self.runs:
+            row: dict[str, Any] = {
+                "index": run.index,
+                "run_id": run.run_id,
+                "state": states[run.index].value,
+            }
+            for path, value in run.overrides.items():
+                row[path] = self._to_table_value(ConfigCodec.encode(value))
+            metrics = self.directory.run_directory(run.run_id).read_metrics()
+            clashes = row.keys() & metrics.keys()
+            if clashes:
+                raise ValueError(
+                    f"Metrics of run {run.index} clash with columns: {sorted(clashes)}."
+                )
+            row.update(metrics)
+            rows.append(row)
+        return pd.DataFrame(rows)
+
+    # ----------------------------------------------------------------------------------------------
+    def write_run_table(self) -> Path:
+        """Write the run table to `<study>/summary/run_table.parquet` and return its path."""
+        self.directory.summary_dir.mkdir(exist_ok=True)
+        table_path = self.directory.summary_dir / "run_table.parquet"
+        self.build_run_table().to_parquet(table_path, index=False)
+        return table_path
 
     # ----------------------------------------------------------------------------------------------
     @staticmethod
-    def _warn_if_environment_changed(directory: StudyDirectory) -> None:
-        """Warn if the code or the environment differs from the one recorded at creation.
+    def _to_table_value(value: Any) -> Any:
+        """Convert a swept value to a table cell; config objects become their class name."""
+        if isinstance(value, dict) and TYPE_KEY in value:
+            return value[TYPE_KEY]
+        if value is None or isinstance(value, bool | int | float | str):
+            return value
+        return str(value)
+
+    # ----------------------------------------------------------------------------------------------
+    def _warn_if_environment_changed(self, environment: Environment) -> None:
+        """Warn if the code or the environment differs from the state at creation.
 
         A study can be continued long after it was created, so its runs may stem from different
         code states; every run records the environment it executed in.
         """
-        recorded = directory.description_records.read_record("environment.json")
-        differences = Environment.collect_from_current_process().find_differences(recorded)
+        recorded = json.loads(self.directory.environment_path.read_text())
+        differences = environment.find_differences(recorded)
         if differences:
             lines = "\n  ".join(differences)
             warnings.warn(
-                f"The environment differs from the one recorded when the study was created:\n  "
-                f"{lines}",
-                stacklevel=3,
+                f"The code differs from the state recorded when the study was created:\n  {lines}",
+                stacklevel=2,
             )
 
     # ----------------------------------------------------------------------------------------------
-    @property
-    def _run_type_path(self) -> str:
-        """The run type as `module:Class`, by which a created study imports it."""
-        return f"{self.run_type.__module__}:{self.run_type.__qualname__}"
-
-    # ----------------------------------------------------------------------------------------------
-    def _check_configurations_survive_json(self, runs: list[ResolvedRun]) -> None:
-        """Raise if a configuration changes when written to JSON and read back.
-
-        A created study reads its configurations back from `runs.json`.
-        """
-        for run in runs:
-            if self.run_type.config_type.from_json_dict(run.config.to_json_dict()) != run.config:
-                raise ValueError(f"The configuration of run {run.index} does not survive JSON.")
-
-    # ----------------------------------------------------------------------------------------------
-    def _describe_for_record(
-        self, runs: list[ResolvedRun], definition_path: Path, environment_files: list[str]
-    ) -> StudyRecord:
-        return StudyRecord(
-            name=self.name,
-            description=self.description,
-            created=datetime.now().astimezone().isoformat(timespec="seconds"),
-            run_type=self._run_type_path,
-            collector=self.collector.__name__,
-            num_runs=len(runs),
-            sweep=self.sweep.to_json_dict(),
-            base_config=self.base.to_json_dict(),
-            outputs=self.run_type.outputs,
-            definition_sha256=hashlib.sha256(definition_path.read_bytes()).hexdigest(),
-            environment_files=environment_files,
-        )
-
-    # ----------------------------------------------------------------------------------------------
     @staticmethod
-    def _index_runs(runs: list[ResolvedRun]) -> list[dict[str, Any]]:
-        """The run list as stored in `runs.json`."""
-        return [
+    def _write_description(
+        directory: StudyDirectory, study: Study, runs: list[ResolvedRun], module_path: Path
+    ) -> None:
+        """Write the study description and the environment into `directory`."""
+        environment = Environment.collect_from_current_process()
+        environment_files = EnvironmentArchive(
+            environment, directory.environment_dir
+        ).write_specification()
+        resolved_module = module_path.resolve()
+        module = (
+            resolved_module.relative_to(REPOSITORY_ROOT)
+            if resolved_module.is_relative_to(REPOSITORY_ROOT)
+            else resolved_module
+        )
+        write_json_record(
+            directory.study_record_path,
             {
-                "index": run.index,
-                "id": run.run_id,
-                "overrides": ConfigCodec.encode(run.overrides),
-                "config": run.config.to_json_dict(),
-            }
-            for run in runs
-        ]
+                "name": study.name,
+                "description": study.description,
+                "created": format_current_time(),
+                "module": str(module),
+                "run_type": study.run_type_path,
+                "run_ids": [run.run_id for run in runs],
+                "sweep": study.sweep.to_json_dict(),
+                "base_config": study.base.to_json_dict(),
+                "outputs": study.run_type.outputs,
+                "environment_files": environment_files,
+            },
+        )
+        write_json_record(directory.environment_path, asdict(environment))

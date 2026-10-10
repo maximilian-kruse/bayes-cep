@@ -64,7 +64,7 @@ class ConfigCodec:
             ValueError: For `NaN` and infinite numbers.
         """
         if is_dataclass(value) and not isinstance(value, type):
-            entries = {f.name: cls.encode(getattr(value, f.name)) for f in fields(value)}
+            entries = {f.name: cls.encode(getattr(value, f.name)) for f in fields(value) if f.init}
             return {TYPE_KEY: type(value).__name__, **entries}
         if isinstance(value, Path):
             return str(value)
@@ -100,7 +100,8 @@ class ConfigCodec:
         """Rebuild a dataclass instance from its JSON form.
 
         Raises:
-            ValueError: If `data` does not describe `dataclass_type`, or contains unknown fields.
+            ValueError: If `data` does not describe `dataclass_type`, or contains unknown fields,
+                or a `Literal` or enum value is not allowed.
             TypeError: If a value does not fit the type of its field.
         """
         if not isinstance(data, dict) or data.get(TYPE_KEY) != dataclass_type.__name__:
@@ -119,7 +120,11 @@ class ConfigCodec:
     def decode(cls, value: object, annotation: Any) -> Any:
         """Rebuild a value from its JSON form, following the type annotation of its field."""
         origin = get_origin(annotation)
-        if annotation is Any or origin is Literal:
+        if annotation is Any:
+            return value
+        if origin is Literal:
+            if value not in get_args(annotation):
+                raise ValueError(f"{value!r} is not one of {get_args(annotation)}.")
             return value
         if origin in (Union, types.UnionType):
             return cls._decode_union(value, get_args(annotation))
@@ -138,6 +143,8 @@ class ConfigCodec:
             if is_dataclass(annotation):
                 return cls.decode_dataclass(value, annotation)
             if issubclass(annotation, Enum):
+                if value not in annotation.__members__:
+                    raise ValueError(f"{value!r} is not a member of {annotation.__name__}.")
                 return annotation[value]
             if annotation is Path:
                 return Path(value)
@@ -148,7 +155,7 @@ class ConfigCodec:
             ):
                 return float(value)
             if annotation is numbers.Real and isinstance(value, int | float):
-                return value
+                return value  # used by settings of ls_bayesian, e.g. CustomLBFGSSettings
             if annotation in (int, str, bool) and type(value) is annotation:
                 return value
         raise TypeError(f"Cannot decode {value!r} as {annotation}.")
@@ -179,7 +186,7 @@ class ConfigCodec:
                 continue
             try:
                 return cls.decode(value, member)
-            except TypeError, ValueError, KeyError:
+            except TypeError, ValueError:
                 continue
         raise ValueError(f"Cannot decode {value!r} as any of {members}.")
 

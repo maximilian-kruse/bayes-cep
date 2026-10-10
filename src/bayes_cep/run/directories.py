@@ -1,7 +1,7 @@
 """The directories of runs and studies on disk, and the state of a run.
 
 ```
-<study_name>/                 StudyDirectory
+<study root>/                 StudyDirectory
   study/       study.json, environment.json,
                environment/ (pixi.lock, pyproject.toml, conda spec, source.patch)
   runs/<id>/                  RunDirectory: config.json, metadata.json, status.json,
@@ -46,6 +46,7 @@ METADATA_RECORD = "metadata.json"
 METRICS_RECORD = "metrics.json"
 STATUS_RECORD = "status.json"
 LOG_FILE_NAME = "run.log"
+RESULTS_DIR_NAME = "results"
 
 
 # ==================================================================================================

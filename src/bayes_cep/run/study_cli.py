@@ -4,25 +4,25 @@ This is the CLI of studies; a single run is started with `scripts/run.py` (`pixi
 
 A study is a Python module in `studies/` defining `STUDY`: a base run configuration plus the
 sweeps over it, and the executor settings (local, or SLURM resources). Every command names the
-study by its module; the study directory is `<root>/<study name>`, with `--root` required for every
-command that acts on a study. `create` resolves the module into a fixed list of runs and writes the
+study by its module; the study directory is the `root` set in the module.
+`create` resolves the module into a fixed list of runs and writes the
 study directory; `run` executes the runs one after the other in this process (cluster `local`) or
 on a SLURM cluster (cluster `slurm`), as set in the module.
 
 Example:
 
-    pixi run study create studies/prior_investigation.py --root working_data
+    pixi run study create studies/prior_investigation.py
     pixi run study show studies/prior_investigation.py
-    pixi run study run studies/prior_investigation.py --root working_data
-    pixi run study status studies/prior_investigation.py --root working_data
-    pixi run study collect studies/prior_investigation.py --root working_data
-    pixi run study report studies/prior_investigation.py --root working_data
+    pixi run study run studies/prior_investigation.py
+    pixi run study status studies/prior_investigation.py
+    pixi run study collect studies/prior_investigation.py
+    pixi run study report studies/prior_investigation.py
 
 With the cluster `slurm`, `run` sends the unfinished runs to SLURM as one job array via `submitit`
 (one task per unfinished run); the tasks use this pixi environment, so it must be reachable from
 the compute nodes. With `--no-wait`, the command returns after queueing:
 
-    pixi run study run studies/map_synthetic.py --root working_data --no-wait
+    pixi run study run studies/map_synthetic.py --no-wait
 
 Finished runs are skipped, so running again only repeats failed or unstarted runs. Runs that are
 submitted or running are skipped too (a second job would delete the files of the first); after a
@@ -51,11 +51,9 @@ class StudyCommand:
 
     Attributes:
         module (Path): Python file defining `STUDY`.
-        root (Path): Directory holding all study directories.
     """
 
     module: tyro.conf.Positional[Path]
-    root: Path
 
 
 # ==================================================================================================
@@ -139,7 +137,7 @@ def main(command: Command) -> None:
     match command:
         case CreateCommand():
             # Resolve the study module into its run list and write the study directory.
-            study = Study.create(command.module, command.root)
+            study = Study.create(command.module)
             print(f"Created {study.directory.path} with {len(study.runs)} runs.")
         case ShowCommand():
             # Print an overview of a study module or a single run config.
@@ -150,7 +148,7 @@ def main(command: Command) -> None:
         case RunCommand():
             # Execute unfinished runs (blocking), or queue them on SLURM and return (`--no-wait`).
             indices = None if command.index is None else [command.index]
-            outcomes = Study.load(command.module, command.root).execute_runs(
+            outcomes = Study.load(command.module).execute_runs(
                 indices, command.force, command.include_active, command.wait
             )
             print(dict(Counter(str(outcome) for outcome in outcomes.values())))
@@ -160,19 +158,19 @@ def main(command: Command) -> None:
                 sys.exit(1)
         case StatusCommand():
             # Print the state (pending/submitted/running/done/failed) of every run.
-            study = Study.load(command.module, command.root)
+            study = Study.load(command.module)
             states = study.read_states()
             for run in study.runs:
                 print(f"{run.index:>4}  {run.run_id}  {states[run.index].value}")
             print(dict(Counter(state.value for state in states.values())))
         case CollectCommand():
             # Write the cross-run table.
-            study = Study.load(command.module, command.root)
+            study = Study.load(command.module)
             print(f"Wrote {study.write_run_table()}")
             print(study.build_run_table().to_string(index=False))
         case ReportCommand():
             # Plot the finished runs; unfinished ones are skipped.
-            Study.load(command.module, command.root).plot_finished_runs(command.index)
+            Study.load(command.module).plot_finished_runs(command.index)
 
 
 if __name__ == "__main__":

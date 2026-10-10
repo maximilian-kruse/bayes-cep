@@ -11,7 +11,7 @@ Classes:
 """
 
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import override
 
@@ -37,9 +37,6 @@ from bayes_cep.statistics.correlation_length import (
     estimate_correlation_length,
 )
 
-REFERENCE_PRIOR_KAPPA = 0.05
-REFERENCE_PRIOR_TAU = 10.0
-
 
 # ==================================================================================================
 @dataclass(frozen=True)
@@ -52,8 +49,8 @@ class PriorParameters:
         seed (int): Random seed for prior sampling. Defaults to `0`.
     """
 
-    kappa: float = REFERENCE_PRIOR_KAPPA
-    tau: float = REFERENCE_PRIOR_TAU
+    kappa: float
+    tau: float
     seed: int = 0
 
 
@@ -75,8 +72,8 @@ class PriorRunConfig(RunConfig):
 
     raw_dir: Path
     correlation: CorrelationLengthSettings
-    prior: PriorParameters = field(default_factory=PriorParameters)
-    num_samples: int = 1000
+    prior: PriorParameters
+    num_samples: int
     keep_samples: bool = False
 
     def __post_init__(self) -> None:
@@ -112,7 +109,7 @@ class PriorRun(Run[PriorRunConfig]):
         config = self.config
         plots_dir = run_dir / "plots"
         plots_dir.mkdir(exist_ok=True)
-        results_dir = run_dir / "results"
+        results_dir = self.results_dir(run_dir)
         metrics = RunDirectory(run_dir).read_metrics()
         label = f"kappa={config.prior.kappa}, tau={config.prior.tau}"
 
@@ -168,10 +165,10 @@ class PriorRun(Run[PriorRunConfig]):
     @override
     def _execute(self, run_dir: Path, logger: BaseLogger) -> Metrics:
         start_time = time.perf_counter()
-        results_dir = run_dir / "results"
-        results_dir.mkdir(parents=True, exist_ok=True)
         config = self.config
         steps = StepReporter(logger)
+        results_dir = self.results_dir(run_dir)
+        results_dir.mkdir(parents=True, exist_ok=True)
 
         raw_dir = resolve_repository_path(config.raw_dir)
         with steps.step(f"Loading the mesh from {raw_dir}"):

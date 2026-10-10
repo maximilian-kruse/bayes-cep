@@ -7,12 +7,9 @@ and its assembly live here once; the runs themselves only optimize or sample it.
 Classes:
     InferenceProblemConfig: Which data and which model the posterior is built from.
     AssembledPosterior: The posterior with the prior builder and the data it was built from.
-
-Functions:
-    reference_inference_problem: The inference problem of the example data.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -30,11 +27,7 @@ from bayes_cep.posterior.likelihood import LikelihoodSettings
 from bayes_cep.posterior.prior import PriorSettings
 from bayes_cep.run.directories import resolve_repository_path
 from bayes_cep.run.progress import StepReporter
-from single_runs.preprocessing import (
-    REFERENCE_RAW_DIR,
-    PreprocessedData,
-    reference_eikonal_settings,
-)
+from single_runs.preprocessing import PreprocessedData
 from single_runs.prior import PriorParameters
 
 
@@ -62,7 +55,8 @@ class InferenceProblemConfig:
     Attributes:
         raw_dir (Path): Directory containing `mesh.vtu` and `basis_vecs.npy`. It must be the one
             the preprocessing run used.
-        preprocessing_dir (Path): Run directory of the preprocessing run that produced the data.
+        preprocessed_data_dir (Path): Directory with the preprocessed data files: the `results`
+            directory of the preprocessing run that produced them.
         prior (PriorParameters): Parameters of the inference prior. Its mean is the prior mean of
             the preprocessed data.
         eikonal (EikonalSolverSettings): Forward-solver settings of the inference.
@@ -71,27 +65,20 @@ class InferenceProblemConfig:
     """
 
     raw_dir: Path
-    preprocessing_dir: Path
-    prior: PriorParameters = field(default_factory=PriorParameters)
-    eikonal: EikonalSolverSettings = field(default_factory=reference_eikonal_settings)
-    interpolation: LinearInterpolationStrategy | NearestNeighborInterpolationStrategy = field(
-        default_factory=NearestNeighborInterpolationStrategy
-    )
-
-    # ----------------------------------------------------------------------------------------------
-    @property
-    def preprocessed_results_dir(self) -> Path:
-        """The `results/` folder of the preprocessing run."""
-        return resolve_repository_path(self.preprocessing_dir) / "results"
+    preprocessed_data_dir: Path
+    prior: PriorParameters
+    eikonal: EikonalSolverSettings
+    interpolation: LinearInterpolationStrategy | NearestNeighborInterpolationStrategy
 
     # ----------------------------------------------------------------------------------------------
     def input_files(self) -> list[Path]:
         """The raw files and the preprocessed data the posterior is built from."""
         raw_dir = resolve_repository_path(self.raw_dir)
+        data_dir = resolve_repository_path(self.preprocessed_data_dir)
         return [
             raw_dir / "mesh.vtu",
             raw_dir / "basis_vecs.npy",
-            *PreprocessedData.file_paths(self.preprocessed_results_dir),
+            *PreprocessedData.file_paths(data_dir),
         ]
 
     # ----------------------------------------------------------------------------------------------
@@ -106,13 +93,14 @@ class InferenceProblemConfig:
             AssembledPosterior: The posterior, its prior builder and the data.
         """
         raw_dir = resolve_repository_path(self.raw_dir)
+        data_dir = resolve_repository_path(self.preprocessed_data_dir)
         with steps.step(f"Loading the mesh and basis vectors from {raw_dir}"):
             mesh = load_pyvista_mesh(raw_dir / "mesh.vtu")
             basis_vectors = np.load(raw_dir / "basis_vecs.npy")
         logger.info(f"      mesh: {mesh.n_points} vertices, {mesh.n_cells} triangles")
 
-        with steps.step(f"Loading the preprocessed data from {self.preprocessed_results_dir}"):
-            data = PreprocessedData.load(self.preprocessed_results_dir)
+        with steps.step(f"Loading the preprocessed data from {data_dir}"):
+            data = PreprocessedData.load(data_dir)
 
         with steps.step("Building the posterior"):
             posterior_builder = PosteriorBuilder(
@@ -137,17 +125,3 @@ class InferenceProblemConfig:
             )
             log_posterior = posterior_builder.build()
         return AssembledPosterior(posterior_builder, log_posterior, data)
-
-
-# ==================================================================================================
-def reference_inference_problem(preprocessing_dir: Path) -> InferenceProblemConfig:
-    """The inference problem of the example data.
-
-    Args:
-        preprocessing_dir (Path): Run directory of the preprocessing run that produced the data;
-            there is deliberately no default.
-
-    Returns:
-        InferenceProblemConfig: The reference problem for the given data.
-    """
-    return InferenceProblemConfig(raw_dir=REFERENCE_RAW_DIR, preprocessing_dir=preprocessing_dir)

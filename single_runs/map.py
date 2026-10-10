@@ -5,27 +5,19 @@ The run reads the data of a preprocessing run (see
 optimization, started at the prior mean. The ground truth in the data is used for the error
 metrics only.
 
-Constants:
-    REFERENCE_*: Settings of the reference MAP run, used as defaults.
-
 Classes:
     MapRunConfig: Which posterior to maximize, and with which optimizer.
     MapRun: The MAP estimation run.
-
-Functions:
-    reference_optimizer_strategy: Cameron-Martin L-BFGS with the loose reference tolerance.
-    reference_map_config: The MAP run configuration of the example data.
 """
 
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import override
 
 import matplotlib.pyplot as plt
 import numpy as np
 from ls_bayesian.common.logging import BaseLogger, LoggerSettings
-from ls_bayesian.optimization.algorithms.custom_lbfgs import CustomLBFGSSettings
 
 from bayes_cep.mesh.interpolation import NearestNeighborInterpolationStrategy
 from bayes_cep.mesh.io import load_pyvista_mesh
@@ -36,22 +28,8 @@ from bayes_cep.run.directories import RunDirectory, resolve_repository_path
 from bayes_cep.run.progress import StepReporter
 from bayes_cep.run.template import Metrics, Run
 from bayes_cep.statistics.axial_statistics import compute_axial_data_diff, wrap_axial_angles
-from single_runs.inference import InferenceProblemConfig, reference_inference_problem
+from single_runs.inference import InferenceProblemConfig
 from single_runs.preprocessing import PreprocessedData
-
-REFERENCE_GRADIENT_NORM_TOLERANCE = 100.0
-REFERENCE_MAX_NUM_ITERATIONS = 1000
-
-
-# ==================================================================================================
-def reference_optimizer_strategy() -> CustomLBFGSStrategy:
-    """Cameron-Martin L-BFGS with the loose reference gradient-norm tolerance."""
-    return CustomLBFGSStrategy(
-        lbfgs_settings=CustomLBFGSSettings(
-            maximum_num_iterations=REFERENCE_MAX_NUM_ITERATIONS,
-            gradient_norm_tolerance=REFERENCE_GRADIENT_NORM_TOLERANCE,
-        )
-    )
 
 
 # ==================================================================================================
@@ -65,23 +43,7 @@ class MapRunConfig(RunConfig):
     """
 
     problem: InferenceProblemConfig
-    optimizer: CustomLBFGSStrategy | ScipyLBFGSBStrategy = field(
-        default_factory=reference_optimizer_strategy
-    )
-
-
-# ==================================================================================================
-def reference_map_config(preprocessing_dir: Path) -> MapRunConfig:
-    """The MAP run configuration of the example data.
-
-    Args:
-        preprocessing_dir (Path): Run directory of the preprocessing run that produced the data;
-            there is deliberately no default.
-
-    Returns:
-        MapRunConfig: The reference configuration for the given data.
-    """
-    return MapRunConfig(problem=reference_inference_problem(preprocessing_dir))
+    optimizer: CustomLBFGSStrategy | ScipyLBFGSBStrategy
 
 
 # ==================================================================================================
@@ -112,9 +74,10 @@ class MapRun(Run[MapRunConfig]):
         problem = self.config.problem
         plots_dir = run_dir / "plots"
         plots_dir.mkdir(exist_ok=True)
-        results_dir = run_dir / "results"
         metrics = RunDirectory(run_dir).read_metrics()
-        ground_truth = PreprocessedData.load(problem.preprocessed_results_dir).ground_truth
+        data_dir = resolve_repository_path(problem.preprocessed_data_dir)
+        ground_truth = PreprocessedData.load(data_dir).ground_truth
+        results_dir = self.results_dir(run_dir)
         map_estimate = np.load(results_dir / "map_estimate.npy")
 
         mesh = load_pyvista_mesh(resolve_repository_path(problem.raw_dir) / "mesh.vtu")
@@ -184,7 +147,7 @@ class MapRun(Run[MapRunConfig]):
         prior_mean_error = np.abs(compute_axial_data_diff(data.prior_mean, data.ground_truth))
         logger.info(f"      axial error of the MAP: mean {map_error.mean():.4f} rad")
 
-        results_dir = run_dir / "results"
+        results_dir = self.results_dir(run_dir)
         results_dir.mkdir(parents=True, exist_ok=True)
         np.save(results_dir / "map_estimate.npy", result.result)
         np.save(results_dir / "map_loss_history.npy", result.loss_history)

@@ -1,13 +1,14 @@
 """Studies: the definition of a study, and a study written to disk.
 
 A study is a run type, a base configuration and a sweep over it. `StudySetup` is what a study module
-(`studies/<name>.py`) defines as `STUDY`; it resolves into a fixed, ordered list of runs. A sweep is
-a tree of nodes, each expanding into a list of override dicts (dotted configuration path to value)
-that are applied to the base configuration.
+(`studies/<name>.py`) defines as `STUDY`, together with the settings for executing it (local or
+SLURM resources) and the root directory of the study. It resolves into a fixed,
+ordered list of runs. A sweep is a tree of nodes, each expanding into a list of override dicts
+(dotted configuration path to value) that are applied to the base configuration.
 
 `Study` is a study written to disk: creating it, executing its runs, plotting and
-summarizing them. A study is identified by its module and the root directory of all study
-directories; its directory is `<root>/<study name>` (see `directories` for the layout).
+summarizing them. A study is identified by its module; its directory is the root of its setup
+(see `directories` for the layout).
 `Study.create` resolves the module into the fixed run list and writes the study directory,
 including the environment specification. Working on the study resolves the module again;
 the runs must have the ids recorded at creation, since the results in the directory belong to them.
@@ -30,7 +31,7 @@ import shutil
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from dataclasses import asdict, dataclass, is_dataclass
+from dataclasses import asdict, dataclass, field, is_dataclass
 from functools import cached_property
 from pathlib import Path
 from typing import Any, Self, override
@@ -40,6 +41,7 @@ import pandas as pd
 from bayes_cep.run.config import TYPE_KEY, ConfigCodec, RunConfig, format_config_tree
 from bayes_cep.run.directories import (
     REPOSITORY_ROOT,
+    RESULTS_DIR_NAME,
     RunState,
     StudyDirectory,
     format_current_time,
@@ -202,6 +204,10 @@ class StudySetup:
         base (RunConfig): Configuration of all runs before the sweep is applied; fixes all
             parameters that are common to the runs.
         sweep (SweepNode): The parameter variations.
+        root (Path): The study directory, conventionally named after the study. Other studies find
+            the runs of this one through it. Not part of a run's identity.
+        executor (ExecutorSettings): Where and with which resources the runs execute, e.g. the
+            SLURM resources. Not part of a run's identity.
     """
 
     name: str
@@ -209,6 +215,8 @@ class StudySetup:
     run_type: type[Run]
     base: RunConfig
     sweep: SweepNode
+    root: Path
+    executor: ExecutorSettings = field(default_factory=ExecutorSettings)
 
     def __post_init__(self) -> None:
         if not STUDY_NAME_PATTERN.fullmatch(self.name):
@@ -230,9 +238,9 @@ class StudySetup:
     # ----------------------------------------------------------------------------------------------
     @classmethod
     def load_from_module_file(cls, module_path: Path) -> Self:
-        """Load the `STUDY` attribute of a study module file.
+        """Load the study a study module file defines.
 
-        The module is executed as a script. It should import only from `bayes_cep` and from the
+        The module is executed as a script. It should import only from `bayes_cep`, from the
         run kinds of `single_runs`, which are found through the `PYTHONPATH` of the pixi
         environment; those are not archived with a study (the commit and the patch of
         uncommitted changes in the recorded environment cover them).
@@ -283,29 +291,43 @@ class StudySetup:
         return runs
 
     # ----------------------------------------------------------------------------------------------
-    def run_directories(self, root: Path) -> list[Path]:
+    def run_directories(self) -> list[Path]:
         """The run directories of all runs, in order, as they exist once the study is created.
 
         This lets a study refer to the results of another one, e.g. a MAP study to the
         preprocessing runs that produced its data. The paths are relative if `root` is.
 
-        Args:
-            root (Path): Directory holding all study directories.
-
         Returns:
             list[Path]: One run directory per run.
         """
-        study_directory = StudyDirectory(root / self.name)
+        study_directory = StudyDirectory(self.root)
         return [study_directory.run_directory(run.run_id).path for run in self.resolve_runs()]
 
     # ----------------------------------------------------------------------------------------------
-    def run_directory(self, config: RunConfig, root: Path) -> Path:
+    def results_directories(self) -> list[Path]:
+        """The result directories of all runs, in order (see `run_directories`).
+
+        A study that reads the output files of another one points at these.
+        """
+        return [run_directory / RESULTS_DIR_NAME for run_directory in self.run_directories()]
+
+    # ----------------------------------------------------------------------------------------------
+    def results_directory(self, config: RunConfig) -> Path:
+        """The result directory of the run with this configuration.
+
+        Raises:
+            ValueError: If the study has no run with this configuration.
+        """
+        return self.run_directory(config) / RESULTS_DIR_NAME
+
+    # ----------------------------------------------------------------------------------------------
+    def run_directory(self, config: RunConfig) -> Path:
         """The run directory of the run with this configuration (see `run_directories`).
 
         Raises:
             ValueError: If the study has no run with this configuration.
         """
-        for run, run_directory in zip(self.resolve_runs(), self.run_directories(root), strict=True):
+        for run, run_directory in zip(self.resolve_runs(), self.run_directories(), strict=True):
             if run.run_id == config.run_id:
                 return run_directory
         raise ValueError(f"Study {self.name!r} has no run with the configuration {config.run_id}.")
@@ -320,6 +342,8 @@ class StudySetup:
                 "",
                 f"run type  : {self.run_type_path}",
                 f"num runs  : {len(self.resolve_runs())}",
+                "executor  : "
+                + ", ".join(f"{key} = {value}" for key, value in asdict(self.executor).items()),
                 "",
                 "Base configuration",
                 format_config_tree(self.base.to_json_dict()),
@@ -346,7 +370,7 @@ class Study:
 
     # ----------------------------------------------------------------------------------------------
     @classmethod
-    def create(cls, module_path: Path, root: Path) -> Self:
+    def create(cls, module_path: Path) -> Self:
         """Resolve a study module and write its study directory, before any run starts.
 
         The directory is built under a temporary name and moved into place at the end, so a failure
@@ -354,25 +378,32 @@ class Study:
 
         Args:
             module_path (Path): Python file defining `STUDY`.
-            root (Path): Directory holding all study directories; created if missing.
 
         Returns:
             Self: The new study.
 
         Raises:
             FileExistsError: If the study directory already exists.
+            FileNotFoundError: If input files of a run are missing, e.g. because the preprocessing
+                study it reads from has not been run.
             ValueError: If a configuration does not survive its JSON form.
         """
         study = StudySetup.load_from_module_file(module_path)
-        study_dir = (root / study.name).resolve()
+        study_dir = study.root.resolve()
         if study_dir.exists():
             raise FileExistsError(f"Study directory {study_dir} already exists.")
         runs = study.resolve_runs()
+        missing_files: set[Path] = set()
         for run in runs:
             if study.run_type.config_type.from_json_dict(run.config.to_json_dict()) != run.config:
                 raise ValueError(f"The configuration of run {run.index} does not survive JSON.")
+            input_files = study.run_type(run.config).input_files()
+            missing_files.update(path for path in input_files if not path.exists())
+        if missing_files:
+            listed = "\n  ".join(str(path) for path in sorted(missing_files))
+            raise FileNotFoundError(f"Input files of the runs are missing:\n  {listed}")
 
-        temporary_dir = study_dir.with_name(f".{study.name}.creating")
+        temporary_dir = study_dir.with_name(f".{study_dir.name}.creating")
         shutil.rmtree(temporary_dir, ignore_errors=True)
         try:
             cls._write_description(StudyDirectory(temporary_dir), study, runs, module_path)
@@ -384,17 +415,17 @@ class Study:
 
     # ----------------------------------------------------------------------------------------------
     @classmethod
-    def load(cls, module_path: Path, root: Path) -> Self:
-        """Load a study from its module and the root of the study directories.
+    def load(cls, module_path: Path) -> Self:
+        """Load a study from its module.
 
         Raises:
-            FileNotFoundError: If the study has not been created in `root`.
+            FileNotFoundError: If the study has not been created in the root of its module.
             ValueError: If the module no longer resolves to the runs recorded at creation.
         """
         study = StudySetup.load_from_module_file(module_path)
-        directory = StudyDirectory((root / study.name).resolve())
+        directory = StudyDirectory(study.root.resolve())
         if not directory.study_record_path.exists():
-            raise FileNotFoundError(f"Study {study.name!r} has not been created in {root}.")
+            raise FileNotFoundError(f"Study {study.name!r} has not been created in {study.root}.")
         recorded_ids = json.loads(directory.study_record_path.read_text())["run_ids"]
         if [run.run_id for run in study.resolve_runs()] != recorded_ids:
             raise ValueError(
@@ -419,7 +450,6 @@ class Study:
     # ----------------------------------------------------------------------------------------------
     def execute_runs(
         self,
-        settings: ExecutorSettings,
         indices: list[int] | None = None,
         force: bool = False,
         include_active: bool = False,
@@ -437,7 +467,6 @@ class Study:
         any run starts; every run records the environment it actually executed in.
 
         Args:
-            settings (ExecutorSettings): Where and with which resources the runs execute.
             indices (list[int] | None): Runs to consider (repeated indices count once); all runs if
                 `None`.
             force (bool): Whether to also rerun finished runs. Defaults to `False`.
@@ -469,7 +498,9 @@ class Study:
         if pending:
             environment = Environment.collect_from_current_process()
             self._warn_if_environment_changed(environment)
-            executor = Executor(settings, self.directory.job_dir, self.directory.path.name)
+            executor = Executor(
+                self.definition.executor, self.directory.job_dir, self.directory.path.name
+            )
             results = executor.run(
                 [self.definition.run_type(self.runs[index].config) for index in pending],
                 [self.directory.run_directory(self.runs[index].run_id).path for index in pending],
@@ -581,7 +612,10 @@ class Study:
     # ----------------------------------------------------------------------------------------------
     @staticmethod
     def _write_description(
-        directory: StudyDirectory, study: StudySetup, runs: list[ResolvedRun], module_path: Path
+        directory: StudyDirectory,
+        study: StudySetup,
+        runs: list[ResolvedRun],
+        module_path: Path,
     ) -> None:
         """Write the study description and the environment into `directory`."""
         environment = Environment.collect_from_current_process()
@@ -601,6 +635,7 @@ class Study:
                 "description": study.description,
                 "created": format_current_time(),
                 "module": str(module),
+                "executor": asdict(study.executor),
                 "run_type": study.run_type_path,
                 "run_ids": [run.run_id for run in runs],
                 "sweep": study.sweep.to_json_dict(),

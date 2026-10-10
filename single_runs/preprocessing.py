@@ -1,23 +1,16 @@
 """Preprocessing run: ground truth, prior mean and synthetic observations for the inference runs.
 
 The preprocessing run is the only place where data is generated. The MAP and MCMC runs read its
-`results/` folder and nothing else of the data side, so several inference runs (and studies) share
+run directory and nothing else of the data side, so several inference runs (and studies) share
 exactly the same data.
-
-Constants:
-    REFERENCE_*: Settings of the reference, used as defaults and by the reference configs.
 
 Classes:
     PreprocessedData: The data the inference runs work on, with its files.
     PreprocessingRunConfig: Build a ground truth and generate synthetic observations from it.
     PreprocessingRun: The preprocessing run.
-
-Functions:
-    reference_eikonal_settings: Eikonal forward-solver settings of the reference patient.
-    reference_preprocessing_config: The preprocessing configuration of the example data.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Self, override
 
@@ -46,24 +39,6 @@ from bayes_cep.run.progress import StepReporter, describe_array
 from bayes_cep.run.template import Metrics, Run
 from bayes_cep.statistics.axial_statistics import wrap_axial_angles
 
-# Settings used as defaults below; every one of them can be overridden in a study.
-REFERENCE_RAW_DIR = Path("example_data/raw")
-REFERENCE_INITIAL_SITE_IND = 12650
-REFERENCE_LONGITUDINAL_VELOCITY = 1.5
-REFERENCE_TRANSVERSAL_VELOCITY = 1.0
-REFERENCE_NUM_OBSERVATIONS = 1000
-REFERENCE_NOISE_VARIANCE = 1e-3
-
-
-# ==================================================================================================
-def reference_eikonal_settings() -> EikonalSolverSettings:
-    """Eikonal forward-solver settings of the reference patient."""
-    return EikonalSolverSettings(
-        initial_site_ind=REFERENCE_INITIAL_SITE_IND,
-        longitudinal_velocity=REFERENCE_LONGITUDINAL_VELOCITY,
-        transversal_velocity=REFERENCE_TRANSVERSAL_VELOCITY,
-    )
-
 
 # ==================================================================================================
 @dataclass(frozen=True)
@@ -88,8 +63,8 @@ class PreprocessedData:
 
     # ----------------------------------------------------------------------------------------------
     @staticmethod
-    def file_paths(results_dir: Path) -> list[Path]:
-        """The files of the data in the `results/` folder of a preprocessing run."""
+    def file_paths(data_dir: Path) -> list[Path]:
+        """The files of the data in `data_dir`, the result directory of a preprocessing run."""
         names = (
             "ground_truth_angle_field.npy",
             "prior_mean_angle_field.npy",
@@ -97,12 +72,12 @@ class PreprocessedData:
             "observed_activation_times.npy",
             "observation_noise_variance.npy",
         )
-        return [results_dir / name for name in names]
+        return [data_dir / name for name in names]
 
     # ----------------------------------------------------------------------------------------------
-    def save(self, results_dir: Path) -> None:
-        """Write the data into `results_dir`, which is created if missing."""
-        results_dir.mkdir(parents=True, exist_ok=True)
+    def save(self, data_dir: Path) -> None:
+        """Write the data into `data_dir`, which is created if missing."""
+        data_dir.mkdir(parents=True, exist_ok=True)
         arrays = (
             self.ground_truth,
             self.prior_mean,
@@ -110,20 +85,20 @@ class PreprocessedData:
             self.observed_activation_times,
             np.array(self.noise_variance),
         )
-        for path, array in zip(self.file_paths(results_dir), arrays, strict=True):
+        for path, array in zip(self.file_paths(data_dir), arrays, strict=True):
             np.save(path, array)
 
     # ----------------------------------------------------------------------------------------------
     @classmethod
-    def load(cls, results_dir: Path) -> Self:
-        """Read the data from the `results/` folder of a preprocessing run."""
+    def load(cls, data_dir: Path) -> Self:
+        """Read the data from `data_dir`, the result directory of a preprocessing run."""
         (
             ground_truth_path,
             prior_mean_path,
             vertex_indices_path,
             activation_times_path,
             noise_variance_path,
-        ) = cls.file_paths(results_dir)
+        ) = cls.file_paths(data_dir)
         return cls(
             ground_truth=np.load(ground_truth_path),
             prior_mean=np.load(prior_mean_path),
@@ -138,8 +113,8 @@ class PreprocessedData:
 class PreprocessingRunConfig(RunConfig):
     """Build a ground truth and generate synthetic observations from it.
 
-    The ground truth and the observation settings have no defaults on purpose: they are what the
-    studies vary.
+    There are no defaults: the reference values are in `single_runs.reference`, and studies vary
+    them from there.
 
     Attributes:
         raw_dir (Path): Directory containing `mesh.vtu`, `basis_vecs.npy` and `fiber_field.npy`.
@@ -155,32 +130,8 @@ class PreprocessingRunConfig(RunConfig):
     raw_dir: Path
     ground_truth: RealDataGroundTruthStrategy | SyntheticGroundTruthStrategy
     observations: ObservationSamplingSettings
-    eikonal: EikonalSolverSettings = field(default_factory=reference_eikonal_settings)
-    interpolation: LinearInterpolationStrategy | NearestNeighborInterpolationStrategy = field(
-        default_factory=NearestNeighborInterpolationStrategy
-    )
-
-
-# ==================================================================================================
-def reference_preprocessing_config(
-    ground_truth: RealDataGroundTruthStrategy | SyntheticGroundTruthStrategy,
-) -> PreprocessingRunConfig:
-    """The preprocessing configuration of the example data.
-
-    Args:
-        ground_truth (RealDataGroundTruthStrategy | SyntheticGroundTruthStrategy): Ground-truth
-            source; there is deliberately no default.
-
-    Returns:
-        PreprocessingRunConfig: The reference configuration for the given ground truth.
-    """
-    return PreprocessingRunConfig(
-        raw_dir=REFERENCE_RAW_DIR,
-        ground_truth=ground_truth,
-        observations=ObservationSamplingSettings(
-            num_observations=REFERENCE_NUM_OBSERVATIONS, noise_variance=REFERENCE_NOISE_VARIANCE
-        ),
-    )
+    eikonal: EikonalSolverSettings
+    interpolation: LinearInterpolationStrategy | NearestNeighborInterpolationStrategy
 
 
 # ==================================================================================================
@@ -210,7 +161,7 @@ class PreprocessingRun(Run[PreprocessingRunConfig]):
     def report(self, run_dir: Path) -> None:
         plots_dir = run_dir / "plots"
         plots_dir.mkdir(exist_ok=True)
-        data = PreprocessedData.load(run_dir / "results")
+        data = PreprocessedData.load(self.results_dir(run_dir))
 
         mesh = load_pyvista_mesh(resolve_repository_path(self.config.raw_dir) / "mesh.vtu")
         connectivity = mesh.cells.reshape(-1, 4)[:, 1:]
@@ -264,7 +215,7 @@ class PreprocessingRun(Run[PreprocessingRunConfig]):
             observed_vertex_indices=observed_vertex_indices,
             observed_activation_times=observed_activation_times,
             noise_variance=config.observations.noise_variance,
-        ).save(run_dir / "results")
+        ).save(self.results_dir(run_dir))
         return {
             "num_observed_vertices": int(observed_vertex_indices.shape[0]),
             "prior_mean_angle": float(prior_mean[0]),

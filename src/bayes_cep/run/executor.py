@@ -67,6 +67,10 @@ class ExecutorSettings:
     partition: str | None = None
     max_parallel: int | None = None
 
+    def __post_init__(self) -> None:
+        if self.cluster not in ("local", "slurm"):
+            raise ValueError(f"cluster must be 'local' or 'slurm', got {self.cluster!r}.")
+
 
 # ==================================================================================================
 class Executor:

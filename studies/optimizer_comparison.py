@@ -12,21 +12,27 @@ from ls_bayesian.optimization.algorithms.scipy_lbfgs_b import ScipyLBFGSBSetting
 
 from bayes_cep.optimization.strategies import ScipyLBFGSBStrategy
 from bayes_cep.preprocessing.ground_truth import SyntheticGroundTruthStrategy
+from bayes_cep.run.executor import ExecutorSettings
 from bayes_cep.run.study import Axis, Product, StudySetup
-from single_runs.map import MapRun, reference_map_config, reference_optimizer_strategy
-from single_runs.preprocessing import reference_preprocessing_config
+from single_runs.map import MapRun
+from single_runs.reference import (
+    reference_map_config,
+    reference_optimizer_strategy,
+    reference_preprocessing_config,
+)
 from studies.preprocessing_synthetic import STUDY as PREPROCESSING_STUDY
 
-STUDY_ROOT = Path("working_data")  # the --root the preprocessing study is created in
-REFERENCE_PREPROCESSING_DIR = PREPROCESSING_STUDY.run_directory(
-    reference_preprocessing_config(SyntheticGroundTruthStrategy()), STUDY_ROOT
+RAW_DIR = Path("example_data/raw")  # the raw data all runs of this study work on
+
+REFERENCE_PREPROCESSED_DATA_DIR = PREPROCESSING_STUDY.results_directory(
+    reference_preprocessing_config(RAW_DIR, SyntheticGroundTruthStrategy())
 )
 
 STUDY = StudySetup(
     run_type=MapRun,
     name="optimizer_comparison",
     description="MAP estimate of one problem with the custom L-BFGS and with scipy's L-BFGS-B.",
-    base=reference_map_config(REFERENCE_PREPROCESSING_DIR),
+    base=reference_map_config(RAW_DIR, REFERENCE_PREPROCESSED_DATA_DIR),
     sweep=Product(
         Axis(
             "optimizer",
@@ -36,4 +42,6 @@ STUDY = StudySetup(
             ),
         )
     ),
+    root=Path("working_data/optimizer_comparison"),
+    executor=ExecutorSettings(cluster="slurm", time_min=240, cpus_per_task=4),
 )

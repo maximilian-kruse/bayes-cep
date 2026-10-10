@@ -23,7 +23,12 @@ import numpy as np
 from ls_bayesian.common.logging import BaseLogger, LoggerSettings
 
 from bayes_cep.run.config import RunConfig
-from bayes_cep.run.directories import RunDirectory, RunState, format_current_time
+from bayes_cep.run.directories import (
+    RESULTS_DIR_NAME,
+    RunDirectory,
+    RunState,
+    format_current_time,
+)
 from bayes_cep.run.provenance import Environment, RunMetadata
 
 type Metrics = dict[str, float | bool | int | str]
@@ -42,9 +47,13 @@ class Run[ConfigT: RunConfig](ABC):
         config_type (type[RunConfig]): The configuration class this run is paired with; taken from
             the generic argument of the subclass.
         outputs (dict[str, str]): Description of the files a run writes, by path relative to the
-            run directory; documented in the study description.
+            run directory; documented in the study description. Result files are listed with
+            their `results/` prefix, which is dropped with `flat_results`.
         config (ConfigT): The configuration of this run.
         write_to_console (bool): Whether progress is also printed to the console.
+        flat_results (bool): Whether result files are written directly into the run directory
+            instead of its `results/` subdirectory. Not part of the run's identity; for runs
+            whose directory is the result itself, like the example data.
     """
 
     config_type: ClassVar[type[RunConfig]]
@@ -59,13 +68,17 @@ class Run[ConfigT: RunConfig](ABC):
                 if isinstance(config_type, type):
                     cls.config_type = config_type
 
-    def __init__(self, config: ConfigT, write_to_console: bool = True) -> None:
+    def __init__(
+        self, config: ConfigT, write_to_console: bool = True, flat_results: bool = False
+    ) -> None:
         """Pair the run with its configuration.
 
         Args:
             config (ConfigT): Run configuration; must be an instance of `config_type`.
             write_to_console (bool): Whether progress is also printed to the console. Defaults to
                 `True`.
+            flat_results (bool): Whether result files go directly into the run directory instead
+                of `results/`. Defaults to `False`.
 
         Raises:
             TypeError: If the subclass does not define `config_type` (through its generic
@@ -81,6 +94,12 @@ class Run[ConfigT: RunConfig](ABC):
             )
         self.config = config
         self.write_to_console = write_to_console
+        self.flat_results = flat_results
+
+    # ----------------------------------------------------------------------------------------------
+    def results_dir(self, run_dir: Path) -> Path:
+        """The directory the result files of the run are in (created by the run when writing)."""
+        return run_dir if self.flat_results else run_dir / RESULTS_DIR_NAME
 
     # ----------------------------------------------------------------------------------------------
     @abstractmethod

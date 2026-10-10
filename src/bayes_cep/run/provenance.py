@@ -1,10 +1,14 @@
-"""Metadata of a run and of a study: what code, inputs and machine produced the results.
+"""Provenance of results: which code, environment and machine produced them.
 
-The environment covers everything that determines the code that ran: the Python version, the
-pixi environment and the hash of `pixi.lock` (which pins all conda and PyPI packages), and the git
-state of the repository and of every editable (path) dependency, which `pixi.lock` does not pin. A
-study additionally archives the specification behind these fingerprints, see `EnvironmentArchive`.
-The records are frozen dataclasses; `dataclasses.asdict` gives their JSON form.
+The environment covers the Python version, the pixi environment and the hash of `pixi.lock` (which
+pins all conda and PyPI packages), and the git state of the repository and of every editable
+(path) dependency, which `pixi.lock` does not pin. It is collected once per submission. Every run
+adds its own record (time, host, SLURM ids, input hashes), and a study archives the specification
+behind the fingerprints. The records are frozen dataclasses; `dataclasses.asdict` gives their JSON
+form.
+
+Constants:
+    LOCK_FILE_NAME: Name of the pixi lock file in the repository root.
 
 Classes:
     GitState: Commit and uncommitted changes of one git repository.
@@ -24,9 +28,7 @@ import socket
 import subprocess
 import warnings
 from collections.abc import Sequence
-from contextlib import suppress
 from dataclasses import asdict, dataclass
-from datetime import datetime
 from importlib import metadata as importlib_metadata
 from pathlib import Path
 from typing import Any, Self
@@ -46,7 +48,7 @@ EXPORT_TIMEOUT_SECONDS = 120
 # ==================================================================================================
 @dataclass(frozen=True)
 class GitState:
-    """The state of one git repository.
+    """The state of a git repository.
 
     Attributes:
         commit (str | None): Hash of the checked-out commit; `None` if not a git repository or git
@@ -83,10 +85,10 @@ class GitRepository:
             GitState: The state; its entries are `None` where git cannot tell, e.g. outside of a
                 repository.
         """
-        status = self._run("status", "--porcelain")
+        status = self._run_git_in_subprocess("status", "--porcelain")
         dirty = None if status is None else bool(status.strip())
         changes = self.read_uncommitted_changes() if dirty else None
-        commit = self._run("rev-parse", "HEAD")
+        commit = self._run_git_in_subprocess("rev-parse", "HEAD")
         return GitState(
             commit=None if commit is None else commit.strip(),
             dirty=dirty,
@@ -103,10 +105,12 @@ class GitRepository:
         Returns:
             str | None: The patch, empty if there are no changes; `None` if git fails.
         """
-        return self._run("diff", "--binary", "HEAD", "--", ".", f":(exclude){LOCK_FILE_NAME}")
+        return self._run_git_in_subprocess(
+            "diff", "--binary", "HEAD", "--", ".", f":(exclude){LOCK_FILE_NAME}"
+        )
 
     # ----------------------------------------------------------------------------------------------
-    def _run(self, *arguments: str) -> str | None:
+    def _run_git_in_subprocess(self, *arguments: str) -> str | None:
         """Output of a git command, or `None` if git fails, hangs or is unavailable.
 
         The output is returned as it is (undecodable bytes are replaced), including the trailing
@@ -171,9 +175,13 @@ class EditablePackage:
         text = distribution.read_text("direct_url.json")
         if text is None:
             return None
-        direct_url = json.loads(text)
-        url = urlparse(direct_url["url"])
-        if url.scheme != "file" or not direct_url.get("dir_info", {}).get("editable", False):
+        try:
+            direct_url = json.loads(text)
+            url = urlparse(direct_url["url"])
+            editable = direct_url.get("dir_info", {}).get("editable", False)
+        except ValueError, KeyError, AttributeError:
+            return None  # malformed metadata of one package must not stop the collection
+        if url.scheme != "file" or not editable:
             return None
         return Path(unquote(url.path))
 
@@ -227,8 +235,8 @@ class Environment:
                 'abc', now 'def'`; empty if the environments agree. An entry present in only one
                 of them counts as `None` in the other.
         """
-        before = self._flatten(recorded)
-        now = self._flatten(asdict(self))
+        before = self._flatten_dict(recorded)
+        now = self._flatten_dict(asdict(self))
         return [
             f"{key}: recorded {before.get(key)!r}, now {now.get(key)!r}"
             for key in sorted(before.keys() | now.keys())
@@ -237,12 +245,12 @@ class Environment:
 
     # ----------------------------------------------------------------------------------------------
     @staticmethod
-    def _flatten(data: dict[str, Any], prefix: str = "") -> dict[str, Any]:
+    def _flatten_dict(data: dict[str, Any], prefix: str = "") -> dict[str, Any]:
         """Nested dicts as one dict with dotted keys."""
         flat: dict[str, Any] = {}
         for key, value in data.items():
             if isinstance(value, dict):
-                flat.update(Environment._flatten(value, f"{prefix}{key}."))
+                flat.update(Environment._flatten_dict(value, f"{prefix}{key}."))
             else:
                 flat[f"{prefix}{key}"] = value
         return flat
@@ -254,7 +262,6 @@ class RunMetadata:
     """Data for a run.
 
     Attributes:
-        started (str): Start time, ISO 8601 with time zone.
         environment (Environment): The code the run executed.
         input_sha256 (dict[str, str | None]): Content hash of every input file, by path relative
             to the repository (absolute outside of it); `None` for a file that does not exist.
@@ -264,7 +271,6 @@ class RunMetadata:
         slurm_array_task_id (str | None): SLURM array task id if the run is a cluster task.
     """
 
-    started: str
     environment: Environment
     input_sha256: dict[str, str | None]
     host: str
@@ -273,20 +279,22 @@ class RunMetadata:
     slurm_array_task_id: str | None
 
     @classmethod
-    def collect_for_run(cls, input_files: Sequence[Path]) -> Self:
+    def collect_for_run(cls, input_files: Sequence[Path], environment: Environment) -> Self:
         """Collect the metadata of a run about to start.
 
         Args:
             input_files (Sequence[Path]): Files the run reads; a missing file is recorded as
                 `None`.
+            environment (Environment): The environment the run executes in. Collected once by the
+                submitter instead of per run, since it costs several git calls and a scan of all
+                installed packages.
 
         Returns:
             Self: The environment, the content hashes of the input files, the machine, and the
                 SLURM job identifiers if the run is a cluster task.
         """
         return cls(
-            started=datetime.now().astimezone().isoformat(timespec="seconds"),
-            environment=Environment.collect_from_current_process(),
+            environment=environment,
             input_sha256=cls._hash_input_files(input_files),
             host=socket.gethostname(),
             cpu_count=os.cpu_count(),
@@ -305,9 +313,11 @@ class RunMetadata:
                 key = str(resolved.relative_to(REPOSITORY_ROOT))
             else:
                 key = str(resolved)
-            hashes[key] = (
-                hashlib.sha256(resolved.read_bytes()).hexdigest() if resolved.exists() else None
-            )
+            if not resolved.exists():
+                hashes[key] = None
+                continue
+            with resolved.open("rb") as file:
+                hashes[key] = hashlib.file_digest(file, "sha256").hexdigest()
         return hashes
 
 
@@ -387,7 +397,7 @@ class EnvironmentArchive:
             warnings.warn(
                 f"The archived {name} does not match the environment collected before: it "
                 "changed in between.",
-                stacklevel=4,
+                stacklevel=2,
             )
 
     # ----------------------------------------------------------------------------------------------
@@ -398,7 +408,7 @@ class EnvironmentArchive:
         issued and nothing is written.
         """
         if shutil.which("pixi") is None:
-            warnings.warn("pixi not found: no conda specification archived.", stacklevel=3)
+            warnings.warn("pixi not found: no conda specification archived.", stacklevel=2)
             return
         command = [
             "pixi",
@@ -410,8 +420,7 @@ class EnvironmentArchive:
             "--ignore-pypi-errors",
             "--ignore-source-errors",
         ]
-        error = ""
-        with suppress(OSError, subprocess.TimeoutExpired):
+        try:
             completed = subprocess.run(
                 command,
                 cwd=REPOSITORY_ROOT,
@@ -420,6 +429,8 @@ class EnvironmentArchive:
                 check=False,
                 timeout=EXPORT_TIMEOUT_SECONDS,
             )
-            error = completed.stderr.strip()
+            reason = completed.stderr.strip()
+        except OSError, subprocess.TimeoutExpired:
+            reason = "the export failed to run or timed out."
         if not any(self._target_dir.glob(CONDA_SPECIFICATION_PATTERN)):
-            warnings.warn(f"No conda specification archived. {error}", stacklevel=3)
+            warnings.warn(f"No conda specification archived. {reason}", stacklevel=2)

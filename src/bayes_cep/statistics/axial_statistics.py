@@ -11,8 +11,8 @@ magnitude measures concentration (`1`: all samples identical, `0`: uniformly spr
 Functions:
     compute_axial_mean_and_variance: Axial mean and variance of angle samples, read block by block.
     shift_angles_to_minimize_axial_variance: Re-branch an angle field around its own axial mean.
-    wrap_axial_angles: Wrap angles onto the principal branch.
     compute_axial_data_diff: Signed axial angle difference between two fields.
+    wrap_axial_angles: Wrap angles onto the principal branch $(-\pi/2, \pi/2]$.
 """
 
 import numpy as np
@@ -71,19 +71,6 @@ def shift_angles_to_minimize_axial_variance(
 
 
 # --------------------------------------------------------------------------------------------------
-def wrap_axial_angles(angles: np.ndarray) -> np.ndarray:
-    r"""Wrap angles onto $(-\pi/2, \pi/2]$, the principal branch of axial data.
-
-    Args:
-        angles (np.ndarray): Angles in radians, any shape.
-
-    Returns:
-        np.ndarray: The same axial angles, on the principal branch, same shape.
-    """
-    return np.angle(np.exp(2j * angles)) / 2
-
-
-# --------------------------------------------------------------------------------------------------
 def compute_axial_data_diff(
     angle_field_one: np.ndarray[tuple[int], np.dtype[np.float64]],
     angle_field_two: np.ndarray[tuple[int], np.dtype[np.float64]],
@@ -97,5 +84,19 @@ def compute_axial_data_diff(
     Returns:
         np.ndarray: Signed axial difference `angle_field_one - angle_field_two`.
     """
-    raw_diff = angle_field_one - angle_field_two
-    return np.angle(np.exp(2j * raw_diff)) / 2
+    return wrap_axial_angles(angle_field_one - angle_field_two)
+
+
+# --------------------------------------------------------------------------------------------------
+def wrap_axial_angles(
+    angles: np.ndarray[tuple[int], np.dtype[np.float64]],
+) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
+    r"""Wrap angles onto $(-\pi/2, \pi/2]$, the principal branch of axial data.
+
+    Args:
+        angles (np.ndarray): Angles in radians.
+
+    Returns:
+        np.ndarray: The angles modulo $\pi$, in $(-\pi/2, \pi/2]$.
+    """
+    return np.angle(np.exp(2j * angles)) / 2

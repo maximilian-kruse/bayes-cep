@@ -77,12 +77,14 @@ studies in `studies/`), found through `PYTHONPATH` set by the pixi activation.
   through `RunDirectory.record_*`; `execute` is the only public way to run). A subclass names its
   config as the generic argument (`MapRun(Run[MapRunConfig])` gives `config_type`), sets `outputs`,
   implements `_execute`, `report` (plots; separate local step, so cluster runs stay headless), and
-  optionally `input_files`. `MapRun.generate_example_data(stage: MapStage)` is the example-data
-  layout without records, composed from the same stage methods.
+  optionally `input_files`. `execute` is the only way to run; `open_run_logger` is public for
+  callers that perform parts of a run without records (the example data).
 - `single_runs/` (repository root): `config.py` (`PriorRunConfig`, `MapRunConfig`; the MAP ground truth and
   observation settings have no defaults on purpose: studies vary them), `prior.py` (`PriorRun`),
-  `map.py` (`MapRun`, `MapStage`), `progress.py` (`StepReporter`, `describe_array`), `plots.py`.
-  A new run kind = config + `Run` subclass.
+  `map.py` (`MapRun`, `MapStage`, `MapPaths`; `MapRun.run_stages` performs separate stages),
+  `example_data.py` (the example-data layout without run records, composed from `run_stages`),
+  `progress.py` (`StepReporter`, `describe_array`), `plots.py`. A new run kind = config + `Run`
+  subclass.
 - Study side, all in `run/`: `sweep.py` (nestable `Axis`/`Zip`/`Product` nodes over dotted config
   paths), `study.py` (`Study(run_type, base, sweep)`: the definition, resolving to `ResolvedRun`s),
   `created_study.py` (`CreatedStudy`: `create_from_module` writes `study/` atomically: description,
@@ -96,7 +98,9 @@ studies in `studies/`), found through `PYTHONPATH` set by the pixi activation.
   `max_parallel`) and `slurm` (job array) over `submitit`; records `SUBMITTED` before a job may
   start; knows nothing about studies; `wait=False` queues on SLURM and returns; `RunOutcome`),
   `directories.py` (the on-disk layout: repository root, `RunDirectory`/`StudyDirectory`, atomic
-  JSON records, run state), `metadata.py` (environment capture, once per submission),
+  JSON records, run state), `environment.py` (git states, packages and `pixi.lock` fingerprint;
+  collected once per submission), `environment_archive.py` (the specification behind it, copied
+  into the study directory), `metadata.py` (per-run record: time, host, SLURM ids, input hashes),
   `run_table.py` (run table in Parquet), `cli.py` (the `study` command).
 - `studies/*.py` define `STUDY`; they import `bayes_cep` and the run kinds of `single_runs/`, which
   are *not* archived with the study (the commit and patch in the recorded environment cover them).

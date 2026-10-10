@@ -24,7 +24,8 @@ from ls_bayesian.common.logging import BaseLogger, LoggerSettings
 
 from bayes_cep.run.config import RunConfig
 from bayes_cep.run.directories import RunDirectory, RunState
-from bayes_cep.run.metadata import Environment, RunMetadata
+from bayes_cep.run.environment import Environment
+from bayes_cep.run.metadata import RunMetadata
 
 type Metrics = dict[str, float | bool | int | str]
 
@@ -110,7 +111,7 @@ class Run[ConfigT: RunConfig](ABC):
 
     # ----------------------------------------------------------------------------------------------
     @contextmanager
-    def _logged(self, log_path: Path) -> Generator[BaseLogger]:
+    def open_run_logger(self, log_path: Path) -> Generator[BaseLogger]:
         """Provide the logger of the run, after logging which run it is and its configuration.
 
         The log file is overwritten and its missing parent directories are created.
@@ -166,7 +167,7 @@ class Run[ConfigT: RunConfig](ABC):
                 environment = Environment.collect_from_current_process()
             metadata = RunMetadata.collect_for_run(self.input_files(), environment)
             directory.record_start(self.config, asdict(metadata))
-            with self._logged(directory.log_path) as logger:
+            with self.open_run_logger(directory.log_path) as logger:
                 metrics = self._execute(run_dir, logger)
             directory.record_success(metrics)
         except BaseException as error:

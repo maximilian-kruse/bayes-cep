@@ -25,7 +25,7 @@ from typing import Literal
 import submitit
 
 from bayes_cep.run.directories import RunDirectory, RunState
-from bayes_cep.run.metadata import Environment
+from bayes_cep.run.environment import Environment
 from bayes_cep.run.template import Run
 
 

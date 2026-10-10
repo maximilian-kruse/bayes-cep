@@ -1,11 +1,15 @@
 """MAP estimation run: generate synthetic data from a ground truth and compute the MAP estimate.
 
-A recorded run (`execute`) performs all stages. `generate_example_data` writes the example data
-instead, piece by piece: `preprocessing` (ground truth, prior mean, synthetic observations), `map`
-(MAP estimate; reads the preprocessing data) and `mcmc` (chain started at the MAP estimate; reads
-both). `all` runs them in sequence, the MCMC stage only if the configuration has MCMC settings.
+A recorded run (`execute`) performs all stages in one `results/` folder. The stages are also
+available separately through `MapRun.run_stages`, which `single_runs.example_data` uses to write
+the example data piece by piece: `preprocessing` (ground truth, prior mean, synthetic
+observations), `map` (MAP estimate; reads the preprocessing data) and `mcmc` (chain started at the
+MAP estimate; reads both). `all` runs them in sequence, the MCMC stage only if the configuration
+has MCMC settings.
 
 Classes:
+    MapStage: The separately runnable parts of a MAP run.
+    MapPaths: Where the stages read and write.
     MapRun: The MAP estimation run.
 """
 
@@ -38,7 +42,7 @@ from single_runs.progress import StepReporter, describe_array
 
 # ==================================================================================================
 class MapStage(StrEnum):
-    """The parts of a MAP run that `MapRun.generate_example_data` can produce separately."""
+    """The parts of a MAP run that can be performed separately."""
 
     ALL = "all"
     PREPROCESSING = "preprocessing"
@@ -48,8 +52,16 @@ class MapStage(StrEnum):
 
 # ==================================================================================================
 @dataclass(frozen=True)
-class _Paths:
-    """Where the stages write: the folders of the example layout, or `results/` for a run."""
+class MapPaths:
+    """Where the stages read and write their data and logs.
+
+    Attributes:
+        data_dir (Path): Folder of the preprocessing data.
+        map_dir (Path): Folder of the MAP estimate and its histories.
+        mcmc_dir (Path): Folder of the MCMC chain.
+        optimizer_log (Path): Iteration log of the optimizer.
+        sampler_log (Path): Progress log of the sampler.
+    """
 
     data_dir: Path
     map_dir: Path
@@ -58,22 +70,10 @@ class _Paths:
     sampler_log: Path
 
     @classmethod
-    def for_run(cls, run_dir: Path) -> _Paths:
+    def for_run(cls, run_dir: Path) -> MapPaths:
         """The paths of a run directory: all results in `results/`."""
         results = run_dir / "results"
         return cls(results, results, results, run_dir / "optimizer.log", run_dir / "sampler.log")
-
-    @classmethod
-    def for_example_data(cls, example_dir: Path) -> _Paths:
-        """The paths of the example data: one folder per stage, logs in `logs/`."""
-        logs = example_dir / "logs"
-        return cls(
-            example_dir / "preprocessing",
-            example_dir / "map",
-            example_dir / "mcmc",
-            logs / "optimizer.log",
-            logs / "sampler.log",
-        )
 
 
 # --------------------------------------------------------------------------------------------------
@@ -126,34 +126,12 @@ class MapRun(Run[MapRunConfig]):
         report_map_run(self.config, run_dir)
 
     # ----------------------------------------------------------------------------------------------
-    def generate_example_data(self, example_dir: Path, stage: MapStage = MapStage.ALL) -> None:
-        """Write the example data, without the records of a run: one folder per stage.
-
-        The data goes to `preprocessing/`, `map/` and `mcmc/` of `example_dir`, the logs to
-        `logs/<stage>.log` (`run.log` for all stages). A later stage reads the data of the earlier
-        ones from `example_dir`.
-
-        Args:
-            example_dir (Path): Directory of the example data; created if missing.
-            stage (MapStage): The part to generate. Defaults to all parts (the MCMC part only if
-                the configuration has MCMC settings).
-
-        Raises:
-            ValueError: If the `mcmc` stage is requested without MCMC settings in the configuration.
-        """
-        stages = self._stages_to_run(stage)
-        example_dir.mkdir(parents=True, exist_ok=True)
-        log_path = example_dir / "logs" / f"{'run' if stage == MapStage.ALL else stage}.log"
-        with self._logged(log_path) as logger:
-            self._run_stages(logger, _Paths.for_example_data(example_dir), stages)
-
-    # ----------------------------------------------------------------------------------------------
     @override
     def _execute(self, run_dir: Path, logger: BaseLogger) -> Metrics:
-        return self._run_stages(logger, _Paths.for_run(run_dir), self._stages_to_run(MapStage.ALL))
+        return self.run_stages(logger, MapPaths.for_run(run_dir), self.stages_for(MapStage.ALL))
 
     # ----------------------------------------------------------------------------------------------
-    def _stages_to_run(self, stage: MapStage) -> frozenset[MapStage]:
+    def stages_for(self, stage: MapStage) -> frozenset[MapStage]:
         """The concrete stages behind `stage`; `ALL` includes MCMC only if it is configured.
 
         Raises:
@@ -169,11 +147,22 @@ class MapRun(Run[MapRunConfig]):
         return frozenset({stage})
 
     # ----------------------------------------------------------------------------------------------
-    def _run_stages(
-        self, logger: BaseLogger, paths: _Paths, stages: frozenset[MapStage]
+    def run_stages(
+        self, logger: BaseLogger, paths: MapPaths, stages: frozenset[MapStage]
     ) -> Metrics:
-        """Perform the stages; what a stage needs from an earlier one that is not among them is
-        read from the paths."""
+        """Perform the stages, without any record of a run.
+
+        What a stage needs from an earlier one that is not among `stages` is read from `paths`.
+        This is not a second way to execute a run: `execute` is, and it calls this for all stages.
+
+        Args:
+            logger (BaseLogger): Logger for progress output.
+            paths (MapPaths): Where the stages read and write.
+            stages (frozenset[MapStage]): The concrete stages to perform (see `stages_for`).
+
+        Returns:
+            Metrics: The metrics of the stages performed.
+        """
         config = self.config
         steps = StepReporter(logger)
         metrics: Metrics = {}
@@ -218,7 +207,7 @@ class MapRun(Run[MapRunConfig]):
         self,
         mesh: UnstructuredGrid,
         basis_vectors: np.ndarray,
-        paths: _Paths,
+        paths: MapPaths,
         steps: StepReporter,
         logger: BaseLogger,
     ) -> _Data:
@@ -285,7 +274,7 @@ class MapRun(Run[MapRunConfig]):
         posterior_builder: PosteriorBuilder,
         log_posterior: LogPosterior,
         data: _Data,
-        paths: _Paths,
+        paths: MapPaths,
         steps: StepReporter,
         logger: BaseLogger,
         metrics: Metrics,
@@ -343,7 +332,7 @@ class MapRun(Run[MapRunConfig]):
         log_posterior: LogPosterior,
         settings: McmcRunSettings,
         initial_state: np.ndarray,
-        paths: _Paths,
+        paths: MapPaths,
         steps: StepReporter,
         logger: BaseLogger,
         metrics: Metrics,

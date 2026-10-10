@@ -19,8 +19,9 @@ from typing import Any, Self
 
 from bayes_cep.run.config import ConfigCodec
 from bayes_cep.run.directories import RunState, StudyDirectory, read_json_record, write_json_record
+from bayes_cep.run.environment import Environment
+from bayes_cep.run.environment_archive import EnvironmentArchive
 from bayes_cep.run.executor import Executor, ExecutorSettings, RunOutcome
-from bayes_cep.run.metadata import Environment, EnvironmentArchive
 from bayes_cep.run.study import ResolvedRun, Study
 
 

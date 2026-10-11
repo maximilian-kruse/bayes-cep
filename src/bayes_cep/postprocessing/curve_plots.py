@@ -6,7 +6,9 @@ backend, so the functions are safe on a headless machine and in parallel.
 Functions:
     plot_autocorrelation: Autocorrelation functions of a few chains.
     plot_correlation_curve: Binned correlation against distance, with the fitted curve.
+    plot_histogram: Histogram of the finite values of one array.
     plot_optimization_history: Loss and gradient norm over the iterations of an optimizer.
+    plot_traces: Traces of a few chain components, with the burn-in marked.
 """
 
 from collections.abc import Sequence
@@ -126,6 +128,69 @@ def plot_optimization_history(
     gradient_axis.semilogy(gradient_norm_history)
     gradient_axis.set_xlabel("iteration")
     gradient_axis.set_ylabel("gradient norm")
+    _save(figure, path)
+
+
+# --------------------------------------------------------------------------------------------------
+def plot_histogram(
+    values: np.ndarray[tuple[int], np.dtype[np.float64]],
+    path: Path,
+    xlabel: str,
+    title: str = "",
+) -> None:
+    """Plot a histogram of the finite entries of `values`.
+
+    Args:
+        values (np.ndarray): Values, shape `(num_values,)`; non-finite entries are ignored.
+        path (Path): Output PNG file.
+        xlabel (str): Label of the horizontal axis.
+        title (str): Title of the plot. Defaults to none.
+
+    Raises:
+        ValueError: If `values` has no finite entry.
+    """
+    finite_values = values[np.isfinite(values)]
+    if finite_values.size == 0:
+        raise ValueError("values has no finite entry to plot.")
+    figure = Figure(figsize=(6, 4))
+    axis = figure.subplots()
+    axis.hist(finite_values, bins=50)
+    axis.set_xlabel(xlabel)
+    axis.set_ylabel("number of vertices")
+    axis.set_title(title)
+    _save(figure, path)
+
+
+# --------------------------------------------------------------------------------------------------
+def plot_traces(
+    traces: np.ndarray[tuple[int, int], np.dtype[np.float64]],
+    path: Path,
+    labels: Sequence[str],
+    burn_in: int,
+) -> None:
+    """Plot chain traces in vertically stacked panels, one per component.
+
+    Args:
+        traces (np.ndarray): One chain per column, shape `(num_samples, num_components)`.
+        path (Path): Output PNG file.
+        labels (Sequence[str]): Vertical-axis label of each component.
+        burn_in (int): Number of leading samples, marked by a vertical line.
+
+    Raises:
+        ValueError: If `traces` is not 2D or has no column, or `labels` does not match its columns.
+    """
+    if traces.ndim != 2 or traces.shape[1] == 0:
+        raise ValueError(f"traces must be 2D with at least one column, got shape {traces.shape}.")
+    if len(labels) != traces.shape[1]:
+        raise ValueError(f"Got {len(labels)} labels for {traces.shape[1]} traces.")
+    figure = Figure(figsize=(8, 2.2 * traces.shape[1] + 0.8))
+    axes = np.atleast_1d(figure.subplots(traces.shape[1], 1, sharex=True))
+    for axis, trace, label in zip(axes, traces.T, labels, strict=True):
+        axis.plot(trace, linewidth=0.8)
+        axis.axvline(burn_in, color="gray", linestyle="--", label="end of burn-in")
+        axis.set_ylabel(f"{label} [rad]")
+    axes[0].legend()
+    axes[-1].set_xlabel("sample")
     _save(figure, path)
 
 

@@ -95,6 +95,9 @@ parameters; `reference.py` holds them as constants and `reference_*_config` fact
 - `map.py` only optimizes (from the prior mean); `mcmc.py` only samples (from `initial_state_path`, a
   `.npy`: the prior mean or a MAP estimate). Both read the preprocessed data and nothing else of the
   data side, so many inference runs share one preprocessing run. `prior.py` samples the prior.
+  After sampling, `mcmc.py` streams the chain diagnostics (`ChainDiagnostics` record: ESS and
+  autocorrelation time per vertex; trace and autocorrelation of `diagnostics.plotted_components`,
+  none/one/several vertices) and its `report` only plots them.
 - A new run kind = config + `Run` subclass in one module, plus its entries in `RUN_TYPES` and the
   `Config` union of `cli/run_single.py`. Result file names are defined once per run (an `ArrayRecord`
   or module constants) and used by `outputs`, `_execute` and `report`.

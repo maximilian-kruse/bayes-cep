@@ -47,7 +47,7 @@ from bayes_cep.preprocessing.synthetic_observations import ObservationSamplingSe
 from bayes_cep.statistics.correlation_length import CorrelationLengthSettings
 from single_runs.inference import InferenceProblemConfig
 from single_runs.map import MapRunConfig
-from single_runs.mcmc import McmcRunConfig
+from single_runs.mcmc import ChainDiagnosticsSettings, McmcRunConfig
 from single_runs.preprocessing import PreprocessingRunConfig
 from single_runs.prior import PriorRunConfig
 
@@ -98,6 +98,9 @@ MCMC_NUM_SAMPLES = 1000
 MCMC_SEED = 0
 MCMC_CHUNK_SIZE = 100
 MCMC_LOG_INTERVAL = 1
+MCMC_BURN_IN = 100
+MCMC_MAX_LAG = 200
+MCMC_PLOTTED_COMPONENTS = (0,)
 
 
 # ==================================================================================================
@@ -285,6 +288,11 @@ def reference_mcmc_config(
             algorithm=MCMC_ALGORITHM,
             step_width=MCMC_STEP_WIDTH,
             storage=ZarrStorageSettings(chunk_size=MCMC_CHUNK_SIZE),
+        ),
+        diagnostics=ChainDiagnosticsSettings(
+            burn_in=MCMC_BURN_IN,
+            max_lag=MCMC_MAX_LAG,
+            plotted_components=MCMC_PLOTTED_COMPONENTS,
         ),
         num_samples=MCMC_NUM_SAMPLES,
         seed=MCMC_SEED,

@@ -50,8 +50,9 @@ fiber-orientation angle per mesh vertex.
   - `_DerivativeCache` reuses the adjoint only for exactly the same parameter vector
     (`np.array_equal` on a copy): a tolerance would let nearby MCMC proposals reuse another state's
     adjoint. `FiberTensor` and eikonax run in single precision, the posterior in double.
-- `optimization/`: `OptimizerStrategy.build(log_posterior, logger)` returns an optimizer together
-  with its matching model as one pair, never mix them: `CameronMartinPosteriorModel` (the gradient
+- `optimization/`: `InitialGuessStrategy` (where MAP starts: prior mean, prior draw, `.npy`).
+  `OptimizerStrategy.build(log_posterior, logger)` returns an optimizer together with its matching
+  model as one pair, never mix them: `CameronMartinPosteriorModel` (the gradient
   is a dual vector; the prior covariance maps it to the Cameron-Martin representer) for
   `CustomLBFGSStrategy`, `EuclideanPosteriorModel` (raw gradient) for `ScipyLBFGSBStrategy`.
 - `preprocessing/` (ground-truth strategies, constant prior mean, synthetic observations), `mcmc/`
@@ -100,9 +101,9 @@ parameters; `reference.py` holds them as constants and `reference_*_config` fact
 - `data.py`: file layout of the data defined once: `RawDataDirectory`, `PreprocessedData`.
 - `preprocessing.py`: the only place where data is generated. `inference.py`: `InferenceProblemConfig`
   (embedded as `problem` in the MAP and MCMC configs) and `assemble_posterior`.
-- `map.py` only optimizes (from the prior mean); `mcmc.py` only samples (from `initial_state_path`, a
-  `.npy`: the prior mean or a MAP estimate). Both read the preprocessed data and nothing else of the
-  data side, so many inference runs share one preprocessing run. `prior.py` samples the prior.
+- `map.py` only optimizes (from its `initial_guess` strategy; the MAP studies sweep
+  `initial_guess.seed` for multi-start); `mcmc.py` only samples (from `initial_state_path`, a `.npy`:
+  the prior mean or a MAP estimate). Both read the preprocessed data and nothing else of the data side, so many inference runs share one preprocessing run. `prior.py` samples the prior.
   After sampling, `mcmc.py` streams the chain diagnostics (`ChainDiagnostics` record: ESS and
   autocorrelation time per vertex; trace and autocorrelation of `diagnostics.plotted_components`,
   none/one/several vertices) and its `report` only plots them.

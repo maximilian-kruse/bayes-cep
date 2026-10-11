@@ -2,8 +2,8 @@
 
 The run reads the data of a preprocessing run (see
 [`InferenceProblemConfig`][single_runs.inference.InferenceProblemConfig]) and does nothing but the
-optimization, started at the prior mean. The ground truth in the data is used for the error
-metrics only.
+optimization, started at the prior mean, at a draw from the prior or at a stored state. The ground
+truth in the data is used for the error metrics only.
 
 Classes:
     MapRunConfig: Which posterior to maximize, and with which optimizer.
@@ -20,6 +20,11 @@ from typing import ClassVar, override
 import numpy as np
 from ls_bayesian.common.logging import BaseLogger, LoggerSettings
 
+from bayes_cep.optimization.initial_guess import (
+    FileInitialGuess,
+    PriorMeanInitialGuess,
+    PriorSampleInitialGuess,
+)
 from bayes_cep.optimization.strategies import CustomLBFGSStrategy, ScipyLBFGSBStrategy
 from bayes_cep.postprocessing.curve_plots import plot_optimization_history
 from bayes_cep.postprocessing.mesh_plots import (
@@ -34,7 +39,7 @@ from bayes_cep.run.directories import (
     RunDirectory,
     resolve_repository_path,
 )
-from bayes_cep.run.progress import StepReporter
+from bayes_cep.run.progress import StepReporter, describe_array
 from bayes_cep.run.template import Metrics, Run
 from bayes_cep.statistics.axial_statistics import compute_axial_data_diff
 from single_runs.data import PreprocessedData, RawDataDirectory
@@ -54,10 +59,13 @@ class MapRunConfig(RunConfig):
     Attributes:
         problem (InferenceProblemConfig): The data and the model of the posterior.
         optimizer (CustomLBFGSStrategy | ScipyLBFGSBStrategy): Optimizer backend with its model.
+        initial_guess (PriorMeanInitialGuess | PriorSampleInitialGuess | FileInitialGuess): Where
+            the optimization starts.
     """
 
     problem: InferenceProblemConfig
     optimizer: CustomLBFGSStrategy | ScipyLBFGSBStrategy
+    initial_guess: PriorMeanInitialGuess | PriorSampleInitialGuess | FileInitialGuess
 
 
 # ==================================================================================================
@@ -154,9 +162,14 @@ class MapRun(Run[MapRunConfig]):
                 model, optimizer = self.config.optimizer.build(
                     assembled.log_posterior, optimizer_logger
                 )
+            with steps.step(
+                f"Building the initial guess ({type(self.config.initial_guess).__name__})"
+            ):
+                initial_guess = self.config.initial_guess.build(assembled.log_posterior.prior)
+            logger.info(f"      {describe_array('initial guess [rad]', initial_guess)}")
             optimization_start = time.perf_counter()
             with steps.step("Running MAP estimation"):
-                result = optimizer.run(initial_guess=data.prior_mean, model=model)
+                result = optimizer.run(initial_guess=initial_guess, model=model)
             optimization_seconds = time.perf_counter() - optimization_start
         outcome = "converged" if result.success else "did not converge"
         logger.info(f"      MAP estimation {outcome} after {result.num_iterations} iterations")

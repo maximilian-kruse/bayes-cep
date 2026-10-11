@@ -36,6 +36,7 @@ from ls_bayesian.optimization.algorithms.custom_lbfgs import CustomLBFGSSettings
 
 from bayes_cep.mcmc.builder import MCMCAlgorithmName, MCMCSettings, ZarrStorageSettings
 from bayes_cep.mesh.interpolation import NearestNeighborInterpolationStrategy
+from bayes_cep.optimization.initial_guess import PriorMeanInitialGuess
 from bayes_cep.optimization.strategies import CustomLBFGSStrategy
 from bayes_cep.posterior.eikonal_map import EikonalSolverSettings
 from bayes_cep.posterior.prior import PriorParameters
@@ -259,6 +260,7 @@ def reference_map_config(raw_dir: Path, data_dir: Path) -> MapRunConfig:
     return MapRunConfig(
         problem=reference_inference_problem(raw_dir, data_dir),
         optimizer=reference_optimizer_strategy(),
+        initial_guess=PriorMeanInitialGuess(),
     )
 
 

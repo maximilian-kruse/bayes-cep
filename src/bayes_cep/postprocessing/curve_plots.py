@@ -48,9 +48,10 @@ def plot_autocorrelation(
     figure = Figure(figsize=(6, 4))
     axis = figure.subplots()
     axis.axhline(0.0, color="gray", linewidth=0.8)
-    axis.plot(autocorrelation)
+    for column_index, function in enumerate(autocorrelation.T):
+        axis.plot(function, label=None if labels is None else labels[column_index])
     if labels is not None:
-        axis.legend(labels)
+        axis.legend()
     axis.set_xlabel("lag")
     axis.set_ylabel("autocorrelation")
     axis.set_title(title)

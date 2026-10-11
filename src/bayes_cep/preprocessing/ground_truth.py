@@ -30,14 +30,14 @@ import numpy as np
 import pyvista as pv
 
 from bayes_cep.mesh.io import create_dolfinx_mesh
-from bayes_cep.posterior.prior import PriorSettings, SpdePriorParameters, build_fiber_angle_prior
+from bayes_cep.posterior.prior import PriorParameters, build_fiber_angle_prior
 from bayes_cep.preprocessing.angle_field import build_angle_field_from_fiber_field
 from bayes_cep.statistics.axial_statistics import shift_angles_to_minimize_axial_variance
 
 
 # ==================================================================================================
 def build_synthetic_ground_truth(
-    mesh: pv.UnstructuredGrid, prior_parameters: SpdePriorParameters
+    mesh: pv.UnstructuredGrid, prior_parameters: PriorParameters
 ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
     r"""Sample a synthetic ground-truth angle field from the Bilaplacian SPDE prior.
 
@@ -46,7 +46,7 @@ def build_synthetic_ground_truth(
 
     Args:
         mesh (pv.UnstructuredGrid): Triangular surface mesh to sample the prior on.
-        prior_parameters (SpdePriorParameters): SPDE prior parameters and random seed.
+        prior_parameters (PriorParameters): SPDE prior parameters and random seed.
 
     Returns:
         np.ndarray: Synthetic ground-truth angle field, shape `(num_vertices,)`.
@@ -55,7 +55,8 @@ def build_synthetic_ground_truth(
     num_vertices = mesh.points.shape[0]
     prior = build_fiber_angle_prior(
         dlx_mesh,
-        PriorSettings(mean_vector=np.zeros(num_vertices), parameters=prior_parameters),
+        np.zeros(num_vertices),
+        prior_parameters,
     )
     return shift_angles_to_minimize_axial_variance(prior.generate_sample())
 
@@ -114,10 +115,10 @@ class SyntheticGroundTruthStrategy(GroundTruthStrategy):
     Fully decoupled from any real patient data: ignores `fiber_field` and `basis_vectors`.
 
     Attributes:
-        prior (SpdePriorParameters): SPDE prior parameters and random seed; there are no defaults.
+        prior (PriorParameters): SPDE prior parameters and random seed; there are no defaults.
     """
 
-    prior: SpdePriorParameters
+    prior: PriorParameters
 
     # ----------------------------------------------------------------------------------------------
     @override

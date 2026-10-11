@@ -1,12 +1,11 @@
 r"""Adapts `ls_bayesian`'s SPDE prior to a fiber-angle `GaussianPrior`.
 
 Classes:
-    SpdePriorParameters: Bilaplacian SPDE parameters of the fiber-angle field.
-    PriorSettings: Mean and SPDE parameters of the fiber-angle prior.
+    PriorParameters: Bilaplacian SPDE parameters of the fiber-angle field.
     FiberAnglePrior: `GaussianPrior` adapter delegating to an `ls_bayesian` `SPDEPrior`.
 
 Functions:
-    build_fiber_angle_prior: Build a `FiberAnglePrior` from settings and a dolfinx mesh.
+    build_fiber_angle_prior: Build a `FiberAnglePrior` from a mean, parameters and a mesh.
 """
 
 from dataclasses import dataclass
@@ -21,7 +20,7 @@ from ls_bayesian.spde_prior import builder, spde_prior, strategies
 
 # ==================================================================================================
 @dataclass(frozen=True)
-class SpdePriorParameters:
+class PriorParameters:
     r"""Bilaplacian SPDE parameters of the fiber-angle field.
 
     There are no defaults: the reference values are in `single_runs.reference`.
@@ -35,20 +34,6 @@ class SpdePriorParameters:
     kappa: float
     tau: float
     seed: int
-
-
-# ==================================================================================================
-@dataclass(frozen=True)
-class PriorSettings:
-    """Mean and SPDE parameters of the fiber-angle prior.
-
-    Attributes:
-        mean_vector (np.ndarray): Prior mean angle field, given on mesh vertices.
-        parameters (SpdePriorParameters): Bilaplacian SPDE parameters.
-    """
-
-    mean_vector: np.ndarray[tuple[int], np.dtype[np.float64]]
-    parameters: SpdePriorParameters
 
 
 # ==================================================================================================
@@ -127,14 +112,18 @@ class FiberAnglePrior(interfaces.GaussianPrior):
 
 # ==================================================================================================
 def build_fiber_angle_prior(
-    dlx_mesh: dlx.mesh.Mesh, settings: PriorSettings, logger: BaseLogger | None = None
+    dlx_mesh: dlx.mesh.Mesh,
+    mean_vector: np.ndarray[tuple[int], np.dtype[np.float64]],
+    parameters: PriorParameters,
+    logger: BaseLogger | None = None,
 ) -> FiberAnglePrior:
     """Build a `FiberAnglePrior` (Bilaplacian SPDE) on the given dolfinx mesh.
 
     Args:
         dlx_mesh (dlx.mesh.Mesh): Dolfinx mesh to build the prior on, e.g. via
             `bayes_cep.mesh.io.create_dolfinx_mesh`.
-        settings (PriorSettings): Prior hyperparameters.
+        mean_vector (np.ndarray): Prior mean angle field, given on mesh vertices.
+        parameters (PriorParameters): Bilaplacian SPDE parameters.
         logger (BaseLogger | None, optional): Logger for the prior's evaluation diagnostics
             (`evaluate_cost`/`evaluate_gradient`/`evaluate_hessian_vector_product`). Nothing is
             logged if `None`. Defaults to `None`.
@@ -144,10 +133,10 @@ def build_fiber_angle_prior(
     """
     prior_settings = builder.SPDEPriorSettings(
         mesh=dlx_mesh,
-        mean_vector=settings.mean_vector,
-        kappa=settings.parameters.kappa,
-        tau=settings.parameters.tau,
-        seed=settings.parameters.seed,
+        mean_vector=mean_vector,
+        kappa=parameters.kappa,
+        tau=parameters.tau,
+        seed=parameters.seed,
     )
     prior_builder = builder.SPDEPriorBuilder(
         prior_settings, strategies.BilaplacianComponentStrategy(), logger=logger

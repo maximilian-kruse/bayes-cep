@@ -42,8 +42,8 @@ parameter $m$ is a fiber-orientation angle per mesh vertex.
   of a pyvista mesh. `mesh/interpolation.py`: `InterpolationStrategy` ABC assembling the sparse
   vertex→simplex matrix (linear-average or nearest-neighbor); the strategy is always passed
   explicitly.
-- `posterior/prior.py`: `SpdePriorParameters` (kappa, tau, seed; the one class for them, used by
-  the runs, the ground truth and `PriorSettings`), `FiberAnglePrior` adapts an `ls_bayesian`
+- `posterior/prior.py`: `PriorParameters` (kappa, tau, seed; the one class for them, used by
+  the runs, the ground truth and `build_fiber_angle_prior`, which takes the mean separately), `FiberAnglePrior` adapts an `ls_bayesian`
   bilaplacian `SPDEPrior` to `GaussianPrior` by delegation (the decoupling pattern `ls_bayesian`
   uses internally).
 - `posterior/fiber_tensor.py`: `FiberTensor` (an `eikonax` `AbstractSimplexTensor`) builds the

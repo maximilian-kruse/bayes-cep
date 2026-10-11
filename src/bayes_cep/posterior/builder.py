@@ -17,7 +17,7 @@ from bayes_cep.mesh.interpolation import InterpolationStrategy
 from bayes_cep.mesh.io import create_dolfinx_mesh
 from bayes_cep.posterior.eikonal_map import EikonalParameterToSolutionMap, EikonalSolverSettings
 from bayes_cep.posterior.likelihood import LikelihoodSettings, build_activation_time_likelihood
-from bayes_cep.posterior.prior import PriorSettings, build_fiber_angle_prior
+from bayes_cep.posterior.prior import PriorParameters, build_fiber_angle_prior
 
 
 # ==================================================================================================
@@ -30,14 +30,16 @@ class PosteriorSettings:
             `bayes_cep.mesh.io.load_pyvista_mesh`.
         basis_vectors (np.ndarray): Local tangent-plane basis vectors per simplex, shape
             `(num_simplices, 3, 2)`.
-        prior_settings (PriorSettings): Fiber-angle SPDE prior settings.
+        prior_mean_vector (np.ndarray): Prior mean angle field, given on mesh vertices.
+        prior_parameters (PriorParameters): Bilaplacian SPDE parameters of the prior.
         eikonal_settings (EikonalSolverSettings): Eikonal forward solver settings.
         likelihood_settings (LikelihoodSettings): Observed activation-time data settings.
     """
 
     mesh: pv.UnstructuredGrid
     basis_vectors: np.ndarray[tuple[int, int, int], np.dtype[np.float64]]
-    prior_settings: PriorSettings
+    prior_mean_vector: np.ndarray[tuple[int], np.dtype[np.float64]]
+    prior_parameters: PriorParameters
     eikonal_settings: EikonalSolverSettings
     likelihood_settings: LikelihoodSettings
 
@@ -92,7 +94,10 @@ class PosteriorBuilder:
         """
         settings = self._settings
         prior = build_fiber_angle_prior(
-            create_dolfinx_mesh(settings.mesh), settings.prior_settings, logger=self._prior_logger
+            create_dolfinx_mesh(settings.mesh),
+            settings.prior_mean_vector,
+            settings.prior_parameters,
+            logger=self._prior_logger,
         )
         forward_map = EikonalParameterToSolutionMap(
             settings.mesh,

@@ -18,7 +18,7 @@ import numpy as np
 from ls_bayesian.common.logging import BaseLogger
 
 from bayes_cep.mesh.io import create_dolfinx_mesh, get_triangle_connectivity
-from bayes_cep.posterior.prior import PriorSettings, SpdePriorParameters, build_fiber_angle_prior
+from bayes_cep.posterior.prior import PriorParameters, build_fiber_angle_prior
 from bayes_cep.postprocessing.curve_plots import plot_correlation_curve
 from bayes_cep.postprocessing.mesh_plots import render_axial_angle_field, render_point_field
 from bayes_cep.run.config import RunConfig
@@ -51,7 +51,7 @@ class PriorRunConfig(RunConfig):
     Attributes:
         raw_dir (Path): Directory containing `mesh.vtu`.
         correlation (CorrelationLengthSettings): Settings of the correlation length estimation.
-        prior (SpdePriorParameters): Prior parameters.
+        prior (PriorParameters): Prior parameters.
         num_samples (int): Number of samples for the variance and correlation length estimates.
         keep_samples (bool): Whether to store the samples themselves as a result. Keep it off in
             studies, since many runs would otherwise add up to gigabytes.
@@ -59,7 +59,7 @@ class PriorRunConfig(RunConfig):
 
     raw_dir: Path
     correlation: CorrelationLengthSettings
-    prior: SpdePriorParameters
+    prior: PriorParameters
     num_samples: int
     keep_samples: bool
 
@@ -148,7 +148,8 @@ class PriorRun(Run[PriorRunConfig]):
         with steps.step("Building the prior"):
             prior = build_fiber_angle_prior(
                 create_dolfinx_mesh(mesh),
-                PriorSettings(mean_vector=np.zeros(mesh.n_points), parameters=config.prior),
+                np.zeros(mesh.n_points),
+                config.prior,
             )
 
         with steps.step("Drawing the visualization sample"):

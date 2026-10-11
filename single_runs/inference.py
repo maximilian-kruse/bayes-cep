@@ -26,7 +26,7 @@ from bayes_cep.mesh.interpolation import (
 from bayes_cep.posterior.builder import PosteriorBuilder, PosteriorSettings
 from bayes_cep.posterior.eikonal_map import EikonalSolverSettings
 from bayes_cep.posterior.likelihood import LikelihoodSettings
-from bayes_cep.posterior.prior import PriorSettings, SpdePriorParameters
+from bayes_cep.posterior.prior import PriorParameters
 from bayes_cep.run.directories import resolve_repository_path
 from bayes_cep.run.progress import StepReporter
 from single_runs.data import PreprocessedData, RawDataDirectory
@@ -43,7 +43,7 @@ class InferenceProblemConfig:
         data_dir (Path): Directory with the data the posterior is conditioned on and the ground
             truth (the files of `PreprocessedData`). It can come from anywhere, e.g. the `results`
             directory of a preprocessing run.
-        prior (SpdePriorParameters): Parameters of the inference prior. Its mean is the prior mean
+        prior (PriorParameters): Parameters of the inference prior. Its mean is the prior mean
             of the preprocessed data.
         eikonal (EikonalSolverSettings): Forward-solver settings of the inference.
         interpolation (LinearInterpolationStrategy | NearestNeighborInterpolationStrategy):
@@ -52,7 +52,7 @@ class InferenceProblemConfig:
 
     raw_dir: Path
     data_dir: Path
-    prior: SpdePriorParameters
+    prior: PriorParameters
     eikonal: EikonalSolverSettings
     interpolation: LinearInterpolationStrategy | NearestNeighborInterpolationStrategy
 
@@ -118,7 +118,8 @@ def assemble_posterior(
             PosteriorSettings(
                 mesh=mesh,
                 basis_vectors=basis_vectors,
-                prior_settings=PriorSettings(mean_vector=data.prior_mean, parameters=problem.prior),
+                prior_mean_vector=data.prior_mean,
+                prior_parameters=problem.prior,
                 eikonal_settings=problem.eikonal,
                 likelihood_settings=LikelihoodSettings(
                     num_vertices=mesh.n_points,

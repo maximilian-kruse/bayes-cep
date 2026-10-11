@@ -38,7 +38,7 @@ from bayes_cep.mcmc.builder import MCMCAlgorithmName, MCMCSettings, ZarrStorageS
 from bayes_cep.mesh.interpolation import NearestNeighborInterpolationStrategy
 from bayes_cep.optimization.strategies import CustomLBFGSStrategy
 from bayes_cep.posterior.eikonal_map import EikonalSolverSettings
-from bayes_cep.posterior.prior import SpdePriorParameters
+from bayes_cep.posterior.prior import PriorParameters
 from bayes_cep.preprocessing.ground_truth import (
     RealDataGroundTruthStrategy,
     SyntheticGroundTruthStrategy,
@@ -101,9 +101,9 @@ MCMC_LOG_INTERVAL = 1
 
 
 # ==================================================================================================
-def reference_prior_parameters() -> SpdePriorParameters:
+def reference_prior_parameters() -> PriorParameters:
     """Parameters of the Bilaplacian SPDE prior."""
-    return SpdePriorParameters(kappa=PRIOR_KAPPA, tau=PRIOR_TAU, seed=PRIOR_SEED)
+    return PriorParameters(kappa=PRIOR_KAPPA, tau=PRIOR_TAU, seed=PRIOR_SEED)
 
 
 # ==================================================================================================

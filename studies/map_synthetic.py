@@ -1,4 +1,4 @@
-"""Study 2: MAP estimate from a synthetic ground truth.
+"""MAP estimate from a synthetic ground truth.
 
 The MAP estimate is computed for prior parameter pairs (kappa and tau varied together) and for each
 preprocessing run of `preprocessing_synthetic` (number of observations and noise variance), all

@@ -1,4 +1,4 @@
-"""Study 3: MAP estimate from the fiber field of the real patient.
+"""MAP estimate from the fiber field of the real patient.
 
 Same sweep as `map_synthetic.py`, over the preprocessing runs of `preprocessing_patient`. Create and
 run the `preprocessing_patient` study first.

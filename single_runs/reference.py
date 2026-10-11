@@ -100,7 +100,7 @@ MCMC_CHUNK_SIZE = 100
 MCMC_LOG_INTERVAL = 1
 MCMC_BURN_IN = 100
 MCMC_MAX_LAG = 200
-MCMC_PLOTTED_COMPONENTS = (0,)
+MCMC_PLOTTED_COMPONENTS = (0,42, 100, 1000)
 
 
 # ==================================================================================================

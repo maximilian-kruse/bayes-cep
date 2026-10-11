@@ -6,7 +6,6 @@ follow the curvature of the surface.
 
 Functions:
     assemble_edge_length_graph: Sparse symmetric graph of mesh edges, weighted by edge length.
-    find_boundary_vertices: Vertices on the mesh boundary.
     compute_graph_distances: Shortest-path distances from source vertices to all vertices.
 """
 
@@ -14,23 +13,10 @@ import numpy as np
 import scipy.sparse as sp
 from scipy.sparse.csgraph import dijkstra
 
+from bayes_cep.mesh.topology import find_unique_edges
+
 
 # ==================================================================================================
-def _unique_edges(
-    connectivity: np.ndarray[tuple[int, int], np.dtype[np.integer]],
-) -> tuple[
-    np.ndarray[tuple[int, int], np.dtype[np.integer]], np.ndarray[tuple[int], np.dtype[np.integer]]
-]:
-    """Return the unique undirected edges (sorted vertex pairs) and how often each occurs."""
-    edges = np.concatenate(
-        (connectivity[:, [0, 1]], connectivity[:, [1, 2]], connectivity[:, [2, 0]]), axis=0
-    )
-    edges = np.sort(edges, axis=1)
-    unique_edges, counts = np.unique(edges, axis=0, return_counts=True)
-    return unique_edges, counts
-
-
-# --------------------------------------------------------------------------------------------------
 def assemble_edge_length_graph(
     vertex_coordinates: np.ndarray[tuple[int, int], np.dtype[np.float64]],
     connectivity: np.ndarray[tuple[int, int], np.dtype[np.integer]],
@@ -45,7 +31,7 @@ def assemble_edge_length_graph(
         sp.csr_array: Symmetric edge-length matrix, shape `(num_vertices, num_vertices)`.
     """
     num_vertices = vertex_coordinates.shape[0]
-    edges, _ = _unique_edges(connectivity)
+    edges, _ = find_unique_edges(connectivity)
     lengths = np.linalg.norm(
         vertex_coordinates[edges[:, 0]] - vertex_coordinates[edges[:, 1]], axis=1
     )
@@ -54,22 +40,6 @@ def assemble_edge_length_graph(
     return sp.csr_array(
         (np.concatenate((lengths, lengths)), (rows, columns)), shape=(num_vertices, num_vertices)
     )
-
-
-# --------------------------------------------------------------------------------------------------
-def find_boundary_vertices(
-    connectivity: np.ndarray[tuple[int, int], np.dtype[np.integer]],
-) -> np.ndarray[tuple[int], np.dtype[np.integer]]:
-    """Find the vertices on the mesh boundary, i.e. on an edge shared by only one triangle.
-
-    Args:
-        connectivity (np.ndarray): Triangle vertex indices, shape `(num_simplices, 3)`.
-
-    Returns:
-        np.ndarray: Sorted indices of boundary vertices; empty for a closed surface.
-    """
-    edges, counts = _unique_edges(connectivity)
-    return np.unique(edges[counts == 1])
 
 
 # --------------------------------------------------------------------------------------------------

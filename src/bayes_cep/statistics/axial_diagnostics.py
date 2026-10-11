@@ -29,7 +29,10 @@ from ls_bayesian.mcmc.diagnostics import (
     estimate_effective_sample_size,
 )
 
-from bayes_cep.statistics.axial_statistics import compute_axial_mean_and_variance
+from bayes_cep.statistics.axial_statistics import (
+    compute_axial_mean_and_variance,
+    compute_axial_sine_deviation,
+)
 from bayes_cep.statistics.sample_blocks import MappedSampleStore, SampleStore
 
 
@@ -113,4 +116,4 @@ def _build_centered_sine_store(
     r"""Lazy view of the samples as $\sin(2(\theta - \mu))$, with $\mu$ the axial mean after the
     burn-in."""
     axial_mean, _ = compute_axial_mean_and_variance(samples, burn_in, block_size)
-    return MappedSampleStore(samples, lambda block: np.sin(2 * (block - axial_mean)))
+    return MappedSampleStore(samples, lambda block: compute_axial_sine_deviation(block, axial_mean))

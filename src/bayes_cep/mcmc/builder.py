@@ -22,18 +22,9 @@ from ls_bayesian.mcmc.model import MCMCModel
 from ls_bayesian.mcmc.output import MCMCOutput
 from ls_bayesian.mcmc.sampler import Sampler
 from ls_bayesian.mcmc.storage import ZarrStorage
-from ls_bayesian.posterior import interfaces
 from ls_bayesian.posterior.posterior import LogPosterior
 
 from bayes_cep.mcmc.measures import LikelihoodTargetMeasure, PriorGaussianMeasure
-
-# Default proposal step width for both samplers. Far smaller than the usual `O(0.1)` choices: the
-# data (many observations, tiny noise variance) make the likelihood potential very sharp relative
-# to the broad prior, so larger steps are practically never accepted. For pCN on the example
-# patient, started at the MAP estimate, short chains gave an acceptance rate of about 90% at `1e-4`
-# and about 15% at `1e-3`. The problem is highly nonlinear, so acceptance falls further once the
-# chain leaves the MAP's neighborhood; this is a conservative starting point, not a tuned value.
-DEFAULT_STEP_WIDTH = 1e-4
 
 
 # ==================================================================================================
@@ -77,8 +68,11 @@ class ZarrStorageSettings:
 class MCMCSettings:
     r"""Settings for `MCMCBuilder`.
 
+    There are no defaults for the algorithm and the step width: the reference values are in
+    `single_runs.reference`.
+
     Attributes:
-        algorithm (MCMCAlgorithmName): Sampling algorithm. Defaults to pCN.
+        algorithm (MCMCAlgorithmName): Sampling algorithm.
         step_width (float): Proposal step width $\delta$. Smaller values give higher acceptance
             but slower exploration. Must lie in $(0, 1)$ for pCN and be positive for MALA.
         tracked_components (tuple[int, ...]): Indices of state components (mesh vertices) whose
@@ -89,8 +83,8 @@ class MCMCSettings:
         storage (ZarrStorageSettings): Sample storage settings.
     """
 
-    algorithm: MCMCAlgorithmName = MCMCAlgorithmName.PCN
-    step_width: float = DEFAULT_STEP_WIDTH
+    algorithm: MCMCAlgorithmName
+    step_width: float
     tracked_components: tuple[int, ...] = ()
     storage: ZarrStorageSettings = field(default_factory=ZarrStorageSettings)
 
@@ -127,21 +121,18 @@ class MCMCBuilder:
         self,
         settings: MCMCSettings,
         log_posterior: LogPosterior,
-        prior: interfaces.GaussianPrior,
         output_dir: Path,
     ) -> None:
         """Store the settings and the posterior to sample.
 
         Args:
             settings (MCMCSettings): Algorithm and storage settings.
-            log_posterior (LogPosterior): Posterior to sample, e.g. from `PosteriorBuilder.build`.
-            prior (interfaces.GaussianPrior): The same prior `log_posterior` was built with, e.g.
-                `PosteriorBuilder.prior`.
+            log_posterior (LogPosterior): Posterior to sample, e.g. from `PosteriorBuilder.build`;
+                its `prior` is the reference measure.
             output_dir (Path): Directory the sample store is created in.
         """
         self._settings = settings
         self._log_posterior = log_posterior
-        self._prior = prior
         self._output_dir = output_dir
 
     # ----------------------------------------------------------------------------------------------
@@ -158,7 +149,7 @@ class MCMCBuilder:
         Raises:
             ValueError: If a tracked component index is not smaller than the parameter dimension.
         """
-        parameter_dimension = self._prior.mean_vector.shape[0]
+        parameter_dimension = self._log_posterior.prior.mean_vector.shape[0]
         for index in self._settings.tracked_components:
             if index >= parameter_dimension:
                 raise ValueError(
@@ -167,7 +158,7 @@ class MCMCBuilder:
                 )
         model = MCMCModel(
             target=LikelihoodTargetMeasure(self._log_posterior),
-            reference=PriorGaussianMeasure(self._prior),
+            reference=PriorGaussianMeasure(self._log_posterior.prior),
         )
         algorithm: MCMCAlgorithm
         match self._settings.algorithm:

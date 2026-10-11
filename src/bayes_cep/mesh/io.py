@@ -14,6 +14,8 @@ import pyvista as pv
 import ufl
 from mpi4py import MPI
 
+from bayes_cep.mesh.topology import get_triangle_connectivity
+
 
 # ==================================================================================================
 def load_pyvista_mesh(mesh_path: Path) -> pv.UnstructuredGrid:
@@ -48,6 +50,6 @@ def create_dolfinx_mesh(pv_mesh: pv.UnstructuredGrid) -> dlx.mesh.Mesh:
         dlx.mesh.Mesh: Equivalent dolfinx mesh, for use with `ls_bayesian.spde_prior`.
     """
     points = pv_mesh.points
-    cells = pv_mesh.cells.reshape(-1, 4)[:, 1:]
+    cells = get_triangle_connectivity(pv_mesh)
     ufl_cell_type = ufl.Mesh(basix.ufl.element("Lagrange", "triangle", 1, shape=(3,)))
     return dlx.mesh.create_mesh(MPI.COMM_WORLD, cells, ufl_cell_type, points)

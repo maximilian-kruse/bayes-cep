@@ -2,12 +2,11 @@ r"""Ground-truth fiber-angle field: a synthetic (SPDE-sampled) source, and the s
 between it and the real-data source in `angle_field.py`.
 
 A simulation study picks exactly one `GroundTruthStrategy` per run — never both — via
-`PreprocessingSettings.ground_truth` in `scripts/preprocess_data.py`. The prior mean is not part of
+`PreprocessingRunConfig.ground_truth`. The prior mean is not part of
 this strategy: it's computed uniformly from whichever ground truth comes out, via
 [`prior_mean.build_constant_prior_mean`][bayes_cep.preprocessing.prior_mean.build_constant_prior_mean].
 
 Classes:
-    SyntheticGroundTruthSettings: SPDE prior parameters for the synthetic ground truth.
     GroundTruthStrategy: ABC interface for producing a ground-truth angle field.
     RealDataGroundTruthStrategy: Derive it from one patient's raw fiber data.
     SyntheticGroundTruthStrategy: Sample it from the SPDE prior itself, decoupled from any patient
@@ -19,52 +18,35 @@ Functions:
 Note:
     The concrete strategies and their settings are dataclasses on purpose: `tyro` only exposes a
     class as a selectable subcommand (e.g. `--ground-truth:synthetic-ground-truth-strategy`) in
-    `scripts/preprocess_data.py`'s CLI if it is a dataclass; otherwise it freezes the argument to
+    `cli/run_single.py`'s CLI if it is a dataclass; otherwise it freezes the argument to
     the default instance.
 """
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import override
 
 import numpy as np
 import pyvista as pv
 
 from bayes_cep.mesh.io import create_dolfinx_mesh
-from bayes_cep.posterior.prior import PriorSettings, build_fiber_angle_prior
+from bayes_cep.posterior.prior import PriorParameters, build_fiber_angle_prior
 from bayes_cep.preprocessing.angle_field import build_angle_field_from_fiber_field
 from bayes_cep.statistics.axial_statistics import shift_angles_to_minimize_axial_variance
 
 
 # ==================================================================================================
-@dataclass(frozen=True)
-class SyntheticGroundTruthSettings:
-    r"""SPDE prior parameters for the synthetic ground truth.
-
-    Attributes:
-        kappa (float): SPDE parameter $\kappa > 0$, controlling correlation length. Defaults to
-            `5.0`.
-        tau (float): SPDE parameter $\tau > 0$, controlling marginal variance. Defaults to `0.01`.
-        seed (int): Random seed for prior sampling. Defaults to `0`.
-    """
-
-    kappa: float = 0.05
-    tau: float = 10.0
-    seed: int = 0
-
-
-# ==================================================================================================
 def build_synthetic_ground_truth(
-    mesh: pv.UnstructuredGrid, settings: SyntheticGroundTruthSettings
+    mesh: pv.UnstructuredGrid, prior_parameters: PriorParameters
 ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
     r"""Sample a synthetic ground-truth angle field from the Bilaplacian SPDE prior.
 
-    Draws one sample from a zero-mean Bilaplacian SPDE prior (`settings.kappa`, `settings.tau`) and
+    Draws one sample from a zero-mean Bilaplacian SPDE prior (`prior_parameters`) and
     re-branches it onto a single $\pi$-periodic branch.
 
     Args:
         mesh (pv.UnstructuredGrid): Triangular surface mesh to sample the prior on.
-        settings (SyntheticGroundTruthSettings): SPDE prior parameters and random seed.
+        prior_parameters (PriorParameters): SPDE prior parameters and random seed.
 
     Returns:
         np.ndarray: Synthetic ground-truth angle field, shape `(num_vertices,)`.
@@ -73,14 +55,10 @@ def build_synthetic_ground_truth(
     num_vertices = mesh.points.shape[0]
     prior = build_fiber_angle_prior(
         dlx_mesh,
-        PriorSettings(
-            mean_vector=np.zeros(num_vertices),
-            kappa=settings.kappa,
-            tau=settings.tau,
-            seed=settings.seed,
-        ),
+        np.zeros(num_vertices),
+        prior_parameters,
     )
-    return shift_angles_to_minimize_axial_variance(prior.generate_sample()).flatten()
+    return shift_angles_to_minimize_axial_variance(prior.generate_sample())
 
 
 # ==================================================================================================
@@ -137,10 +115,10 @@ class SyntheticGroundTruthStrategy(GroundTruthStrategy):
     Fully decoupled from any real patient data: ignores `fiber_field` and `basis_vectors`.
 
     Attributes:
-        settings (SyntheticGroundTruthSettings): SPDE prior parameters and random seed.
+        prior (PriorParameters): SPDE prior parameters and random seed; there are no defaults.
     """
 
-    settings: SyntheticGroundTruthSettings = field(default_factory=SyntheticGroundTruthSettings)
+    prior: PriorParameters
 
     # ----------------------------------------------------------------------------------------------
     @override
@@ -151,4 +129,4 @@ class SyntheticGroundTruthStrategy(GroundTruthStrategy):
         basis_vectors: np.ndarray[tuple[int, int, int], np.dtype[np.float64]],
     ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
         """Build the synthetic ground truth."""
-        return build_synthetic_ground_truth(mesh, self.settings)
+        return build_synthetic_ground_truth(mesh, self.prior)

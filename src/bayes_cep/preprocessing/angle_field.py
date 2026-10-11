@@ -11,6 +11,7 @@ import numpy as np
 import pyvista as pv
 import scipy.sparse as sp
 
+from bayes_cep.mesh.topology import get_triangle_connectivity
 from bayes_cep.statistics.axial_statistics import shift_angles_to_minimize_axial_variance
 
 
@@ -64,7 +65,7 @@ def interpolate_simplex_field_to_vertices(
     Returns:
         np.ndarray: Per-vertex axial angle field, shape `(num_vertices,)`, in $(-\pi/2, \pi/2]$.
     """
-    connectivity = mesh.cells.reshape(-1, 4)[:, 1:]
+    connectivity = get_triangle_connectivity(mesh)
     num_vertices = mesh.points.shape[0]
     num_simplices = connectivity.shape[0]
     simplex_areas = np.asarray(mesh.compute_cell_sizes().cell_data["Area"], dtype=np.float64)
@@ -109,4 +110,4 @@ def build_angle_field_from_fiber_field(
         fiber_field, basis_vectors[..., 0], basis_vectors[..., 1]
     )
     vertex_angles = interpolate_simplex_field_to_vertices(mesh, simplex_angles)
-    return shift_angles_to_minimize_axial_variance(vertex_angles, axis=1).flatten()
+    return shift_angles_to_minimize_axial_variance(vertex_angles)

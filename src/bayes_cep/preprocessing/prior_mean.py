@@ -6,7 +6,7 @@ Functions:
 
 import numpy as np
 
-from bayes_cep.statistics.axial_statistics import compute_axial_mean_and_variance
+from bayes_cep.statistics.axial_statistics import compute_axial_mean
 
 
 # ==================================================================================================
@@ -28,5 +28,4 @@ def build_constant_prior_mean(
     Returns:
         np.ndarray: Constant prior-mean field, shape `(num_vertices,)`.
     """
-    axial_mean, _ = compute_axial_mean_and_variance(ground_truth_angle_field[:, np.newaxis])
-    return axial_mean * np.ones_like(ground_truth_angle_field)
+    return compute_axial_mean(ground_truth_angle_field) * np.ones_like(ground_truth_angle_field)

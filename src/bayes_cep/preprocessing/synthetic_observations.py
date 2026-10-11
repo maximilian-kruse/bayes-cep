@@ -11,8 +11,7 @@ Functions:
 from dataclasses import dataclass
 
 import numpy as np
-
-from bayes_cep.posterior.eikonal_map import EikonalParameterToSolutionMap
+from ls_bayesian.posterior.interfaces import ParameterToSolutionMap
 
 
 # ==================================================================================================
@@ -23,17 +22,17 @@ class ObservationSamplingSettings:
     Attributes:
         num_observations (int): Number of vertices to observe.
         noise_variance (float): Variance $\sigma^2$ of the i.i.d. Gaussian observation noise.
-        seed (int): Random seed for vertex sampling and noise. Defaults to `0`.
+        seed (int): Random seed for vertex sampling and noise.
     """
 
     num_observations: int
     noise_variance: float
-    seed: int = 0
+    seed: int
 
 
 # ==================================================================================================
 def generate_synthetic_observations(
-    forward_map: EikonalParameterToSolutionMap,
+    forward_map: ParameterToSolutionMap,
     ground_truth_parameter: np.ndarray[tuple[int], np.dtype[np.float64]],
     settings: ObservationSamplingSettings,
 ) -> tuple[
@@ -42,7 +41,8 @@ def generate_synthetic_observations(
     """Forward-solve the ground truth and sample sparse, noisy vertex observations from it.
 
     Args:
-        forward_map (EikonalParameterToSolutionMap): Eikonal activation-time forward map.
+        forward_map (ParameterToSolutionMap): Forward map from the fiber angle to the
+            activation times; only `evaluate_forward` is used.
         ground_truth_parameter (np.ndarray): Ground-truth per-vertex fiber angle field.
         settings (ObservationSamplingSettings): Number of observations, noise level, and seed.
 

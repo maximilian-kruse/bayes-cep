@@ -122,6 +122,8 @@ through the `PYTHONPATH` set by the pixi activation. Modules of `run/`:
   done runs and, unless `include_active`, submitted/running ones; `plot_finished_runs`;
   `build_run_table`/`write_run_table`).
 - `progress.py`: `StepReporter` (numbered, timed steps in the log) and `describe_array`.
+- `array_record.py`: `ArrayRecord`, a frozen dataclass stored as one `.npy` per field from its
+  `FILE_NAMES` mapping (`save`/`load`/`file_paths`); the base of the result records of the runs.
 - `study_cli.py`: the `study` command (`create`, `show`, `run`, `status`, `collect`, `report`), each
   taking the study module.
 
@@ -130,9 +132,8 @@ defaults for scientific parameters: `reference.py` holds all of them (constants 
 `reference_*_config` factories of the example data, including the synthetic and the patient
 preprocessing), and presets and studies start from there:
 - `data.py`: the file layout of the data, defined once: `RawDataDirectory` (mesh, basis vectors,
-  fiber field: paths and loaders), `ArrayRecord` (a frozen dataclass stored as one `.npy` per field
-  from its `FILE_NAMES` mapping; `save`/`load`/`file_paths`) and `PreprocessedData` (the output of
-  the preprocessing run, including the noise variance).
+  fiber field: paths and loaders) and `PreprocessedData` (the output of the preprocessing run,
+  including the noise variance), an `ArrayRecord`.
 - `prior.py`: `PriorRunConfig`, `PriorRun` (samples the prior; needs only the mesh).
 - `preprocessing.py`: `PreprocessingRun` is the only place where data is generated (ground truth,
   prior mean, synthetic observations); ground truth and observation settings have no defaults on
@@ -146,14 +147,14 @@ preprocessing), and presets and studies start from there:
   the preprocessing run, or a MAP run's `map_estimate.npy`; the example data starts at the MAP), with
   the sampler as an embedded `MCMCSettings`. Both read the preprocessed data and nothing else of
   the data side, so many inference runs share one preprocessing run.
-- `registry.py`: `RUN_KINDS` (subcommand name to run type) and `RUN_TYPE_BY_CONFIG_TYPE`;
-  `scripts/run.py` builds its subcommands and dispatch from them. `scripts/run.py` takes the run's
-  executor as a second subcommand (`executor:local` by default, `executor:slurm`).
+- `scripts/run.py` lists the run kinds explicitly (`RUN_TYPES` and the `Config` subcommand union)
+  and takes the run's executor as a second subcommand (`executor:local` by default,
+  `executor:slurm`).
 
 Each run plots in its own `report` method, using the `postprocessing/` helpers. A new run kind =
-config + `Run` subclass in one module, plus one line in `registry.py`; file names of results are
-defined once per run (an `ArrayRecord` or module constants) and used by `outputs`, `_execute` and
-`report`.
+config + `Run` subclass in one module, plus its entries in `RUN_TYPES` and the `Config` union of
+`scripts/run.py`; file names of results are defined once per run (an `ArrayRecord` or module
+constants) and used by `outputs`, `_execute` and `report`.
 `studies/*.py` define `STUDY`; they are not archived with a study (the recorded commit and patch
 cover them), and set their own `root`. The reference factories of `single_runs/reference.py`
 take the raw and preprocessed data directories as arguments (no defaults); each study module

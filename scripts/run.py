@@ -1,7 +1,7 @@
 """Run one configuration into a run directory.
 
-Choose the kind of run as a subcommand: one of the kinds in `single_runs.registry` (`prior`,
-`preprocessing`, `map`, `mcmc`; every option given as a flag), or one of the reference setups of
+Choose the kind of run as a subcommand: `prior`, `preprocessing`, `map` or `mcmc` (every option
+given as a flag), or one of the reference setups of
 `single_runs.reference`: `reference-synthetic-preprocessing`, `reference-patient-preprocessing`,
 `reference-map` and `reference-mcmc`, with the data directories (and the initial state file of the
 chain) as arguments (`--config.raw-dir`, ...); no path is a default.
@@ -37,8 +37,6 @@ A single prior run, with every option listed by `--help`:
 import json
 import sys
 from dataclasses import dataclass
-from functools import reduce
-from operator import or_
 from pathlib import Path
 from typing import Annotated
 
@@ -53,13 +51,24 @@ from bayes_cep.run.executor import (
     create_executor,
 )
 from bayes_cep.run.provenance import Environment
+from bayes_cep.run.template import Run
+from single_runs.map import MapRun, MapRunConfig
+from single_runs.mcmc import McmcRun, McmcRunConfig
+from single_runs.preprocessing import PreprocessingRun, PreprocessingRunConfig
+from single_runs.prior import PriorRun, PriorRunConfig
 from single_runs.reference import (
     reference_map_config,
     reference_mcmc_config,
     reference_patient_preprocessing_config,
     reference_synthetic_preprocessing_config,
 )
-from single_runs.registry import RUN_KINDS, RUN_TYPE_BY_CONFIG_TYPE
+
+RUN_TYPES: dict[type[RunConfig], type[Run]] = {
+    PriorRunConfig: PriorRun,
+    PreprocessingRunConfig: PreprocessingRun,
+    MapRunConfig: MapRun,
+    McmcRunConfig: McmcRun,
+}
 
 
 # ==================================================================================================
@@ -73,39 +82,40 @@ def load_config_file(path: tyro.conf.Positional[Path]) -> RunConfig:
         SystemExit: If the file is not the configuration of one of the run kinds.
     """
     data = json.loads(path.read_text())
-    config_types = {config_type.__name__: config_type for config_type in RUN_TYPE_BY_CONFIG_TYPE}
+    config_types = {config_type.__name__: config_type for config_type in RUN_TYPES}
     config_type = config_types.get(data.get(TYPE_KEY) if isinstance(data, dict) else None)
     if config_type is None:
         raise SystemExit(f"{path} is not a run configuration; known: {sorted(config_types)}")
     return config_type.from_json_dict(data)
 
 
-# The subcommands: the config class of every registered run kind takes all its fields as flags;
-# a function builds the other configs from its arguments.
-_CONFIG_SUBCOMMANDS = [
-    *(
-        Annotated[run_type.config_type, tyro.conf.subcommand(name)]
-        for name, run_type in RUN_KINDS.items()
-    ),
-    Annotated[RunConfig, tyro.conf.subcommand("from-file", constructor=load_config_file)],
-    Annotated[
+# The subcommands: a config class takes all its fields as flags; a function builds the config
+# from its arguments.
+Config = (
+    Annotated[PriorRunConfig, tyro.conf.subcommand("prior")]
+    | Annotated[PreprocessingRunConfig, tyro.conf.subcommand("preprocessing")]
+    | Annotated[MapRunConfig, tyro.conf.subcommand("map")]
+    | Annotated[McmcRunConfig, tyro.conf.subcommand("mcmc")]
+    | Annotated[RunConfig, tyro.conf.subcommand("from-file", constructor=load_config_file)]
+    | Annotated[
         RunConfig,
         tyro.conf.subcommand(
             "reference-synthetic-preprocessing",
             constructor=reference_synthetic_preprocessing_config,
         ),
-    ],
-    Annotated[
+    ]
+    | Annotated[
         RunConfig,
         tyro.conf.subcommand(
             "reference-patient-preprocessing",
             constructor=reference_patient_preprocessing_config,
         ),
-    ],
-    Annotated[RunConfig, tyro.conf.subcommand("reference-map", constructor=reference_map_config)],
-    Annotated[RunConfig, tyro.conf.subcommand("reference-mcmc", constructor=reference_mcmc_config)],
-]
-Config = reduce(or_, _CONFIG_SUBCOMMANDS)
+    ]
+    | Annotated[RunConfig, tyro.conf.subcommand("reference-map", constructor=reference_map_config)]
+    | Annotated[
+        RunConfig, tyro.conf.subcommand("reference-mcmc", constructor=reference_mcmc_config)
+    ]
+)
 
 Executor = (
     Annotated[LocalExecutorSettings, tyro.conf.subcommand("local")]
@@ -165,9 +175,7 @@ def main(settings: SingleRun) -> None:
     if not settings.wait and not isinstance(settings.executor, SlurmExecutorSettings):
         raise SystemExit("--no-wait needs the SLURM executor (subcommand executor:slurm).")
     _check_run_directory_is_replaceable(run_dir, settings.overwrite)
-    run = RUN_TYPE_BY_CONFIG_TYPE[type(settings.config)](
-        settings.config, flat_results=settings.flat_results
-    )
+    run = RUN_TYPES[type(settings.config)](settings.config, flat_results=settings.flat_results)
     executor = create_executor(
         settings.executor, run_dir.parent / f"{run_dir.name}-jobs", job_name=run_dir.name
     )

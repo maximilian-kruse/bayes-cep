@@ -385,10 +385,11 @@ class Study:
     # ----------------------------------------------------------------------------------------------
     @classmethod
     def create(cls, module_path: Path) -> Self:
-        """Resolve a study module and write its study directory, before any run starts.
+        """Resolve a study module and write its study record, before any run starts.
 
-        The directory is built under a temporary name and moved into place at the end, so a failure
-        or an interruption never leaves a half-written study behind.
+        The study directory (`root`) may already exist, e.g. as the folder holding the study
+        module; the record `<root>/study/` is built under a temporary name inside it and moved into
+        place at the end, so a failure or an interruption never leaves a half-written study behind.
 
         Args:
             module_path (Path): Python file defining `STUDY`.
@@ -397,15 +398,15 @@ class Study:
             Self: The new study.
 
         Raises:
-            FileExistsError: If the study directory already exists.
+            FileExistsError: If the study has already been created, i.e. `<root>/study/` exists.
             FileNotFoundError: If input files of a run are missing, e.g. because the preprocessing
                 study it reads from has not been run.
             ValueError: If a configuration does not survive its JSON form.
         """
         study = StudySetup.load_from_module_file(module_path)
-        study_dir = resolve_repository_path(study.root)
-        if study_dir.exists():
-            raise FileExistsError(f"Study directory {study_dir} already exists.")
+        directory = StudyDirectory(resolve_repository_path(study.root))
+        if directory.record_dir.exists():
+            raise FileExistsError(f"Study already created, {directory.record_dir} exists.")
         runs = study.resolve_runs()
         missing_files: set[Path] = set()
         for run in runs:
@@ -417,15 +418,14 @@ class Study:
             listed = "\n  ".join(str(path) for path in sorted(missing_files))
             raise FileNotFoundError(f"Input files of the runs are missing:\n  {listed}")
 
-        temporary_dir = study_dir.with_name(f".{study_dir.name}.creating")
-        shutil.rmtree(temporary_dir, ignore_errors=True)
+        temporary_directory = StudyDirectory(directory.path / ".creating")
+        shutil.rmtree(temporary_directory.path, ignore_errors=True)
         try:
-            cls._write_description(StudyDirectory(temporary_dir), study, runs, module_path)
-            temporary_dir.rename(study_dir)
-        except BaseException:
-            shutil.rmtree(temporary_dir, ignore_errors=True)
-            raise
-        return cls(StudyDirectory(study_dir), study)
+            cls._write_description(temporary_directory, study, runs, module_path)
+            temporary_directory.record_dir.rename(directory.record_dir)
+        finally:
+            shutil.rmtree(temporary_directory.path, ignore_errors=True)
+        return cls(directory, study)
 
     # ----------------------------------------------------------------------------------------------
     @classmethod

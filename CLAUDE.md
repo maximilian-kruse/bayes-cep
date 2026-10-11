@@ -85,9 +85,10 @@ found through the `PYTHONPATH` set by pixi. Modules of `run/`:
   (`bayes_cep.cli.run_single` only decides whether it may).
 - `study.py`: sweep nodes (`Axis`/`Zip`/`Product` over dotted config paths), `StudySetup` (what a
   study module defines as `STUDY`; `results_directories()` for other studies to read) and `Study`
-  (`create` writes `<root>/study/` atomically and requires all input files to exist; `load`
-  re-resolves the module and requires the recorded run ids; `execute_runs` skips done runs and, unless
-  `include_active`, submitted/running ones).
+  (`create` writes `<root>/study/` atomically and requires all input files to exist; `root` itself
+  may already exist, e.g. as the folder of the study module, only `study/` must not; `load`
+  re-resolves the module and requires the recorded run ids; `execute_runs` skips done runs and,
+  unless `include_active`, submitted/running ones).
 - `progress.py`: `StepReporter`, `describe_array`.
 
 `single_runs/` holds the concrete runs, each module with its own config (no defaults for scientific

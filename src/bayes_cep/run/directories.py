@@ -294,7 +294,9 @@ class StudyDirectory:
     """The directory of one study.
 
     Attributes:
-        path (Path): The directory.
+        path (Path): The directory. It may hold other files, e.g. the study module.
+        record_dir (Path): The record written at creation (`study/`); its existence marks the study
+            as created.
         study_record_path (Path): Description of the study and its run ids (`study/study.json`).
         environment_path (Path): The environment recorded at creation (`study/environment.json`).
         environment_dir (Path): The archived environment specification (`study/environment/`).
@@ -305,9 +307,10 @@ class StudyDirectory:
     def __init__(self, path: Path) -> None:
         """Wrap the study directory `path`."""
         self.path = path
-        self.study_record_path = path / "study" / "study.json"
-        self.environment_path = path / "study" / "environment.json"
-        self.environment_dir = path / "study" / "environment"
+        self.record_dir = path / "study"
+        self.study_record_path = self.record_dir / "study.json"
+        self.environment_path = self.record_dir / "environment.json"
+        self.environment_dir = self.record_dir / "environment"
         self.summary_dir = path / "summary"
         self.job_dir = path / "jobs"
 

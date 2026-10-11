@@ -31,7 +31,7 @@ from bayes_cep.preprocessing.synthetic_observations import (
     generate_synthetic_observations,
 )
 from bayes_cep.run.config import RunConfig
-from bayes_cep.run.directories import METRICS_RECORD
+from bayes_cep.run.directories import METRICS_RECORD, PLOTS_DIR_NAME
 from bayes_cep.run.progress import StepReporter, describe_array
 from bayes_cep.run.template import Metrics, Run
 from single_runs.data import PreprocessedData, RawDataDirectory
@@ -93,7 +93,7 @@ class PreprocessingRun(Run[PreprocessingRunConfig]):
     # ----------------------------------------------------------------------------------------------
     @override
     def report(self, run_dir: Path) -> None:
-        plots_dir = run_dir / "plots"
+        plots_dir = run_dir / PLOTS_DIR_NAME
         plots_dir.mkdir(exist_ok=True)
         data = PreprocessedData.load(self.results_dir(run_dir))
         mesh = RawDataDirectory.from_configured_path(self.config.raw_dir).load_mesh()

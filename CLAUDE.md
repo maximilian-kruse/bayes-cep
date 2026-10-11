@@ -75,6 +75,10 @@ found through the `PYTHONPATH` set by pixi. Modules of `run/`:
   records config, metadata, status, log, metrics and failures. A subclass sets `config_type` (to the
   same class as its generic argument) and `outputs`, and implements `_execute`, `report` (plots, a
   separate local step so cluster runs stay headless) and `input_files` (hashed into the metadata).
+  After `_execute`, `execute` checks the written files against `outputs` (`_check_outputs`): a
+  declared file that is missing fails the run, an undeclared one is logged as a warning. Outputs a
+  setting may skip go in `optional_outputs`; file names never depend on the config. The run
+  records and `plots/` (written by `report`) are exempt.
 - `directories.py`: on-disk layout (`RunDirectory`, `StudyDirectory`), atomic JSON records,
   `resolve_repository_path`, and `ArrayRecord` (a frozen dataclass stored as one `.npy` per field
   from its `FILE_NAMES` mapping), the base of result records.

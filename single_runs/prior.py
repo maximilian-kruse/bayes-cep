@@ -23,7 +23,7 @@ from bayes_cep.posterior.prior import PriorParameters, build_fiber_angle_prior
 from bayes_cep.postprocessing.curve_plots import plot_correlation_curve
 from bayes_cep.postprocessing.mesh_plots import render_axial_angle_field, render_point_field
 from bayes_cep.run.config import RunConfig
-from bayes_cep.run.directories import METRICS_RECORD, RunDirectory
+from bayes_cep.run.directories import METRICS_RECORD, PLOTS_DIR_NAME, RunDirectory
 from bayes_cep.run.progress import StepReporter, describe_array
 from bayes_cep.run.template import Metrics, Run
 from bayes_cep.statistics.axial_statistics import (
@@ -95,6 +95,8 @@ class PriorRun(Run[PriorRunConfig]):
         f"{CORRELATION_CURVE_PLOT_FILE_NAME} (study report).",
     }
 
+    optional_outputs = frozenset({f"results/{SAMPLES_FILE_NAME}"})
+
     @override
     def input_files(self) -> list[Path]:
         return [RawDataDirectory.from_configured_path(self.config.raw_dir).mesh_path]
@@ -103,7 +105,7 @@ class PriorRun(Run[PriorRunConfig]):
     @override
     def report(self, run_dir: Path) -> None:
         config = self.config
-        plots_dir = run_dir / "plots"
+        plots_dir = run_dir / PLOTS_DIR_NAME
         plots_dir.mkdir(exist_ok=True)
         results_dir = self.results_dir(run_dir)
         metrics = RunDirectory(run_dir).read_metrics()

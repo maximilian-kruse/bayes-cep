@@ -19,6 +19,7 @@ storing them.
 
 Constants:
     REPOSITORY_ROOT: Root of the repository.
+    RUN_RECORD_NAMES: The files every run directory holds besides the outputs of the run.
 
 Classes:
     RunState: The states of a run.
@@ -55,6 +56,10 @@ METRICS_RECORD = "metrics.json"
 STATUS_RECORD = "status.json"
 LOG_FILE_NAME = "run.log"
 RESULTS_DIR_NAME = "results"
+PLOTS_DIR_NAME = "plots"
+RUN_RECORD_NAMES = frozenset(
+    {CONFIG_RECORD, METADATA_RECORD, METRICS_RECORD, STATUS_RECORD, LOG_FILE_NAME}
+)
 
 
 # ==================================================================================================

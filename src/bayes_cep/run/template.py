@@ -24,7 +24,9 @@ from ls_bayesian.common.logging import BaseLogger, LoggerSettings
 
 from bayes_cep.run.config import RunConfig
 from bayes_cep.run.directories import (
+    PLOTS_DIR_NAME,
     RESULTS_DIR_NAME,
+    RUN_RECORD_NAMES,
     RunDirectory,
     RunState,
     format_current_time,
@@ -48,7 +50,12 @@ class Run[ConfigT: RunConfig](ABC):
             subclass, next to the generic argument that types `config`.
         outputs (dict[str, str]): Description of the files a run writes, by path relative to the
             run directory; documented in the study description. Result files are listed with
-            their `results/` prefix, which is dropped with `flat_results`.
+            their `results/` prefix, which is dropped with `flat_results`. A key ending in `/` (or
+            naming a directory) stands for everything below it. `execute` checks the files that
+            were written against it (see `_check_outputs`); the plots are written by `report`, so
+            the `plots/` entry is exempt.
+        optional_outputs (frozenset[str]): The keys of `outputs` that a run may legitimately not
+            write, e.g. because of a setting; empty by default.
         name (str | None): Name of the subcommand of `bcep-single` that runs this
             run type (lowercase words joined by `-`; see `bayes_cep.run.registry`). `None`, the
             default, keeps the run type off the command line; a study needs no name.
@@ -61,6 +68,7 @@ class Run[ConfigT: RunConfig](ABC):
 
     config_type: ClassVar[type[RunConfig]]
     outputs: ClassVar[dict[str, str]]
+    optional_outputs: ClassVar[frozenset[str]] = frozenset()
     name: ClassVar[str | None] = None
 
     def __init__(
@@ -82,6 +90,12 @@ class Run[ConfigT: RunConfig](ABC):
         for name in ("config_type", "outputs"):
             if not hasattr(type(self), name):
                 raise TypeError(f"{type(self).__name__} must define {name}.")
+        unknown_optional = self.optional_outputs - self.outputs.keys()
+        if unknown_optional:
+            raise ValueError(
+                f"{type(self).__name__}.optional_outputs names files that are not in outputs: "
+                f"{sorted(unknown_optional)}."
+            )
         if not isinstance(config, self.config_type):
             raise TypeError(
                 f"{type(self).__name__} needs a {self.config_type.__name__}, "
@@ -157,6 +171,45 @@ class Run[ConfigT: RunConfig](ABC):
                 raise
 
     # ----------------------------------------------------------------------------------------------
+    def _check_outputs(self, run_dir: Path, logger: BaseLogger) -> None:
+        """Compare the files the run wrote with `outputs`.
+
+        Exempt are the run records (`RUN_RECORD_NAMES`, e.g. `metrics.json`, written by `execute`
+        after `_execute`) and the `plots/` entry (written later by `report`). With `flat_results`
+        the `results/` prefix of a key is dropped.
+
+        Args:
+            run_dir (Path): Run directory, after `_execute`.
+            logger (BaseLogger): Receives a warning for every written file that `outputs` does not
+                cover, so that `outputs` stays the complete description of a run.
+
+        Raises:
+            FileNotFoundError: If a declared output, not in `optional_outputs`, was not written.
+        """
+
+        def output_path(key: str) -> str:
+            path = key.rstrip("/")
+            return path.removeprefix(f"{RESULTS_DIR_NAME}/") if self.flat_results else path
+
+        declared = {output_path(key) for key in self.outputs}
+        declared -= {PLOTS_DIR_NAME} | RUN_RECORD_NAMES
+        optional = {output_path(key) for key in self.optional_outputs}
+        missing = sorted(path for path in declared - optional if not (run_dir / path).exists())
+        if missing:
+            raise FileNotFoundError(f"Declared outputs were not written: {missing}")
+        written = [path.relative_to(run_dir) for path in run_dir.rglob("*") if path.is_file()]
+        exempt = {Path(name) for name in RUN_RECORD_NAMES}
+        undeclared = sorted(
+            path.as_posix()
+            for path in written
+            if path not in exempt
+            and path.parts[0] != PLOTS_DIR_NAME
+            and not any(path.is_relative_to(declared_path) for declared_path in declared)
+        )
+        if undeclared:
+            logger.warning(f"Files written but not listed in outputs: {undeclared}")
+
+    # ----------------------------------------------------------------------------------------------
     @staticmethod
     def _as_plain_metrics(metrics: Metrics) -> Metrics:
         """The metrics with numpy scalars converted to Python scalars.
@@ -202,6 +255,7 @@ class Run[ConfigT: RunConfig](ABC):
             directory.record_start(self.config, asdict(metadata))
             with self.run_logger(directory.log_path) as logger:
                 metrics = self._execute(run_dir, logger)
+                self._check_outputs(run_dir, logger)
             directory.record_success(self._as_plain_metrics(metrics))
         except BaseException as error:
             directory.record_failure(error, traceback.format_exc())

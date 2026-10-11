@@ -264,6 +264,43 @@ class RunConfig:
         return replace(obj, **{head: value})
 
     # ----------------------------------------------------------------------------------------------
+    def with_json_overrides(self, overrides: dict[str, Any]) -> Self:
+        """A copy with nested fields replaced by values in their JSON form.
+
+        Unlike `with_overrides`, the new values are decoded to the types of their fields (a
+        `float` field takes `1`, a `Path` field a string), as when reading a `config.json`. This
+        is the form of values that come from text, e.g. the command line.
+
+        Args:
+            overrides (dict[str, Any]): Dotted path to JSON-compatible new value, e.g.
+                `{"problem.prior.kappa": 0.1}`. A nested dataclass is replaced by its JSON form
+                including the `__type__` entry.
+
+        Returns:
+            Self: The updated configuration; this one is not modified.
+
+        Raises:
+            ValueError: If a path does not address a field of the configuration, or a value does
+                not describe its field.
+            TypeError: If a value does not fit the type of its field.
+        """
+        data = self.to_json_dict()
+        for path, value in overrides.items():
+            parts = path.split(".")
+            node = data
+            for depth, part in enumerate(parts[:-1]):
+                node = node.get(part) if isinstance(node, dict) else None
+                if not isinstance(node, dict):
+                    prefix = ".".join(parts[: depth + 1])
+                    raise ValueError(
+                        f"{path!r} is not a field of the configuration (at {prefix!r})."
+                    )
+            if not isinstance(node, dict) or parts[-1] == TYPE_KEY or parts[-1] not in node:
+                raise ValueError(f"{path!r} is not a field of the configuration.")
+            node[parts[-1]] = value
+        return type(self).from_json_dict(data)
+
+    # ----------------------------------------------------------------------------------------------
     def describe(self) -> str:
         """Indented text overview of all settings."""
         return format_config_tree(self.to_json_dict())

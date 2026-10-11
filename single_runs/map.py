@@ -29,6 +29,7 @@ from bayes_cep.postprocessing.mesh_plots import (
 from bayes_cep.run.config import RunConfig
 from bayes_cep.run.directories import (
     METRICS_RECORD,
+    PLOTS_DIR_NAME,
     ArrayRecord,
     RunDirectory,
     resolve_repository_path,
@@ -112,7 +113,7 @@ class MapRun(Run[MapRunConfig]):
     @override
     def report(self, run_dir: Path) -> None:
         problem = self.config.problem
-        plots_dir = run_dir / "plots"
+        plots_dir = run_dir / PLOTS_DIR_NAME
         plots_dir.mkdir(exist_ok=True)
         metrics = RunDirectory(run_dir).read_metrics()
         ground_truth = PreprocessedData.load(resolve_repository_path(problem.data_dir)).ground_truth

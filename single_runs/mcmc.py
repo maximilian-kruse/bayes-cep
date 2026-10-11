@@ -29,7 +29,7 @@ from ls_bayesian.mcmc.diagnostics import MINIMUM_NUM_SAMPLES_PER_CHAIN
 from ls_bayesian.mcmc.sampler import SamplerSettings
 from ls_bayesian.mcmc.storage import open_zarr_samples
 
-from bayes_cep.mcmc.builder import MCMCBuilder, MCMCSettings, ZarrStorageSettings
+from bayes_cep.mcmc.builder import SAMPLE_STORE_NAME, MCMCBuilder, MCMCSettings
 from bayes_cep.postprocessing.curve_plots import (
     plot_autocorrelation,
     plot_histogram,
@@ -39,6 +39,7 @@ from bayes_cep.postprocessing.mesh_plots import render_point_field
 from bayes_cep.run.config import RunConfig
 from bayes_cep.run.directories import (
     METRICS_RECORD,
+    PLOTS_DIR_NAME,
     ArrayRecord,
     RunDirectory,
     resolve_repository_path,
@@ -173,7 +174,7 @@ class McmcRun(Run[McmcRunConfig]):
     config_type = McmcRunConfig
     name = "mcmc"
     outputs = {
-        f"results/{ZarrStorageSettings.store_name}": "MCMC chain (zarr store, one sample per row).",
+        f"results/{SAMPLE_STORE_NAME}": "MCMC chain (zarr store, one sample per row).",
         f"results/{_FILES['effective_sample_size']}": "Split-chain effective sample size per "
         "vertex.",
         f"results/{_FILES['integrated_autocorrelation_time']}": "Autocorrelation time per vertex.",
@@ -205,7 +206,7 @@ class McmcRun(Run[McmcRunConfig]):
     @override
     def report(self, run_dir: Path) -> None:
         config = self.config
-        plots_dir = run_dir / "plots"
+        plots_dir = run_dir / PLOTS_DIR_NAME
         plots_dir.mkdir(exist_ok=True)
         metrics = RunDirectory(run_dir).read_metrics()
         diagnostics = ChainDiagnostics.load(self.results_dir(run_dir))
@@ -304,7 +305,7 @@ class McmcRun(Run[McmcRunConfig]):
         configured vertices are read into memory for their trace and autocorrelation."""
         config = self.config
         settings = config.diagnostics
-        chain = open_zarr_samples(results_dir / config.sampler.storage.store_name)
+        chain = open_zarr_samples(results_dir / SAMPLE_STORE_NAME)
         num_samples, num_vertices = chain.shape
         if any(index >= num_vertices for index in settings.plotted_components):
             raise ValueError(

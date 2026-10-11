@@ -5,7 +5,10 @@ Choose the run type as a subcommand: a run defined in `single_runs/` by its `nam
 `--run-file` (see below), or one of the reference setups of
 `single_runs.reference`: `reference-synthetic-preprocessing`, `reference-patient-preprocessing`,
 `reference-map` and `reference-mcmc`, with the data directories (and the initial state file of the
-chain) as arguments (`--config.raw-dir`, ...); no path is a default.
+chain) as arguments (`--config.raw-dir`, ...); no path is a default. Single reference values
+are changed by `--config.overrides dotted.path=value ...` (value as JSON, several separated by
+spaces), e.g. `--config.overrides problem.prior.kappa=0.1 num_samples=500`; the run then gets a
+new run id.
 Everything is written to `--run-dir`: `config.json`, `metadata.json`, `status.json`, `run.log`,
 `metrics.json` and the outputs of the run.
 
@@ -39,12 +42,14 @@ A single prior run, with every option listed by `--help`:
 
 import argparse
 import functools
+import inspect
 import json
 import operator
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import tyro
 
@@ -63,11 +68,89 @@ from single_runs.reference import (
 
 # The subcommands that build a configuration from a file or a function; no run may take these names.
 CONFIG_FILE_SUBCOMMAND = "from-file"
-REFERENCE_SUBCOMMANDS = {
+REFERENCE_FACTORIES = {
     "reference-synthetic-preprocessing": reference_synthetic_preprocessing_config,
     "reference-patient-preprocessing": reference_patient_preprocessing_config,
     "reference-map": reference_map_config,
     "reference-mcmc": reference_mcmc_config,
+}
+OVERRIDES_ARGUMENT = "overrides"
+
+
+# ==================================================================================================
+def parse_override(assignment: str) -> tuple[str, Any]:
+    """Split `dotted.path=value` into the path and the JSON-compatible value.
+
+    The value is read as JSON (`0.1`, `true`, `[0, 42]`, `"text"`); if it is not valid JSON, it is
+    taken as a plain string, so paths need no quoting.
+
+    Raises:
+        SystemExit: If `assignment` has no `=` or an empty path.
+    """
+    path, separator, text = assignment.partition("=")
+    if not separator or not path:
+        raise SystemExit(f"Override {assignment!r} is not of the form dotted.path=value.")
+    try:
+        return path, json.loads(text)
+    except json.JSONDecodeError:
+        return path, text
+
+
+# --------------------------------------------------------------------------------------------------
+def with_overrides_argument(factory: Callable[..., RunConfig]) -> Callable[..., RunConfig]:
+    """Extend a reference factory by the argument `overrides`, a list of `dotted.path=value`.
+
+    The overrides are applied to the configuration the factory returns, so single reference values
+    can be changed from the command line; the run then gets a new run id. The wrapper has the
+    signature and the docstring of the factory plus the new argument, so the command line parser
+    lists it like the others.
+
+    Args:
+        factory (Callable[..., RunConfig]): A function from paths to a reference configuration.
+
+    Returns:
+        Callable[..., RunConfig]: The function with the extra argument `overrides`.
+    """
+
+    def build_with_overrides(*args: Any, **kwargs: Any) -> RunConfig:
+        overrides = kwargs.pop(OVERRIDES_ARGUMENT, ())
+        config = factory(*args, **kwargs)
+        try:
+            return config.with_json_overrides(dict(map(parse_override, overrides)))
+        except (ValueError, TypeError) as error:
+            raise SystemExit(f"Invalid override: {error}") from error
+
+    signature = inspect.signature(factory)
+    overrides_parameter = inspect.Parameter(
+        OVERRIDES_ARGUMENT,
+        inspect.Parameter.KEYWORD_ONLY,
+        default=(),
+        annotation=tuple[str, ...],
+    )
+    build_with_overrides.__signature__ = signature.replace(  # type: ignore[attr-defined]
+        parameters=[*signature.parameters.values(), overrides_parameter]
+    )
+    build_with_overrides.__annotations__ = {
+        **factory.__annotations__,
+        OVERRIDES_ARGUMENT: tuple[str, ...],
+    }
+    build_with_overrides.__name__ = factory.__name__
+    # The new entry goes at the end of the "Args:" section of the factory, before "Returns:".
+    arguments_documentation, separator, returns_documentation = (factory.__doc__ or "").partition(
+        "\n\nReturns:"
+    )
+    build_with_overrides.__doc__ = (
+        arguments_documentation.rstrip()
+        + "\n    overrides: Changes to the reference values, each\n"
+        + "        `dotted.path=value` (value as JSON), e.g. `problem.prior.kappa=0.1`."
+        + separator
+        + returns_documentation
+    )
+    return build_with_overrides
+
+
+REFERENCE_SUBCOMMANDS = {
+    name: with_overrides_argument(factory) for name, factory in REFERENCE_FACTORIES.items()
 }
 
 

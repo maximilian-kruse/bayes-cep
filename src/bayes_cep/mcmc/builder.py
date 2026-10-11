@@ -2,6 +2,9 @@ r"""Builds an MCMC `Sampler` for the fiber-angle posterior.
 
 The algorithm is chosen by `MCMCSettings.algorithm`; samples are always stored in a Zarr store.
 
+Constants:
+    SAMPLE_STORE_NAME: Name of the Zarr store of the chain in the output directory.
+
 Classes:
     MCMCAlgorithmName: Selectable MCMC algorithms.
     ZarrStorageSettings: Settings for the Zarr sample storage.
@@ -26,6 +29,10 @@ from ls_bayesian.posterior.posterior import LogPosterior
 
 from bayes_cep.mcmc.measures import LikelihoodTargetMeasure, PriorGaussianMeasure
 
+# Directory name of the Zarr store within the output directory; fixed, so that the files of a run
+# do not depend on its settings.
+SAMPLE_STORE_NAME = "samples.zarr"
+
 
 # ==================================================================================================
 class MCMCAlgorithmName(Enum):
@@ -45,8 +52,8 @@ class MCMCAlgorithmName(Enum):
 # ==================================================================================================
 @dataclass(frozen=True)
 class ZarrStorageSettings:
-    """Disk-backed Zarr storage at `<output_dir>/<store_name>`, so long chains need not fit in
-    memory and survive interruption (up to the last flushed buffer).
+    """Disk-backed Zarr storage at `<output_dir>/<SAMPLE_STORE_NAME>`, so long chains need not fit
+    in memory and survive interruption (up to the last flushed buffer).
 
     Attributes:
         chunk_size (int): Length of the on-disk chunk along the sample axis.
@@ -54,13 +61,11 @@ class ZarrStorageSettings:
             writes every sample immediately; larger values trade durability for fewer writes.
         overwrite (bool): Whether to overwrite an existing store. Defaults to `True`, since
             appending to the store of an earlier run would silently mix two chains.
-        store_name (str): Directory name of the Zarr store within the output directory.
     """
 
     chunk_size: int = 100
     buffer_size: int = 1
     overwrite: bool = True
-    store_name: str = "samples.zarr"
 
 
 # ==================================================================================================
@@ -168,7 +173,7 @@ class MCMCBuilder:
                 algorithm = MALAAlgorithm(model, self._settings.step_width, logger=logger)
         storage_settings = self._settings.storage
         storage = ZarrStorage(
-            save_directory=self._output_dir / storage_settings.store_name,
+            save_directory=self._output_dir / SAMPLE_STORE_NAME,
             chunk_size=storage_settings.chunk_size,
             buffer_size=storage_settings.buffer_size,
             overwrite=storage_settings.overwrite,

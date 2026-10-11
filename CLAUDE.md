@@ -98,10 +98,10 @@ parameters; `reference.py` holds them as constants and `reference_*_config` fact
   After sampling, `mcmc.py` streams the chain diagnostics (`ChainDiagnostics` record: ESS and
   autocorrelation time per vertex; trace and autocorrelation of `diagnostics.plotted_components`,
   none/one/several vertices) and its `report` only plots them.
-- A new run kind = config + `Run` subclass in one module, with a class attribute `name` (the
+- A new run type = config + `Run` subclass in one module, with a class attribute `name` (the
   `config:<name>` subcommand of `cli/run_single.py`; no name = not on the command line). There is
   no global registry: `cli/run_single.py` creates a `RunRegistry` (`run/registry.py`), registers
-  every named run defined in the `single_runs` package, plus those of each file given as
+  every named run type defined in the `single_runs` package, plus those of each file given as
   `--run-file path.py` (repeatable, before the subcommand), and builds its subcommands from it.
   Result file names are defined once per run (an `ArrayRecord` or module constants) and used by
   `outputs`, `_execute` and `report`.

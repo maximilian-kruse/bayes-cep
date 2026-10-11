@@ -1,6 +1,6 @@
 """Run one configuration into a run directory.
 
-Choose the kind of run as a subcommand: a run defined in `single_runs/` by its `name` (`prior`,
+Choose the run type as a subcommand: a run defined in `single_runs/` by its `name` (`prior`,
 `preprocessing`, `map`, `mcmc`; every option given as a flag), a run of a file given with
 `--run-file` (see below), or one of the reference setups of
 `single_runs.reference`: `reference-synthetic-preprocessing`, `reference-patient-preprocessing`,
@@ -22,7 +22,7 @@ change a value; the run then gets a new run id):
 
     pixi run single --run-dir working_data/debug config:from-file path/to/config.json
 
-Another kind of run is registered explicitly by the Python file that defines it (a `Run` subclass
+Another run type is registered explicitly by the Python file that defines it (a `Run` subclass
 with a `name`, see `bayes_cep.run.registry`); `--run-file` may be repeated and must come before
 the subcommand:
 
@@ -82,9 +82,9 @@ def build_registry(run_files: list[Path]) -> RunRegistry:
         RunRegistry: The registry.
     """
     registry = RunRegistry(reserved_names=[CONFIG_FILE_SUBCOMMAND, *REFERENCE_SUBCOMMANDS])
-    registry.register_runs_in_package(single_runs)
+    registry.register_run_types_in_package(single_runs)
     for run_file in run_files:
-        registry.register_runs_in_file(run_file)
+        registry.register_run_types_in_file(run_file)
     return registry
 
 
@@ -100,7 +100,7 @@ def build_config_type(registry: RunRegistry) -> object:
         """Run the configuration recorded in a `config.json`, e.g. of a run of a study.
 
         Args:
-            path (Path): The `config.json`; its `__type__` entry tells which kind of run it is.
+            path (Path): The `config.json`; its `__type__` entry tells which run type it is.
 
         Raises:
             SystemExit: If the file is not the configuration of one of the registered runs.
@@ -113,7 +113,10 @@ def build_config_type(registry: RunRegistry) -> object:
         return config_type.from_json_dict(data)
 
     subcommands = [
-        *(Annotated[kind.config_type, tyro.conf.subcommand(kind.name)] for kind in registry.kinds),
+        *(
+            Annotated[run_type.config_type, tyro.conf.subcommand(run_type.name)]
+            for run_type in registry.run_types
+        ),
         Annotated[
             RunConfig, tyro.conf.subcommand(CONFIG_FILE_SUBCOMMAND, constructor=load_config_file)
         ],

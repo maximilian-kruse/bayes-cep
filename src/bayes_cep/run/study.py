@@ -201,7 +201,7 @@ class StudySetup:
     Attributes:
         name (str): Name of the study, also the name of its directory.
         description (str): What the study investigates and computes.
-        run_type (type[Run]): The kind of run all runs of the study are.
+        run_type (type[Run]): The run type of all runs of the study.
         base (RunConfig): Configuration of all runs before the sweep is applied; fixes all
             parameters that are common to the runs.
         sweep (SweepNode): The parameter variations.
@@ -265,7 +265,7 @@ class StudySetup:
         """Load the study a study module file defines.
 
         The module is executed as a script. It should import only from `bayes_cep`, from the
-        run kinds of `single_runs`, which are found through the `PYTHONPATH` of the pixi
+        run types of `single_runs`, which are found through the `PYTHONPATH` of the pixi
         environment; those are not archived with a study (the commit and the patch of
         uncommitted changes in the recorded environment cover them).
 

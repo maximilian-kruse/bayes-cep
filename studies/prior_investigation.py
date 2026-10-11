@@ -4,13 +4,13 @@ Samples a zero-mean Bilaplacian SPDE prior for a grid of kappa and tau, and esti
 variance and the correlation length from 1000 samples.
 """
 
-from pathlib import Path
-
+from bayes_cep.run.directories import module_relative_path
 from bayes_cep.run.study import Axis, Product, StudySetup
 from single_runs.prior import PriorRun
 from single_runs.reference import reference_prior_config
 
-RAW_DIR = Path("example_data/raw")  # the raw data all runs of this study work on
+# The raw data all runs of this study work on.
+RAW_DIR = module_relative_path(__file__, "../example_data/raw")
 
 STUDY = StudySetup(
     run_type=PriorRun,
@@ -24,5 +24,5 @@ STUDY = StudySetup(
         Axis("prior.kappa", (0.025, 0.05, 0.1)),
         Axis("prior.tau", (5.0, 10.0, 20.0)),
     ),
-    root=Path(__file__).parent / "../working_data/prior_investigation",
+    root=module_relative_path(__file__, "../working_data/prior_investigation"),
 )

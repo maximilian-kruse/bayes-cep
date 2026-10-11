@@ -6,11 +6,10 @@ Cameron-Martin L-BFGS and with scipy's Euclidean L-BFGS-B. Create and run the
 `preprocessing_synthetic` study first.
 """
 
-from pathlib import Path
-
 from ls_bayesian.optimization.algorithms.scipy_lbfgs_b import ScipyLBFGSBSettings
 
 from bayes_cep.optimization.strategies import ScipyLBFGSBStrategy
+from bayes_cep.run.directories import module_relative_path
 from bayes_cep.run.executor import ExecutorSettings
 from bayes_cep.run.study import Axis, Product, StudySetup
 from single_runs.map import MapRun
@@ -21,7 +20,8 @@ from single_runs.reference import (
 )
 from studies.preprocessing_synthetic import STUDY as PREPROCESSING_STUDY
 
-RAW_DIR = Path("example_data/raw")  # the raw data all runs of this study work on
+# The raw data all runs of this study work on.
+RAW_DIR = module_relative_path(__file__, "../example_data/raw")
 
 REFERENCE_DATA_DIR = PREPROCESSING_STUDY.results_directory(
     reference_synthetic_preprocessing_config(RAW_DIR)
@@ -41,6 +41,6 @@ STUDY = StudySetup(
             ),
         )
     ),
-    root=Path(__file__).parent / "../working_data/optimizer_comparison",
+    root=module_relative_path(__file__, "../working_data/optimizer_comparison"),
     executor=ExecutorSettings(cluster="slurm", time_min=240, cpus_per_task=4),
 )

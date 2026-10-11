@@ -4,15 +4,15 @@ Same sweep as `map_synthetic.py`, over the preprocessing runs of `preprocessing_
 run the `preprocessing_patient` study first.
 """
 
-from pathlib import Path
-
+from bayes_cep.run.directories import module_relative_path
 from bayes_cep.run.executor import ExecutorSettings
 from bayes_cep.run.study import Axis, Product, StudySetup, Zip
 from single_runs.map import MapRun
 from single_runs.reference import reference_map_config
 from studies.preprocessing_patient import STUDY as PREPROCESSING_STUDY
 
-RAW_DIR = Path("example_data/raw")  # the raw data all runs of this study work on
+# The raw data all runs of this study work on.
+RAW_DIR = module_relative_path(__file__, "../example_data/raw")
 
 DATA_DIRS = PREPROCESSING_STUDY.results_directories()
 
@@ -31,6 +31,6 @@ STUDY = StudySetup(
         ),
         Axis("problem.data_dir", tuple(DATA_DIRS)),
     ),
-    root=Path(__file__).parent / "../working_data/map_patient",
+    root=module_relative_path(__file__, "../working_data/map_patient"),
     executor=ExecutorSettings(cluster="slurm", time_min=240, cpus_per_task=4),
 )

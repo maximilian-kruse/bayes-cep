@@ -5,13 +5,13 @@ Synthetic observations are generated from it for the number of observations and 
 (all combinations). The MAP and MCMC studies of the synthetic problem read these runs.
 """
 
-from pathlib import Path
-
+from bayes_cep.run.directories import module_relative_path
 from bayes_cep.run.study import Axis, Product, StudySetup
 from single_runs.preprocessing import PreprocessingRun
 from single_runs.reference import reference_synthetic_preprocessing_config
 
-RAW_DIR = Path("example_data/raw")  # the raw data all runs of this study work on
+# The raw data all runs of this study work on.
+RAW_DIR = module_relative_path(__file__, "../example_data/raw")
 
 STUDY = StudySetup(
     run_type=PreprocessingRun,
@@ -25,5 +25,5 @@ STUDY = StudySetup(
         Axis("observations.num_observations", (100, 1000)),
         Axis("observations.noise_variance", (1e-2, 1e-3)),
     ),
-    root=Path(__file__).parent / "../working_data/preprocessing_synthetic",
+    root=module_relative_path(__file__, "../working_data/preprocessing_synthetic"),
 )

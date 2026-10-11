@@ -45,6 +45,7 @@ from bayes_cep.run.directories import (
     RunState,
     StudyDirectory,
     format_current_time,
+    repository_relative_path,
     resolve_repository_path,
     write_json_record,
 )
@@ -207,10 +208,17 @@ class StudySetup:
         sweep (SweepNode): The parameter variations.
         root (Path): The study directory, conventionally named after the study. Other studies find
             the runs of this one through it. Not part of a run's identity. A study module sets it
-            relative to itself, `Path(__file__).parent / "../working_data/<name>"`, so that it works
-            from any working directory (a bare relative path would be relative to the working
-            directory). After construction `root` is relative to the repository root if the
-            directory is inside it, else absolute; see `_make_root_repository_relative` for why.
+            relative to itself, `module_relative_path(__file__, "../working_data/<name>")`, so that
+            it works from any working directory (a bare relative path would be relative to the
+            working directory). After construction `root` is relative to the repository root if the
+            directory is inside it, else absolute (see `repository_relative_path`). This keeps the
+            run ids independent of where the repository is checked out: the run id is a hash of
+            the configuration, paths included, and a study that reads the results of another one
+            (see `results_directories`) gets the paths in its configurations from that study's
+            `root`. With an absolute `root` the checkout location would end up in the run ids: the
+            same study would have other run ids in another checkout, a worktree or on the cluster,
+            and a study created elsewhere (or before) would fail `Study.load`, which requires the
+            run ids recorded at creation.
         executor (ExecutorSettings): Where and with which resources the runs execute, e.g. the
             SLURM resources. Not part of a run's identity.
     """
@@ -233,25 +241,7 @@ class StudySetup:
                 f"{self.run_type.__name__} needs a {self.run_type.config_type.__name__} as base, "
                 f"got {type(self.base).__name__}."
             )
-        object.__setattr__(self, "root", self._make_root_repository_relative())
-
-    # ----------------------------------------------------------------------------------------------
-    def _make_root_repository_relative(self) -> Path:
-        """Resolve `root` and express it relative to the repository root if it lies inside it.
-
-        This keeps the run ids independent of where the repository is checked out. The run id is
-        a hash of the configuration, paths included, and a study that reads the results of another
-        one (see `results_directories`) gets the paths in its configurations from that study's
-        `root`. With an absolute `root` the checkout location would end up in the run ids: the same
-        study would have other run ids in another checkout, a worktree or on the cluster, and a
-        study created elsewhere (or before) would fail `Study.load`, which requires the run ids
-        recorded at creation. Outside the repository there is no relative form, so `root` stays
-        absolute.
-        """
-        resolved = self.root.resolve()
-        if resolved.is_relative_to(REPOSITORY_ROOT):
-            return resolved.relative_to(REPOSITORY_ROOT)
-        return resolved
+        object.__setattr__(self, "root", repository_relative_path(self.root))
 
     # ----------------------------------------------------------------------------------------------
     @property

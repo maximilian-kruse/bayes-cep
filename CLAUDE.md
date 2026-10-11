@@ -110,11 +110,15 @@ parameters; `reference.py` holds them as constants and `reference_*_config` fact
   `outputs`, `_execute` and `report`.
 
 `studies/*.py` define `STUDY`, set their own `root` and `RAW_DIR`, and are not archived with a study
-(the recorded commit and patch cover them). A study module sets `root` relative to itself,
-`Path(__file__).parent / "../working_data/<name>"`, so a module (and root) may live outside the
-repository. `StudySetup` makes a `root` inside the repository repo-relative: the run id hashes the
-configuration paths, which derive from `root` for studies that read other studies' results, so an
-absolute `root` would tie run ids (and `Study.load` of existing studies) to the checkout location.
+(the recorded commit and patch cover them). A bare relative path in a config is relative to the
+repository root (`resolve_repository_path`), not to the module or the working directory. A study
+module gives its paths (`root`, `RAW_DIR`, other input paths) relative to itself with
+`module_relative_path(__file__, "../working_data/<name>")` (`run/directories.py`), so a module (and
+its root, data) may live outside the repository. The result is repo-relative inside the repository
+(`repository_relative_path`, also applied to `root` by `StudySetup`), else absolute: the run id
+hashes the config paths, which derive from `root` for studies that read other studies' results, so
+an absolute path inside the repository would tie run ids (and `Study.load` of existing studies) to
+the checkout location.
 A study of inference runs sweeps `problem.data_dir` over `PREPROCESSING_STUDY.results_directories()`;
 that preprocessing study must be created and run first.
 

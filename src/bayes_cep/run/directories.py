@@ -28,6 +28,8 @@ Classes:
 
 Functions:
     resolve_repository_path: Resolve a configured path against the repository root.
+    repository_relative_path: Express a path relative to the repository root if it is inside it.
+    module_relative_path: A path given relative to a module file, in its configuration form.
     format_current_time: The current time as an ISO 8601 string with time zone.
     write_json_record: Write a JSON file atomically.
 """
@@ -80,6 +82,48 @@ def resolve_repository_path(path: Path) -> Path:
     """Resolve a relative path against the repository root, so runs do not depend on the working
     directory; absolute paths stay as they are."""
     return path if path.is_absolute() else REPOSITORY_ROOT / path
+
+
+# --------------------------------------------------------------------------------------------------
+def repository_relative_path(path: Path) -> Path:
+    """Resolve `path` and express it relative to the repository root if it lies inside it.
+
+    This is the form of a path in a configuration: independent of the checkout location, so that
+    run ids (hashes of the configuration) are the same in another checkout, a worktree or on the
+    cluster. Outside the repository there is no relative form, so the path is absolute.
+
+    Args:
+        path (Path): Absolute path, or relative to the working directory.
+
+    Returns:
+        Path: Relative to the repository root if inside it, else absolute.
+    """
+    resolved = path.resolve()
+    if resolved.is_relative_to(REPOSITORY_ROOT):
+        return resolved.relative_to(REPOSITORY_ROOT)
+    return resolved
+
+
+# --------------------------------------------------------------------------------------------------
+def module_relative_path(module_file: str | Path, relative_path: str | Path) -> Path:
+    """A path given relative to a module file, in the form a configuration holds it.
+
+    A bare relative path in a configuration is relative to the repository root
+    (`resolve_repository_path`), whatever module writes it. A study module outside the repository
+    uses this function for the input paths of its configurations (`RAW_DIR = module_relative_path(
+    __file__, "raw")`), so that they are relative to the module and not to the repository.
+
+    Args:
+        module_file (str | Path): The module file, pass `__file__`.
+        relative_path (str | Path): Path relative to the directory of the module file; may contain
+            `..`. An absolute path is independent of the module, and is treated the same way:
+            made repo-relative if it lies inside the repository, else it stays as it is.
+
+    Returns:
+        Path: Relative to the repository root if inside it, else absolute (see
+            `repository_relative_path`).
+    """
+    return repository_relative_path(Path(module_file).resolve().parent / relative_path)
 
 
 # --------------------------------------------------------------------------------------------------

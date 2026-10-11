@@ -12,7 +12,7 @@ prior (kappa 0.05, tau 10), 1000 observations with noise variance 1e-3. Mesh-spe
 initial site of the eikonal solver, the velocities) belong to that patient.
 
 Constants:
-    NUM_OBSERVATIONS ... MCMC_NUM_SAMPLES: The reference values.
+    The reference values for all data primitives.
 
 Functions:
     reference_prior_parameters: Parameters of the Bilaplacian SPDE prior.

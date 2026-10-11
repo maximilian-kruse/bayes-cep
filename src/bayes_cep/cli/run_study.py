@@ -33,6 +33,7 @@ crash or an interrupted submission, `--include-active` restarts them. SLURM logs
 import json
 import sys
 from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated
@@ -138,6 +139,14 @@ def main() -> None:
 
 
 # ==================================================================================================
+def _describe_counts(labels: Iterable[str]) -> str:
+    """Summarize labels as e.g. `9 runs: 7 done, 2 failed`, in order of first appearance."""
+    counts = Counter(str(label) for label in labels)
+    listed = ", ".join(f"{count} {label}" for label, count in counts.items())
+    return f"{counts.total()} runs: {listed}"
+
+
+# ==================================================================================================
 def execute_command(command: Command) -> None:
     """Dispatch the subcommand."""
     match command:
@@ -157,7 +166,7 @@ def execute_command(command: Command) -> None:
             outcomes = Study.load(command.module).execute_runs(
                 indices, command.force, command.include_active, command.wait
             )
-            print(dict(Counter(str(outcome) for outcome in outcomes.values())))
+            print(f"\n{_describe_counts(outcomes.values())}")
             if RunOutcome.ACTIVE in outcomes.values():
                 print("Skipped runs that are submitted or running; --include-active restarts them.")
             if RunOutcome.FAILED in outcomes.values():
@@ -168,7 +177,7 @@ def execute_command(command: Command) -> None:
             states = study.read_states()
             for run in study.runs:
                 print(f"{run.index:>4}  {run.run_id}  {states[run.index].value}")
-            print(dict(Counter(state.value for state in states.values())))
+            print(_describe_counts(state.value for state in states.values()))
         case CollectCommand():
             # Write the cross-run table.
             study = Study.load(command.module)

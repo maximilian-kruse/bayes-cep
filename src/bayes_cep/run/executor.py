@@ -28,6 +28,8 @@ from bayes_cep.run.directories import RunDirectory, RunState
 from bayes_cep.run.provenance import Environment
 from bayes_cep.run.template import Run
 
+DIVIDER_WIDTH = 100
+
 
 # ==================================================================================================
 class RunOutcome(StrEnum):
@@ -157,11 +159,13 @@ class Executor:
     def _run_locally(
         self, runs: Sequence[Run], run_dirs: Sequence[Path], environment: Environment
     ) -> list[RunOutcome]:
-        """Execute the runs one after the other in this process."""
-        return [
-            self._execute_run(run, run_dir, environment)
-            for run, run_dir in zip(runs, run_dirs, strict=True)
-        ]
+        """Execute the runs one after the other in this process, a divider line before each."""
+        outcomes: list[RunOutcome] = []
+        for number, (run, run_dir) in enumerate(zip(runs, run_dirs, strict=True), start=1):
+            title = f" Run {number}/{len(runs)}: {run.config.run_id} "
+            print(f"\n{title:=^{DIVIDER_WIDTH}}\n")
+            outcomes.append(self._execute_run(run, run_dir, environment))
+        return outcomes
 
     # ----------------------------------------------------------------------------------------------
     def _run_on_slurm(

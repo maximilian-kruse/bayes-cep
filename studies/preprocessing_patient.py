@@ -24,5 +24,5 @@ STUDY = StudySetup(
         Axis("observations.num_observations", (100, 1000)),
         Axis("observations.noise_variance", (1e-2, 1e-3)),
     ),
-    root=Path("working_data/preprocessing_patient"),
+    root=Path("../working_data/preprocessing_patient"),
 )

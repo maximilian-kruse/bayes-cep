@@ -1,7 +1,8 @@
 """Run one configuration into a run directory.
 
 Choose the kind of run as a subcommand: `prior`, `preprocessing`, `map` or `mcmc` (every option
-given as a flag), or one of the reference setups of
+given as a flag), a kind registered by a module named in `BAYES_CEP_RUN_MODULES` (see
+`bayes_cep.run.registry`), or one of the reference setups of
 `single_runs.reference`: `reference-synthetic-preprocessing`, `reference-patient-preprocessing`,
 `reference-map` and `reference-mcmc`, with the data directories (and the initial state file of the
 chain) as arguments (`--config.raw-dir`, ...); no path is a default.
@@ -30,7 +31,9 @@ A single prior run, with every option listed by `--help`:
         --config.correlation.max-distance 40
 """
 
+import functools
 import json
+import operator
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -42,11 +45,11 @@ from bayes_cep.run.config import TYPE_KEY, RunConfig
 from bayes_cep.run.directories import STATUS_RECORD
 from bayes_cep.run.executor import Executor, ExecutorSettings, RunOutcome
 from bayes_cep.run.provenance import Environment
-from bayes_cep.run.template import Run
-from single_runs.map import MapRun, MapRunConfig
-from single_runs.mcmc import McmcRun, McmcRunConfig
-from single_runs.preprocessing import PreprocessingRun, PreprocessingRunConfig
-from single_runs.prior import PriorRun, PriorRunConfig
+from bayes_cep.run.registry import RUN_REGISTRY, import_registration_modules, register_run_type
+from single_runs.map import MapRun
+from single_runs.mcmc import McmcRun
+from single_runs.preprocessing import PreprocessingRun
+from single_runs.prior import PriorRun
 from single_runs.reference import (
     reference_map_config,
     reference_mcmc_config,
@@ -54,12 +57,12 @@ from single_runs.reference import (
     reference_synthetic_preprocessing_config,
 )
 
-RUN_TYPES: dict[type[RunConfig], type[Run]] = {
-    PriorRunConfig: PriorRun,
-    PreprocessingRunConfig: PreprocessingRun,
-    MapRunConfig: MapRun,
-    McmcRunConfig: McmcRun,
-}
+register_run_type("prior", PriorRun)
+register_run_type("preprocessing", PreprocessingRun)
+register_run_type("map", MapRun)
+register_run_type("mcmc", McmcRun)
+# Kinds of run defined outside of this repository; the subcommands below are built afterwards.
+import_registration_modules()
 
 
 # ==================================================================================================
@@ -73,40 +76,36 @@ def load_config_file(path: tyro.conf.Positional[Path]) -> RunConfig:
         SystemExit: If the file is not the configuration of one of the run kinds.
     """
     data = json.loads(path.read_text())
-    config_types = {config_type.__name__: config_type for config_type in RUN_TYPES}
+    config_types = RUN_REGISTRY.config_types_by_name
     config_type = config_types.get(data.get(TYPE_KEY) if isinstance(data, dict) else None)
     if config_type is None:
         raise SystemExit(f"{path} is not a run configuration; known: {sorted(config_types)}")
     return config_type.from_json_dict(data)
 
 
-# The subcommands: a config class takes all its fields as flags; a function builds the config
-# from its arguments.
-Config = (
-    Annotated[PriorRunConfig, tyro.conf.subcommand("prior")]
-    | Annotated[PreprocessingRunConfig, tyro.conf.subcommand("preprocessing")]
-    | Annotated[MapRunConfig, tyro.conf.subcommand("map")]
-    | Annotated[McmcRunConfig, tyro.conf.subcommand("mcmc")]
-    | Annotated[RunConfig, tyro.conf.subcommand("from-file", constructor=load_config_file)]
-    | Annotated[
+# The subcommands: the config class of a registered kind of run takes all its fields as flags; a
+# function builds the config from its arguments.
+_SUBCOMMANDS = [
+    *(Annotated[kind.config_type, tyro.conf.subcommand(kind.name)] for kind in RUN_REGISTRY.kinds),
+    Annotated[RunConfig, tyro.conf.subcommand("from-file", constructor=load_config_file)],
+    Annotated[
         RunConfig,
         tyro.conf.subcommand(
             "reference-synthetic-preprocessing",
             constructor=reference_synthetic_preprocessing_config,
         ),
-    ]
-    | Annotated[
+    ],
+    Annotated[
         RunConfig,
         tyro.conf.subcommand(
             "reference-patient-preprocessing",
             constructor=reference_patient_preprocessing_config,
         ),
-    ]
-    | Annotated[RunConfig, tyro.conf.subcommand("reference-map", constructor=reference_map_config)]
-    | Annotated[
-        RunConfig, tyro.conf.subcommand("reference-mcmc", constructor=reference_mcmc_config)
-    ]
-)
+    ],
+    Annotated[RunConfig, tyro.conf.subcommand("reference-map", constructor=reference_map_config)],
+    Annotated[RunConfig, tyro.conf.subcommand("reference-mcmc", constructor=reference_mcmc_config)],
+]
+Config = functools.reduce(operator.or_, _SUBCOMMANDS)
 
 
 # ==================================================================================================
@@ -158,7 +157,9 @@ def main(settings: SingleRunConfig) -> None:
     """Execute the run; exit with status 1 if it failed."""
     run_dir = settings.run_dir
     _check_run_directory_is_replaceable(run_dir, settings.overwrite)
-    run = RUN_TYPES[type(settings.config)](settings.config, flat_results=settings.flat_results)
+    run = RUN_REGISTRY.run_type_of(settings.config)(
+        settings.config, flat_results=settings.flat_results
+    )
     executor = Executor(
         settings.executor, run_dir.parent / f"{run_dir.name}-jobs", job_name=run_dir.name
     )

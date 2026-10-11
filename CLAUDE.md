@@ -98,12 +98,17 @@ parameters; `reference.py` holds them as constants and `reference_*_config` fact
   After sampling, `mcmc.py` streams the chain diagnostics (`ChainDiagnostics` record: ESS and
   autocorrelation time per vertex; trace and autocorrelation of `diagnostics.plotted_components`,
   none/one/several vertices) and its `report` only plots them.
-- A new run kind = config + `Run` subclass in one module, plus its entries in `RUN_TYPES` and the
-  `Config` union of `cli/run_single.py`. Result file names are defined once per run (an `ArrayRecord`
-  or module constants) and used by `outputs`, `_execute` and `report`.
+- A new run kind = config + `Run` subclass in one module, registered by `register_run_type(name,
+  run_type)` (`run/registry.py`; the kinds of this repo are registered in `cli/run_single.py`, which
+  builds its subcommands from the registry). A kind outside the repo registers itself in a module
+  importable by name (directory on `PYTHONPATH`) that is listed in the environment variable
+  `BAYES_CEP_RUN_MODULES`. Result file names are defined once per run (an `ArrayRecord` or module
+  constants) and used by `outputs`, `_execute` and `report`.
 
 `studies/*.py` define `STUDY`, set their own `root` and `RAW_DIR`, and are not archived with a study
-(the recorded commit and patch cover them). A study of inference runs sweeps `problem.data_dir` over
+(the recorded commit and patch cover them). A relative `StudySetup.root` is relative to the study
+module (e.g. `../working_data/<name>`), which may live outside the repository; inside the
+repository `root` becomes repo-relative, so run ids do not depend on the checkout location. A study of inference runs sweeps `problem.data_dir` over
 `PREPROCESSING_STUDY.results_directories()`; that preprocessing study must be created and run first.
 
 ## Design & style

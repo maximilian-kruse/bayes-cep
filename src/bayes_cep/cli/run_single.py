@@ -20,20 +20,20 @@ given in the pixi tasks (flat, with `--flat-results`); they are made in sequence
 To run a configuration recorded in a `config.json`, e.g. of one run of a study (edit the file to
 change a value; the run then gets a new run id):
 
-    pixi run single --run-dir working_data/debug config:from-file path/to/config.json
+    bcep-single --run-dir working_data/debug config:from-file path/to/config.json
 
 Another run type is registered explicitly by the Python file that defines it (a `Run` subclass
 with a `name`, see `bayes_cep.run.registry`); `--run-file` may be repeated and must come before
 the subcommand:
 
-    pixi run single --run-file path/to/my_run.py --run-dir working_data/mine config:my-run ...
+    bcep-single --run-file path/to/my_run.py --run-dir working_data/mine config:my-run ...
 
 Add `--executor.cluster slurm` (and `--no-wait` to return after queueing) to run on SLURM; the
 resource options are listed by `--help`, as for `study run`.
 
 A single prior run, with every option listed by `--help`:
 
-    pixi run single --run-dir working_data/test config:prior --config.raw-dir example_data/raw \
+    bcep-single --run-dir working_data/test config:prior --config.raw-dir example_data/raw \
         --config.correlation.max-distance 40
 """
 
@@ -130,7 +130,7 @@ def build_config_type(registry: RunRegistry) -> object:
 
 # --------------------------------------------------------------------------------------------------
 def build_settings_type(registry: RunRegistry) -> type:
-    """The settings class of `run_single.py`, whose `config` is chosen among the registered runs.
+    """The settings class of `bcep-single`, whose `config` is chosen among the registered runs.
 
     The class is built here, not at import time, because its subcommands are the runs that are
     registered from the command line.
@@ -139,7 +139,7 @@ def build_settings_type(registry: RunRegistry) -> type:
 
     @dataclass(frozen=True)
     class SingleRunSettings:
-        """Settings of `run_single.py`.
+        """Settings of `bcep-single`.
 
         `--run-file PATH` (before the subcommand, may be repeated) registers the runs defined in
         a Python file as further subcommands; it is taken out of the arguments before this
@@ -204,9 +204,15 @@ def _check_run_directory_is_replaceable(run_dir: Path, overwrite: bool) -> None:
 
 
 # ==================================================================================================
-def main(arguments: list[str]) -> None:
+def main(arguments: list[str] | None = None) -> None:
     """Parse the command line, register the runs, and execute the run; exit with status 1 if it
-    failed."""
+    failed.
+
+    Args:
+        arguments (list[str] | None): Command line arguments; `sys.argv[1:]` if `None`.
+    """
+    if arguments is None:
+        arguments = sys.argv[1:]
     run_files, remaining_arguments = split_run_file_arguments(arguments)
     registry = build_registry(run_files)
     settings = tyro.cli(build_settings_type(registry), args=remaining_arguments)
@@ -225,4 +231,4 @@ def main(arguments: list[str]) -> None:
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()

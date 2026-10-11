@@ -1,7 +1,6 @@
 """Command line interface of simulation studies: create, run, inspect and summarize.
 
-This is the CLI of studies; a single run is started with `cli/run_single.py`
-(`pixi run single`).
+This is the CLI of studies; a single run is started with `bcep-single`.
 
 A study is a Python module in `studies/` defining `STUDY`: a base run configuration plus the
 sweeps over it, and the executor settings (local, or SLURM resources). Every command names the
@@ -12,18 +11,18 @@ study directory; `run` executes the runs one after the other in this process
 
 Example:
 
-    pixi run study create studies/prior_investigation.py
-    pixi run study show studies/prior_investigation.py
-    pixi run study run studies/prior_investigation.py
-    pixi run study status studies/prior_investigation.py
-    pixi run study collect studies/prior_investigation.py
-    pixi run study report studies/prior_investigation.py
+    bcep-study create studies/prior_investigation.py
+    bcep-study show studies/prior_investigation.py
+    bcep-study run studies/prior_investigation.py
+    bcep-study status studies/prior_investigation.py
+    bcep-study collect studies/prior_investigation.py
+    bcep-study report studies/prior_investigation.py
 
 With the cluster `slurm`, `run` sends the unfinished runs to SLURM as one job array via
 `submitit` (one task per unfinished run); the tasks use this pixi environment, so it must be
 reachable from the compute nodes. With `--no-wait`, the command returns after queueing:
 
-    pixi run study run studies/map_synthetic.py --no-wait
+    bcep-study run studies/map_synthetic.py --no-wait
 
 Finished runs are skipped, so running again only repeats failed or unstarted runs. Runs that are
 submitted or running are skipped too (a second job would delete the files of the first); after a
@@ -133,7 +132,13 @@ Command = (
 
 
 # ==================================================================================================
-def main(command: Command) -> None:
+def main() -> None:
+    """Parse the command line and dispatch the subcommand."""
+    execute_command(tyro.cli(Command))
+
+
+# ==================================================================================================
+def execute_command(command: Command) -> None:
     """Dispatch the subcommand."""
     match command:
         case CreateCommand():
@@ -175,4 +180,4 @@ def main(command: Command) -> None:
 
 
 if __name__ == "__main__":
-    main(tyro.cli(Command))
+    main()

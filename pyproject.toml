@@ -27,6 +27,10 @@ classifiers = [
 ]
 dependencies = []
 
+[project.scripts]
+bcep-single = "bayes_cep.cli.run_single:main"
+bcep-study = "bayes_cep.cli.run_study:main"
+
 
 # ==================================================================================================
 # Pixi (Environment Management)
@@ -66,18 +70,18 @@ tyro = ">=1.0.16,<2"
 # --- Tasks ------------------------------------------------------------------------------------
 
 [tool.pixi.tasks]
-single = "python cli/run_single.py"
-study = "python cli/run_study.py"
+single = "bcep-single"
+study = "bcep-study"
 example = { depends-on = ["example-map", "example-mcmc"] }
 
 [tool.pixi.tasks.example-preprocessing]
-cmd = """python cli/run_single.py --overwrite --flat-results \
+cmd = """bcep-single --overwrite --flat-results \
     --run-dir example_data/preprocessing \
     config:reference-synthetic-preprocessing \
     --config.raw-dir example_data/raw"""
 
 [tool.pixi.tasks.example-map]
-cmd = """python cli/run_single.py --overwrite --flat-results \
+cmd = """bcep-single --overwrite --flat-results \
     --run-dir example_data/map \
     config:reference-map \
     --config.raw-dir example_data/raw \
@@ -85,7 +89,7 @@ cmd = """python cli/run_single.py --overwrite --flat-results \
 depends-on = ["example-preprocessing"]
 
 [tool.pixi.tasks.example-mcmc]
-cmd = """python cli/run_single.py --overwrite --flat-results \
+cmd = """bcep-single --overwrite --flat-results \
     --run-dir example_data/mcmc \
     config:reference-mcmc \
     --config.raw-dir example_data/raw \

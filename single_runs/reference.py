@@ -1,7 +1,7 @@
 """The reference setup: every default parameter of the runs, in one place.
 
 The configuration classes of the runs have no defaults for scientific parameters; presets
-(`cli/run_single.py`), studies (`studies/`) and the example data all start from the configurations
+(`bcep-single`), studies (`studies/`) and the example data all start from the configurations
 built here and change what they investigate. To know which value a run uses unless stated
 otherwise, read this module and nothing else.
 

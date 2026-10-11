@@ -49,7 +49,7 @@ class Run[ConfigT: RunConfig](ABC):
         outputs (dict[str, str]): Description of the files a run writes, by path relative to the
             run directory; documented in the study description. Result files are listed with
             their `results/` prefix, which is dropped with `flat_results`.
-        name (str | None): Name of the subcommand of `cli/run_single.py` that runs this
+        name (str | None): Name of the subcommand of `bcep-single` that runs this
             run type (lowercase words joined by `-`; see `bayes_cep.run.registry`). `None`, the
             default, keeps the run type off the command line; a study needs no name.
         config (ConfigT): The configuration of this run.

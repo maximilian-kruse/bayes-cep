@@ -18,7 +18,7 @@ Functions:
 Note:
     The concrete strategies and their settings are dataclasses on purpose: `tyro` only exposes a
     class as a selectable subcommand (e.g.
-    `--config.ground-truth:synthetic-ground-truth-strategy`) in the CLI of `cli/run_single.py` if it
+    `--config.ground-truth:synthetic-ground-truth-strategy`) in the CLI of `bcep-single` if it
     is a dataclass; otherwise it freezes the argument to the default instance.
 """
 

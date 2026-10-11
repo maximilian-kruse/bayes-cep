@@ -19,9 +19,12 @@ change → run checks → review diff.
   `pixi run -e dev ruff check src` / `ruff format src`.
 - There is no test suite: the tests were removed on purpose (commit `92fb8f1`). The `test` env and
   pytest settings stay for a future one; do not recreate tests unasked.
-- Tasks (run from the repository root; relative config paths resolve against it): `single`
-  (`cli/run_single.py`), `study` (`cli/run_study.py`), `example` and `example-preprocessing`/
-  `-map`/`-mcmc` (regenerate the example data; map depends on preprocessing, mcmc on map). The
+- CLIs in `src/bayes_cep/cli/`, installed as the scripts `bcep-single` (`run_single`) and
+  `bcep-study` (`run_study`); from another directory:
+  `pixi run --manifest-path <repo> bcep-single ...` (relative paths then resolve against that
+  directory). They still import `single_runs`/`studies` from the repository root via `PYTHONPATH`.
+- Tasks (run from the repository root; relative config paths resolve against it): `single`, `study`,
+  `example` and `example-preprocessing`/`-map`/`-mcmc` (regenerate the example data; map depends on preprocessing, mcmc on map). The
   example directories are arguments of these tasks in `pyproject.toml`, not defaults in Python code.
 - `example_data/` (git-tracked): `raw/` (mesh, fiber field, basis vectors) and the output of three
   reference runs (`preprocessing/`, `map/`, `mcmc/`, chain gitignored), written flat
@@ -79,7 +82,7 @@ found through the `PYTHONPATH` set by pixi. Modules of `run/`:
   `EnvironmentArchive` (specification copied into the study directory).
 - `executor.py`: `Executor` runs `Run` objects locally in this process or as a `submitit` SLURM job
   array (`ExecutorSettings.cluster`). It is the only one that removes the files of an earlier attempt
-  (`cli/run_single.py` only decides whether it may).
+  (`bayes_cep.cli.run_single` only decides whether it may).
 - `study.py`: sweep nodes (`Axis`/`Zip`/`Product` over dotted config paths), `StudySetup` (what a
   study module defines as `STUDY`; `results_directories()` for other studies to read) and `Study`
   (`create` writes `<root>/study/` atomically and requires all input files to exist; `load`
@@ -99,8 +102,8 @@ parameters; `reference.py` holds them as constants and `reference_*_config` fact
   autocorrelation time per vertex; trace and autocorrelation of `diagnostics.plotted_components`,
   none/one/several vertices) and its `report` only plots them.
 - A new run type = config + `Run` subclass in one module, with a class attribute `name` (the
-  `config:<name>` subcommand of `cli/run_single.py`; no name = not on the command line). There is
-  no global registry: `cli/run_single.py` creates a `RunRegistry` (`run/registry.py`), registers
+  `config:<name>` subcommand of `bayes_cep.cli.run_single`; no name = not on the command line). There is
+  no global registry: `bayes_cep.cli.run_single` creates a `RunRegistry` (`run/registry.py`), registers
   every named run type defined in the `single_runs` package, plus those of each file given as
   `--run-file path.py` (repeatable, before the subcommand), and builds its subcommands from it.
   Result file names are defined once per run (an `ArrayRecord` or module constants) and used by

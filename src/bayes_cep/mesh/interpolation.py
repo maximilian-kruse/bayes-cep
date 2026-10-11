@@ -9,7 +9,7 @@ Classes:
 Note:
     The concrete strategies are (stateless) dataclasses on purpose: `tyro` only exposes a class as
     a selectable subcommand (e.g. `--config.problem.interpolation:linear-interpolation-strategy`)
-    in the CLI of `cli/run_single.py` if it is a dataclass; otherwise it freezes the argument to
+    in the CLI of `bcep-single` if it is a dataclass; otherwise it freezes the argument to
     the default instance.
 """
 

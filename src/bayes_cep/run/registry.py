@@ -1,4 +1,4 @@
-"""Registry of the run types that `cli/run_single.py` offers as subcommands.
+"""Registry of the run types that `bcep-single` offers as subcommands.
 
 A run type is a `Run` subclass; it is registered under its `name`, the name of its subcommand.
 Registering it makes it available to the command line and to `config:from-file`, which finds the
@@ -8,9 +8,9 @@ names its run type directly and needs no registration.
 A registry is filled explicitly, from two kinds of sources:
 
 - a package: every module of the package is imported and the named `Run` subclasses defined in it
-  are registered (`cli/run_single.py` does this for `single_runs`);
+  are registered (`bcep-single` does this for `single_runs`);
 - a file: the file is executed like a script and the named `Run` subclasses defined in it are
-  registered (the `--run-file` option of `cli/run_single.py`).
+  registered (the `--run-file` option of `bcep-single`).
 
 A run type in a file needs no registration call:
 

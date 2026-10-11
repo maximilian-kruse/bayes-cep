@@ -126,7 +126,7 @@ Executor = (
 # ==================================================================================================
 @dataclass(frozen=True)
 class SingleRun:
-    """Settings of `single_run.py`.
+    """Settings of `run_single.py`.
 
     Attributes:
         run_dir (Path): Directory the run is written to; must not exist yet unless `overwrite`.

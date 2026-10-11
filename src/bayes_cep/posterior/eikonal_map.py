@@ -15,7 +15,7 @@ from eikonax import derivator, linalg, preprocessing, solver, tensorfield
 from ls_bayesian.posterior import interfaces
 
 from bayes_cep.mesh.interpolation import InterpolationStrategy
-from bayes_cep.mesh.io import get_triangle_connectivity
+from bayes_cep.mesh.topology import get_triangle_connectivity
 from bayes_cep.posterior.fiber_tensor import FiberTensor, FiberTensorSettings
 
 

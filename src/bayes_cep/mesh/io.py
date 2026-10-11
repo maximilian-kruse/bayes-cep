@@ -2,7 +2,6 @@
 
 Functions:
     load_pyvista_mesh: Load and validate a triangular surface mesh from disk.
-    get_triangle_connectivity: Vertex indices of the triangles of a triangular surface mesh.
     create_dolfinx_mesh: Convert a pyvista mesh to a dolfinx mesh, in matching vertex order.
 """
 
@@ -14,6 +13,8 @@ import numpy as np
 import pyvista as pv
 import ufl
 from mpi4py import MPI
+
+from bayes_cep.mesh.topology import get_triangle_connectivity
 
 
 # ==================================================================================================
@@ -33,24 +34,6 @@ def load_pyvista_mesh(mesh_path: Path) -> pv.UnstructuredGrid:
     if not np.all(mesh.celltypes == pv.CellType.TRIANGLE):
         raise ValueError("Only triangular meshes are supported.")
     return mesh
-
-
-# --------------------------------------------------------------------------------------------------
-def get_triangle_connectivity(
-    pv_mesh: pv.UnstructuredGrid,
-) -> np.ndarray[tuple[int, int], np.dtype[np.integer]]:
-    """Vertex indices of the triangles of a triangular surface mesh.
-
-    Assumes `pv_mesh` has already been validated as purely triangular, e.g. via
-    [`load_pyvista_mesh`][bayes_cep.mesh.io.load_pyvista_mesh].
-
-    Args:
-        pv_mesh (pv.UnstructuredGrid): Triangular surface mesh.
-
-    Returns:
-        np.ndarray: Connectivity, shape `(num_simplices, 3)`.
-    """
-    return pv_mesh.cells.reshape(-1, 4)[:, 1:]
 
 
 # --------------------------------------------------------------------------------------------------

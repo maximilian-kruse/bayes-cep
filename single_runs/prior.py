@@ -17,7 +17,8 @@ from typing import override
 import numpy as np
 from ls_bayesian.common.logging import BaseLogger
 
-from bayes_cep.mesh.io import create_dolfinx_mesh, get_triangle_connectivity
+from bayes_cep.mesh.io import create_dolfinx_mesh
+from bayes_cep.mesh.topology import get_triangle_connectivity
 from bayes_cep.posterior.prior import PriorParameters, build_fiber_angle_prior
 from bayes_cep.postprocessing.curve_plots import plot_correlation_curve
 from bayes_cep.postprocessing.mesh_plots import render_axial_angle_field, render_point_field

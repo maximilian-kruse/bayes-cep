@@ -11,7 +11,7 @@ import numpy as np
 import pyvista as pv
 import scipy.sparse as sp
 
-from bayes_cep.mesh.io import get_triangle_connectivity
+from bayes_cep.mesh.topology import get_triangle_connectivity
 from bayes_cep.statistics.axial_statistics import shift_angles_to_minimize_axial_variance
 
 

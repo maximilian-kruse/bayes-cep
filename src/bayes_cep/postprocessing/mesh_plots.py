@@ -13,7 +13,7 @@ import numpy as np
 import pyvista as pv
 
 from bayes_cep.mesh.interpolation import NearestNeighborInterpolationStrategy
-from bayes_cep.mesh.io import get_triangle_connectivity
+from bayes_cep.mesh.topology import get_triangle_connectivity
 from bayes_cep.statistics.axial_statistics import wrap_axial_angles
 
 WINDOW_SIZE = (1000, 800)

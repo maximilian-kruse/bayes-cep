@@ -5,25 +5,22 @@ run directory and nothing else of the data side, so several inference runs (and 
 exactly the same data.
 
 Classes:
-    PreprocessedData: The data the inference runs work on, with its files.
     PreprocessingRunConfig: Build a ground truth and generate synthetic observations from it.
     PreprocessingRun: The preprocessing run.
 """
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Self, override
+from typing import override
 
-import numpy as np
 from ls_bayesian.common.logging import BaseLogger
 
 from bayes_cep.mesh.interpolation import (
     LinearInterpolationStrategy,
     NearestNeighborInterpolationStrategy,
 )
-from bayes_cep.mesh.io import load_pyvista_mesh
 from bayes_cep.posterior.eikonal_map import EikonalParameterToSolutionMap, EikonalSolverSettings
-from bayes_cep.postprocessing.mesh_plots import render_cell_field
+from bayes_cep.postprocessing.mesh_plots import render_axial_angle_field
 from bayes_cep.preprocessing.ground_truth import (
     RealDataGroundTruthStrategy,
     SyntheticGroundTruthStrategy,
@@ -34,78 +31,9 @@ from bayes_cep.preprocessing.synthetic_observations import (
     generate_synthetic_observations,
 )
 from bayes_cep.run.config import RunConfig
-from bayes_cep.run.directories import resolve_repository_path
 from bayes_cep.run.progress import StepReporter, describe_array
 from bayes_cep.run.template import Metrics, Run
-from bayes_cep.statistics.axial_statistics import wrap_axial_angles
-
-
-# ==================================================================================================
-@dataclass(frozen=True)
-class PreprocessedData:
-    """The data the inference runs work on, as written by the preprocessing run.
-
-    Attributes:
-        ground_truth (np.ndarray): Ground-truth fiber angle [rad] per vertex.
-        prior_mean (np.ndarray): Constant prior mean [rad] per vertex: the axial mean of the ground
-            truth.
-        observed_vertex_indices (np.ndarray): Indices of the observed vertices.
-        observed_activation_times (np.ndarray): Noisy activation times at those vertices.
-        noise_variance (float): Variance of the noise of the observations; the likelihood of the
-            inference uses the same value, so that data and inference cannot disagree.
-    """
-
-    ground_truth: np.ndarray
-    prior_mean: np.ndarray
-    observed_vertex_indices: np.ndarray
-    observed_activation_times: np.ndarray
-    noise_variance: float
-
-    # ----------------------------------------------------------------------------------------------
-    @staticmethod
-    def file_paths(data_dir: Path) -> list[Path]:
-        """The files of the data in `data_dir`, the result directory of a preprocessing run."""
-        names = (
-            "ground_truth_angle_field.npy",
-            "prior_mean_angle_field.npy",
-            "observed_vertex_indices.npy",
-            "observed_activation_times.npy",
-            "observation_noise_variance.npy",
-        )
-        return [data_dir / name for name in names]
-
-    # ----------------------------------------------------------------------------------------------
-    def save(self, data_dir: Path) -> None:
-        """Write the data into `data_dir`, which is created if missing."""
-        data_dir.mkdir(parents=True, exist_ok=True)
-        arrays = (
-            self.ground_truth,
-            self.prior_mean,
-            self.observed_vertex_indices,
-            self.observed_activation_times,
-            np.array(self.noise_variance),
-        )
-        for path, array in zip(self.file_paths(data_dir), arrays, strict=True):
-            np.save(path, array)
-
-    # ----------------------------------------------------------------------------------------------
-    @classmethod
-    def load(cls, data_dir: Path) -> Self:
-        """Read the data from `data_dir`, the result directory of a preprocessing run."""
-        (
-            ground_truth_path,
-            prior_mean_path,
-            vertex_indices_path,
-            activation_times_path,
-            noise_variance_path,
-        ) = cls.file_paths(data_dir)
-        return cls(
-            ground_truth=np.load(ground_truth_path),
-            prior_mean=np.load(prior_mean_path),
-            observed_vertex_indices=np.load(vertex_indices_path),
-            observed_activation_times=np.load(activation_times_path),
-            noise_variance=float(np.load(noise_variance_path)),
-        )
+from single_runs.data import PreprocessedData, RawDataDirectory
 
 
 # ==================================================================================================
@@ -138,6 +66,7 @@ class PreprocessingRunConfig(RunConfig):
 class PreprocessingRun(Run[PreprocessingRunConfig]):
     """Build the ground truth and the prior mean, and generate the synthetic observations."""
 
+    config_type = PreprocessingRunConfig
     outputs = {
         "results/ground_truth_angle_field.npy": "Ground-truth fiber angle [rad] per vertex.",
         "results/prior_mean_angle_field.npy": "Constant prior mean [rad] per vertex: the axial "
@@ -153,8 +82,8 @@ class PreprocessingRun(Run[PreprocessingRunConfig]):
     # ----------------------------------------------------------------------------------------------
     @override
     def input_files(self) -> list[Path]:
-        raw_dir = resolve_repository_path(self.config.raw_dir)
-        return [raw_dir / name for name in ("mesh.vtu", "basis_vecs.npy", "fiber_field.npy")]
+        raw_data = RawDataDirectory.from_configured_path(self.config.raw_dir)
+        return [raw_data.mesh_path, raw_data.basis_vectors_path, raw_data.fiber_field_path]
 
     # ----------------------------------------------------------------------------------------------
     @override
@@ -162,20 +91,9 @@ class PreprocessingRun(Run[PreprocessingRunConfig]):
         plots_dir = run_dir / "plots"
         plots_dir.mkdir(exist_ok=True)
         data = PreprocessedData.load(self.results_dir(run_dir))
-
-        mesh = load_pyvista_mesh(resolve_repository_path(self.config.raw_dir) / "mesh.vtu")
-        connectivity = mesh.cells.reshape(-1, 4)[:, 1:]
-        to_simplices = NearestNeighborInterpolationStrategy().assemble_matrix(
-            mesh.points, connectivity
-        )
-        render_cell_field(
-            mesh,
-            wrap_axial_angles(to_simplices @ data.ground_truth),
-            plots_dir / "ground_truth.png",
-            "ground truth",
-            "angle [rad]",
-            "hsv",
-            (-np.pi / 2, np.pi / 2),
+        mesh = RawDataDirectory.from_configured_path(self.config.raw_dir).load_mesh()
+        render_axial_angle_field(
+            mesh, data.ground_truth, plots_dir / "ground_truth.png", "ground truth"
         )
 
     # ----------------------------------------------------------------------------------------------
@@ -184,15 +102,15 @@ class PreprocessingRun(Run[PreprocessingRunConfig]):
         config = self.config
         steps = StepReporter(logger)
 
-        raw_dir = resolve_repository_path(config.raw_dir)
-        with steps.step(f"Loading the mesh and basis vectors from {raw_dir}"):
-            mesh = load_pyvista_mesh(raw_dir / "mesh.vtu")
-            basis_vectors = np.load(raw_dir / "basis_vecs.npy")
+        raw_data = RawDataDirectory.from_configured_path(config.raw_dir)
+        with steps.step(f"Loading the mesh and basis vectors from {raw_data.path}"):
+            mesh = raw_data.load_mesh()
+            basis_vectors = raw_data.load_basis_vectors()
         logger.info(f"      mesh: {mesh.n_points} vertices, {mesh.n_cells} triangles")
 
         strategy_name = type(config.ground_truth).__name__
         with steps.step(f"Building ground truth and prior mean ({strategy_name})"):
-            fiber_field = np.load(raw_dir / "fiber_field.npy")
+            fiber_field = raw_data.load_fiber_field()
             ground_truth = config.ground_truth.build(mesh, fiber_field, basis_vectors)
             prior_mean = build_constant_prior_mean(ground_truth)
         logger.info(f"      {describe_array('ground truth [rad]', ground_truth)}")

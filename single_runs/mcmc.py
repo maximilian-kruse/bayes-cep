@@ -20,17 +20,12 @@ import numpy as np
 from ls_bayesian.common.logging import BaseLogger, LoggerSettings
 from ls_bayesian.mcmc.sampler import SamplerSettings
 
-from bayes_cep.mcmc.builder import (
-    MCMCAlgorithmName,
-    MCMCBuilder,
-    MCMCSettings,
-    ZarrStorageSettings,
-)
+from bayes_cep.mcmc.builder import MCMCBuilder, MCMCSettings
 from bayes_cep.run.config import RunConfig
 from bayes_cep.run.directories import resolve_repository_path
 from bayes_cep.run.progress import StepReporter
 from bayes_cep.run.template import Metrics, Run
-from single_runs.inference import InferenceProblemConfig
+from single_runs.inference import InferenceProblemConfig, assemble_posterior
 
 
 # ==================================================================================================
@@ -43,28 +38,25 @@ class McmcRunConfig(RunConfig):
         initial_state_path (Path): `.npy` file with the state the chain starts at, one angle [rad]
             per vertex (e.g. `prior_mean_angle_field.npy` of the preprocessing run, or
             `map_estimate.npy` of a MAP run of the same problem).
-        algorithm (MCMCAlgorithmName): Sampling algorithm.
-        step_width (float): Proposal step width $\delta$.
+        sampler (MCMCSettings): Sampling algorithm, step width and sample storage.
         num_samples (int): Number of samples of the chain.
         seed (int): Random seed of the chain.
-        chunk_size (int): Length of the on-disk chunk along the sample axis.
         log_interval (int): Number of samples between two rows of the progress table.
     """
 
     problem: InferenceProblemConfig
     initial_state_path: Path
-    algorithm: MCMCAlgorithmName
-    step_width: float
+    sampler: MCMCSettings
     num_samples: int
-    seed: int = 0
-    chunk_size: int = 100
-    log_interval: int = 1
+    seed: int
+    log_interval: int
 
 
 # ==================================================================================================
 class McmcRun(Run[McmcRunConfig]):
     """Sample the posterior of the preprocessed data, from the configured initial state."""
 
+    config_type = McmcRunConfig
     outputs = {
         "results/samples.zarr": "MCMC chain (zarr store, one sample per row).",
         "metrics.json": "acceptance_rate (final) and seconds_sampling.",
@@ -89,7 +81,7 @@ class McmcRun(Run[McmcRunConfig]):
     def _execute(self, run_dir: Path, logger: BaseLogger) -> Metrics:
         config = self.config
         steps = StepReporter(logger)
-        assembled = config.problem.assemble_posterior(steps, logger)
+        assembled = assemble_posterior(config.problem, steps, logger)
         initial_state_path = resolve_repository_path(config.initial_state_path)
         initial_state = np.load(initial_state_path)
         if initial_state.shape != assembled.data.prior_mean.shape:
@@ -100,20 +92,15 @@ class McmcRun(Run[McmcRunConfig]):
         results_dir = self.results_dir(run_dir)
         results_dir.mkdir(parents=True, exist_ok=True)
         mcmc_builder = MCMCBuilder(
-            MCMCSettings(
-                algorithm=config.algorithm,
-                step_width=config.step_width,
-                storage=ZarrStorageSettings(chunk_size=config.chunk_size),
-            ),
+            config.sampler,
             assembled.log_posterior,
-            assembled.posterior_builder.prior,
             output_dir=results_dir,
         )
         sampler_logger_settings = LoggerSettings(
             print_to_console=self.write_to_console, logfile_path=run_dir / "sampler.log"
         )
         with BaseLogger(sampler_logger_settings, prefix="mcmc") as sampler_logger:
-            with steps.step(f"Building the sampler ({config.algorithm.name})"):
+            with steps.step(f"Building the sampler ({config.sampler.algorithm.name})"):
                 sampler = mcmc_builder.build(logger=sampler_logger)
             sampling_start = time.perf_counter()
             with steps.step(f"Sampling {config.num_samples} states"):

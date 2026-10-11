@@ -1,9 +1,11 @@
 """Execution of runs: one after the other in this process, or as a job array on SLURM.
 
 The executor knows nothing about studies: it is given `Run` objects and their run directories.
-Choosing which runs to execute is up to the caller. Before a SLURM job may start, the executor
-records the run as `SUBMITTED`; the job removes the files of any earlier attempt, and records the
-rest.
+Choosing which runs to execute is up to the caller. The executor is the only owner of the
+clean-up of earlier attempts: before a run starts (in process, or in its SLURM job), the files of
+any earlier attempt in its run directory are removed (the status record stays, see
+`RunDirectory.clear_for_new_attempt`). Before a SLURM job may start, the executor records the run
+as `SUBMITTED`.
 
 Classes:
     RunOutcome: What became of a run in an execution request.

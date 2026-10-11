@@ -107,16 +107,14 @@ through the `PYTHONPATH` set by the pixi activation. Modules of `run/`:
 - `provenance.py`: `Environment` (git states, editable packages, `pixi.lock` hash; collected once
   per submission), `RunMetadata` (time, host, SLURM ids, input hashes), `EnvironmentArchive`
   (lock/pyproject/conda spec/patch of uncommitted changes, copied into the study directory).
-- `executor.py`: `ExecutorSettings = LocalExecutorSettings | SlurmExecutorSettings` (the resources
-  exist only on the SLURM one), `create_executor` gives the `Executor`: `LocalExecutor` runs the
-  `Run` objects serially in this process, `SlurmExecutor` as a `submitit` job array (records
-  `SUBMITTED` first; `wait=False` queues and returns). The executor is the only one that removes
-  the files of an earlier attempt (`cli/run_single.py` only decides whether it may). Knows nothing
-  about studies.
+- `executor.py`: `Executor` runs given `Run` objects in their run directories: `local` serially in
+  this process, `slurm` as a `submitit` job array (records `SUBMITTED` first; `wait=False` queues
+  and returns). It is the only one that removes the files of an earlier attempt
+  (`cli/run_single.py` only decides whether it may). Knows nothing about studies.
 - `study.py`: sweep nodes (`Axis`/`Zip`/`Product` over dotted config paths), `StudySetup(run_type,
   base, sweep, root, executor)` (what a study module defines as `STUDY`: the runs, the `root`
   (the study directory, named after the study), and the `ExecutorSettings` they execute with
-  (`LocalExecutorSettings()` or `SlurmExecutorSettings(...)` with its resources); resolves to `ResolvedRun`s; `run_directories()`/`results_directories()` give the
+  (local, or SLURM resources); resolves to `ResolvedRun`s; `run_directories()`/`results_directories()` give the
   paths of the created study, for other studies to read) and `Study` (`create` writes `<root>/study/`
   atomically with `study.json`, run ids and environment, and requires the input files of all runs
   to exist; `load` re-resolves the module and requires the recorded run ids; `execute_runs` skips
@@ -147,8 +145,7 @@ preprocessing), and presets and studies start from there:
   the sampler as an embedded `MCMCSettings`. Both read the preprocessed data and nothing else of
   the data side, so many inference runs share one preprocessing run.
 - `cli/` holds the entry points. `run_single.py` (task `single`) lists the run kinds explicitly
-  (`RUN_TYPES` and the `Config` subcommand union) and takes the run's executor as a second
-  subcommand (`executor:local` by default, `executor:slurm`). `run_study.py` (task `study`) is the
+  (`RUN_TYPES` and the `Config` subcommand union). `run_study.py` (task `study`) is the
   `study` command (`create`, `show`, `run`, `status`, `collect`, `report`), each taking the study
   module.
 

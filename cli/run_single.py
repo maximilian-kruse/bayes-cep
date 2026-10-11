@@ -21,12 +21,8 @@ change a value; the run then gets a new run id):
 
     pixi run single --run-dir working_data/debug config:from-file path/to/config.json
 
-The run executes in this process unless a second subcommand, after the one of the run, selects
-SLURM: `executor:slurm` (and `--no-wait` before the first subcommand to return after queueing);
-its resource options are listed by `--help`. `executor:local` is the default.
-
-    pixi run single --run-dir working_data/test config:reference-map ... \
-        executor:slurm --executor.time-min 60
+Add `--executor.cluster slurm` (and `--no-wait` to return after queueing) to run on SLURM; the
+resource options are listed by `--help`, as for `study run`.
 
 A single prior run, with every option listed by `--help`:
 
@@ -44,12 +40,7 @@ import tyro
 
 from bayes_cep.run.config import TYPE_KEY, RunConfig
 from bayes_cep.run.directories import STATUS_RECORD
-from bayes_cep.run.executor import (
-    LocalExecutorSettings,
-    RunOutcome,
-    SlurmExecutorSettings,
-    create_executor,
-)
+from bayes_cep.run.executor import Executor, ExecutorSettings, RunOutcome
 from bayes_cep.run.provenance import Environment
 from bayes_cep.run.template import Run
 from single_runs.map import MapRun, MapRunConfig
@@ -117,11 +108,6 @@ Config = (
     ]
 )
 
-Executor = (
-    Annotated[LocalExecutorSettings, tyro.conf.subcommand("local")]
-    | Annotated[SlurmExecutorSettings, tyro.conf.subcommand("slurm")]
-)
-
 
 # ==================================================================================================
 @dataclass(frozen=True)
@@ -137,9 +123,8 @@ class SingleRun:
             instead of its `results/` subdirectory, as the example data does.
         wait (bool): Whether to wait for the run to finish. `--no-wait` queues the run on SLURM
             and returns.
-        executor (LocalExecutorSettings | SlurmExecutorSettings): Where and with which resources
-            to run, chosen as a second subcommand; `executor:slurm` submits the run as a SLURM job,
-            whose logs go to `<run-dir>-jobs`.
+        executor (ExecutorSettings): Where and with which resources to run; `--executor.cluster
+            slurm` submits the run as a SLURM job, whose logs go to `<run-dir>-jobs`.
     """
 
     run_dir: Path
@@ -147,7 +132,7 @@ class SingleRun:
     overwrite: bool = False
     flat_results: bool = False
     wait: bool = True
-    executor: Executor = LocalExecutorSettings()
+    executor: ExecutorSettings = ExecutorSettings()
 
 
 # ==================================================================================================
@@ -172,11 +157,9 @@ def _check_run_directory_is_replaceable(run_dir: Path, overwrite: bool) -> None:
 def main(settings: SingleRun) -> None:
     """Execute the run; exit with status 1 if it failed."""
     run_dir = settings.run_dir
-    if not settings.wait and not isinstance(settings.executor, SlurmExecutorSettings):
-        raise SystemExit("--no-wait needs the SLURM executor (subcommand executor:slurm).")
     _check_run_directory_is_replaceable(run_dir, settings.overwrite)
     run = RUN_TYPES[type(settings.config)](settings.config, flat_results=settings.flat_results)
-    executor = create_executor(
+    executor = Executor(
         settings.executor, run_dir.parent / f"{run_dir.name}-jobs", job_name=run_dir.name
     )
     environment = Environment.collect_from_current_process()

@@ -11,7 +11,7 @@ from pathlib import Path
 from ls_bayesian.optimization.algorithms.scipy_lbfgs_b import ScipyLBFGSBSettings
 
 from bayes_cep.optimization.strategies import ScipyLBFGSBStrategy
-from bayes_cep.run.executor import SlurmExecutorSettings
+from bayes_cep.run.executor import ExecutorSettings
 from bayes_cep.run.study import Axis, Product, StudySetup
 from single_runs.map import MapRun
 from single_runs.reference import (
@@ -42,5 +42,5 @@ STUDY = StudySetup(
         )
     ),
     root=Path("working_data/optimizer_comparison"),
-    executor=SlurmExecutorSettings(time_min=240, cpus_per_task=4),
+    executor=ExecutorSettings(cluster="slurm", time_min=240, cpus_per_task=4),
 )

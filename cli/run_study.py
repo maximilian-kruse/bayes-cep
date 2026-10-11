@@ -1,6 +1,7 @@
 """Command line interface of simulation studies: create, run, inspect and summarize.
 
-This is the CLI of studies; a single run is started with `scripts/run.py` (`pixi run single`).
+This is the CLI of studies; a single run is started with `cli/single_run.py`
+(`pixi run single`).
 
 A study is a Python module in `studies/` defining `STUDY`: a base run configuration plus the
 sweeps over it, and the executor settings (local, or SLURM resources). Every command names the

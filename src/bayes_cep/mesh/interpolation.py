@@ -8,7 +8,7 @@ Classes:
 
 Note:
     The concrete strategies are (stateless) dataclasses on purpose: `tyro` only exposes a class as
-    a selectable subcommand (e.g. `--interpolation:linear-interpolation-strategy`) in the scripts'
+    a selectable subcommand (e.g. `--interpolation:linear-interpolation-strategy`) in the CLIs'
     CLIs if it is a dataclass; otherwise it freezes the argument to the default instance.
 """
 

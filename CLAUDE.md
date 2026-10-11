@@ -22,7 +22,7 @@ change → run checks → review diff.
   `test` env and the pytest settings in `pyproject.toml` stay for a future one; do not recreate
   tests unasked.
 - Tasks (run from the repository root; relative config paths resolve against it): `single`
-  (`scripts/run.py`, one run), `study` (`run/study_cli.py`), `example` and `example-preprocessing`/`-map`/
+  (`cli/single_run.py`, one run), `study` (`cli/run_study.py`), `example` and `example-preprocessing`/`-map`/
   `-mcmc` (regenerate the example data, all or one run; map depends on preprocessing, mcmc on
   map). The example directories are arguments of these tasks in `pyproject.toml`, not defaults in
   Python code.
@@ -110,7 +110,7 @@ through the `PYTHONPATH` set by the pixi activation. Modules of `run/`:
   exist only on the SLURM one), `create_executor` gives the `Executor`: `LocalExecutor` runs the
   `Run` objects serially in this process, `SlurmExecutor` as a `submitit` job array (records
   `SUBMITTED` first; `wait=False` queues and returns). The executor is the only one that removes
-  the files of an earlier attempt (`scripts/run.py` only decides whether it may). Knows nothing
+  the files of an earlier attempt (`cli/single_run.py` only decides whether it may). Knows nothing
   about studies.
 - `study.py`: sweep nodes (`Axis`/`Zip`/`Product` over dotted config paths), `StudySetup(run_type,
   base, sweep, root, executor)` (what a study module defines as `STUDY`: the runs, the `root`
@@ -124,8 +124,6 @@ through the `PYTHONPATH` set by the pixi activation. Modules of `run/`:
 - `progress.py`: `StepReporter` (numbered, timed steps in the log) and `describe_array`.
 - `array_record.py`: `ArrayRecord`, a frozen dataclass stored as one `.npy` per field from its
   `FILE_NAMES` mapping (`save`/`load`/`file_paths`); the base of the result records of the runs.
-- `study_cli.py`: the `study` command (`create`, `show`, `run`, `status`, `collect`, `report`), each
-  taking the study module.
 
 `single_runs/` holds the concrete runs, each module with its own config. The configs have no
 defaults for scientific parameters: `reference.py` holds all of them (constants and
@@ -147,13 +145,15 @@ preprocessing), and presets and studies start from there:
   the preprocessing run, or a MAP run's `map_estimate.npy`; the example data starts at the MAP), with
   the sampler as an embedded `MCMCSettings`. Both read the preprocessed data and nothing else of
   the data side, so many inference runs share one preprocessing run.
-- `scripts/run.py` lists the run kinds explicitly (`RUN_TYPES` and the `Config` subcommand union)
-  and takes the run's executor as a second subcommand (`executor:local` by default,
-  `executor:slurm`).
+- `cli/` holds the entry points. `single_run.py` (task `single`) lists the run kinds explicitly
+  (`RUN_TYPES` and the `Config` subcommand union) and takes the run's executor as a second
+  subcommand (`executor:local` by default, `executor:slurm`). `run_study.py` (task `study`) is the
+  `study` command (`create`, `show`, `run`, `status`, `collect`, `report`), each taking the study
+  module.
 
 Each run plots in its own `report` method, using the `postprocessing/` helpers. A new run kind =
 config + `Run` subclass in one module, plus its entries in `RUN_TYPES` and the `Config` union of
-`scripts/run.py`; file names of results are defined once per run (an `ArrayRecord` or module
+`cli/single_run.py`; file names of results are defined once per run (an `ArrayRecord` or module
 constants) and used by `outputs`, `_execute` and `report`.
 `studies/*.py` define `STUDY`; they are not archived with a study (the recorded commit and patch
 cover them), and set their own `root`. The reference factories of `single_runs/reference.py`

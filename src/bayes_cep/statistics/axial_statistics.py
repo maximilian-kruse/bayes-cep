@@ -8,6 +8,16 @@ is already well-defined for axial data, with no separate branch-folding step nee
 angle (halved) is the axial mean, already on the principal branch $(-\pi/2, \pi/2]$, and its
 magnitude measures concentration (`1`: all samples identical, `0`: uniformly spread).
 
+Note:
+    There are two functions for the axial mean on purpose; they are not interchangeable. Both
+    take the angle of the mean resultant, but `compute_axial_mean` needs the whole array in memory
+    and reduces over any axis (a single field, as in the prior mean and in
+    `shift_angles_to_minimize_axial_variance`), while `compute_axial_mean_and_variance` accumulates
+    the resultant block by block over the sample axis of a `SampleStore` (a Zarr chain on disk that
+    does not fit in memory) and also returns the variance. `compute_axial_sine_deviation` is not a
+    third version of the mean: it is the deviation from a mean that is given to it, shared by the
+    streamed diagnostics and the correlation length.
+
 Functions:
     compute_axial_mean: Axial mean of an in-memory array of angles.
     compute_axial_mean_and_variance: Axial mean and variance of angle samples, read block by block.

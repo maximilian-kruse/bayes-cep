@@ -88,7 +88,7 @@ class PriorRun(Run[PriorRunConfig]):
         "metrics.json": "variance_mean/min/max: statistics of the pointwise variance field; "
         "correlation_distance_threshold: distance where the binned correlation first drops below "
         "the threshold (model-free); correlation_length: fitted Matern length; seconds.",
-        "plots/": "sample.png, pointwise_variance.png, correlation_curve.png (study report).",
+        "plots/": "sample.pdf, pointwise_variance.pdf, correlation_curve.pdf (study report).",
     }
 
     @override
@@ -108,13 +108,13 @@ class PriorRun(Run[PriorRunConfig]):
         render_axial_angle_field(
             mesh,
             np.load(results_dir / SAMPLE_FILE_NAME),
-            plots_dir / "sample.png",
+            plots_dir / "sample.pdf",
             f"prior sample ({label})",
         )
         render_point_field(
             mesh,
             np.load(results_dir / POINTWISE_VARIANCE_FILE_NAME),
-            plots_dir / "pointwise_variance.png",
+            plots_dir / "pointwise_variance.pdf",
             f"pointwise axial variance ({label}), mean {metrics['variance_mean']:.3g}",
             "axial variance",
             "viridis",
@@ -128,7 +128,7 @@ class PriorRun(Run[PriorRunConfig]):
             fitted_length=metrics["correlation_length"],
             correlation_threshold=config.correlation.correlation_threshold,
             distance_threshold=metrics["correlation_distance_threshold"],
-            path=plots_dir / "correlation_curve.png",
+            path=plots_dir / "correlation_curve.pdf",
             title=label,
         )
 

@@ -1,4 +1,6 @@
-"""Line plots written to PNG files, with matplotlib's object-oriented API.
+"""Line plots written to image files, with matplotlib's object-oriented API.
+
+The format follows the suffix of the output path: use `.pdf` (vector graphics) for publications.
 
 `matplotlib.figure.Figure` is used directly, not `pyplot`: no global figure registry, no GUI
 backend, so the functions are safe on a headless machine and in parallel.
@@ -32,7 +34,7 @@ def plot_autocorrelation(
     Args:
         autocorrelation (np.ndarray): One function per column, shape `(num_lags, num_functions)`,
             for the lags `0, ..., num_lags - 1`, e.g. columns of `compute_axial_autocorrelation`.
-        path (Path): Output PNG file.
+        path (Path): Output file; the format follows the suffix, e.g. `.pdf`.
         labels (Sequence[str] | None): Legend entry of each function. Defaults to no legend.
         title (str): Title of the plot. Defaults to none.
 
@@ -81,7 +83,7 @@ def plot_correlation_curve(
         correlation_threshold (float): Correlation level of the horizontal reference line.
         distance_threshold (float): Distance where the correlation drops below the level; no
             vertical line is drawn if it is not finite.
-        path (Path): Output PNG file.
+        path (Path): Output file; the format follows the suffix, e.g. `.pdf`.
         title (str): Title of the plot. Defaults to none.
     """
     figure = Figure(figsize=(6, 4))
@@ -119,7 +121,7 @@ def plot_optimization_history(
     Args:
         loss_history (np.ndarray): Loss per iteration, shape `(num_iterations,)`.
         gradient_norm_history (np.ndarray): Gradient norm per iteration, same shape.
-        path (Path): Output PNG file.
+        path (Path): Output file; the format follows the suffix, e.g. `.pdf`.
     """
     figure = Figure(figsize=(10, 4))
     loss_axis, gradient_axis = figure.subplots(1, 2)
@@ -143,7 +145,7 @@ def plot_histogram(
 
     Args:
         values (np.ndarray): Values, shape `(num_values,)`; non-finite entries are ignored.
-        path (Path): Output PNG file.
+        path (Path): Output file; the format follows the suffix, e.g. `.pdf`.
         xlabel (str): Label of the horizontal axis.
         title (str): Title of the plot. Defaults to none.
 
@@ -173,7 +175,7 @@ def plot_traces(
 
     Args:
         traces (np.ndarray): One chain per column, shape `(num_samples, num_components)`.
-        path (Path): Output PNG file.
+        path (Path): Output file; the format follows the suffix, e.g. `.pdf`.
         labels (Sequence[str]): Vertical-axis label of each component.
         burn_in (int): Number of leading samples, marked by a vertical line.
 

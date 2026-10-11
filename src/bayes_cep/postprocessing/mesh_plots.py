@@ -1,4 +1,7 @@
-"""Scalar fields on a triangular surface mesh, rendered off-screen into PNG files.
+"""Scalar fields on a triangular surface mesh, rendered off-screen into image files.
+
+The format follows the suffix of the output path: `.pdf`, `.svg`, `.eps` and `.ps` are written as
+vector graphics (`VECTOR_SUFFIXES`, for publications), any other suffix (`.png`) as a raster image.
 
 Functions:
     render_cell_field: Render a field with one value per simplex.
@@ -17,6 +20,7 @@ from bayes_cep.mesh.topology import get_triangle_connectivity
 from bayes_cep.statistics.axial_statistics import wrap_axial_angles
 
 WINDOW_SIZE = (1000, 800)
+VECTOR_SUFFIXES = (".pdf", ".svg", ".eps", ".ps")
 TITLE_FONT_SIZE = 10
 
 
@@ -30,12 +34,12 @@ def render_cell_field(
     cmap: str,
     clim: tuple[float, float] | None = None,
 ) -> None:
-    """Render a field with one value per simplex of `mesh` into a PNG.
+    """Render a field with one value per simplex of `mesh` into an image file.
 
     Args:
         mesh (pv.UnstructuredGrid): Triangular surface mesh; not modified.
         simplex_values (np.ndarray): Values, shape `(num_simplices,)`.
-        path (Path): Output PNG file.
+        path (Path): Output file; see the module docstring for the formats.
         title (str): Text in the corner of the image.
         name (str): Name of the field, shown at the color bar.
         cmap (str): Matplotlib color map name.
@@ -57,12 +61,12 @@ def render_point_field(
     cmap: str,
     clim: tuple[float, float] | None = None,
 ) -> None:
-    """Render a field with one value per vertex of `mesh` into a PNG.
+    """Render a field with one value per vertex of `mesh` into an image file.
 
     Args:
         mesh (pv.UnstructuredGrid): Triangular surface mesh; not modified.
         vertex_values (np.ndarray): Values, shape `(num_vertices,)`.
-        path (Path): Output PNG file.
+        path (Path): Output file; see the module docstring for the formats.
         title (str): Text in the corner of the image.
         name (str): Name of the field, shown at the color bar.
         cmap (str): Matplotlib color map name.
@@ -84,7 +88,7 @@ def render_vertex_field_on_simplices(
     cmap: str,
     clim: tuple[float, float] | None = None,
 ) -> None:
-    """Render a field with one value per vertex of `mesh` as one value per simplex into a PNG.
+    """Render a field with one value per vertex of `mesh` as one value per simplex into a file.
 
     Each simplex shows the value of the vertex nearest to its centroid, so that the plot has the
     resolution of the piecewise-constant fields the forward model works with.
@@ -92,7 +96,7 @@ def render_vertex_field_on_simplices(
     Args:
         mesh (pv.UnstructuredGrid): Triangular surface mesh; not modified.
         vertex_values (np.ndarray): Values, shape `(num_vertices,)`.
-        path (Path): Output PNG file.
+        path (Path): Output file; see the module docstring for the formats.
         title (str): Text in the corner of the image.
         name (str): Name of the field, shown at the color bar.
         cmap (str): Matplotlib color map name.
@@ -111,12 +115,12 @@ def render_axial_angle_field(
     path: Path,
     title: str,
 ) -> None:
-    r"""Render a per-vertex fiber-angle field, wrapped onto $(-\pi/2, \pi/2]$, into a PNG.
+    r"""Render a per-vertex fiber-angle field, wrapped onto $(-\pi/2, \pi/2]$, into an image file.
 
     Args:
         mesh (pv.UnstructuredGrid): Triangular surface mesh; not modified.
         vertex_angles (np.ndarray): Angles in radians, shape `(num_vertices,)`.
-        path (Path): Output PNG file.
+        path (Path): Output file; see the module docstring for the formats.
         title (str): Text in the corner of the image.
     """
     render_vertex_field_on_simplices(
@@ -138,9 +142,13 @@ def _render(
     cmap: str,
     clim: tuple[float, float] | None,
 ) -> None:
-    """Render the active scalars of `mesh` off-screen into a PNG."""
+    """Render the active scalars of `mesh` off-screen into a vector or raster image, by the
+    suffix of `path`."""
     plotter = pv.Plotter(off_screen=True, window_size=list(WINDOW_SIZE))
     plotter.add_mesh(mesh, cmap=cmap, clim=clim)
     plotter.add_text(title, font_size=TITLE_FONT_SIZE)
-    plotter.screenshot(path)
+    if path.suffix.lower() in VECTOR_SUFFIXES:
+        plotter.save_graphic(path)
+    else:
+        plotter.screenshot(path)
     plotter.close()

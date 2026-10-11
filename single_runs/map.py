@@ -89,7 +89,7 @@ class MapRun(Run[MapRunConfig]):
         "ground truth (error_mean_abs/median_abs/max_abs/rmse), plus the mean absolute error of "
         "the prior mean as a baseline (prior_mean_error_mean_abs).",
         "optimizer.log": "Iteration table of the optimizer.",
-        "plots/": "map_estimate.png, difference_to_truth.png, optimization_history.png (study "
+        "plots/": "map_estimate.pdf, difference_to_truth.pdf, optimization_history.pdf (study "
         "report).",
     }
 
@@ -109,14 +109,14 @@ class MapRun(Run[MapRunConfig]):
         results = MapResults.load(self.results_dir(run_dir))
         mesh = RawDataDirectory.from_configured_path(problem.raw_dir).load_mesh()
         render_axial_angle_field(
-            mesh, results.estimate, plots_dir / "map_estimate.png", "map estimate"
+            mesh, results.estimate, plots_dir / "map_estimate.pdf", "map estimate"
         )
         difference = compute_axial_data_diff(results.estimate, ground_truth)
         limit = float(np.abs(difference).max())
         render_vertex_field_on_simplices(
             mesh,
             difference,
-            plots_dir / "difference_to_truth.png",
+            plots_dir / "difference_to_truth.pdf",
             f"MAP - ground truth, mean abs {metrics['error_mean_abs']:.3g} rad",
             "difference [rad]",
             "coolwarm",
@@ -125,7 +125,7 @@ class MapRun(Run[MapRunConfig]):
         plot_optimization_history(
             results.loss_history,
             results.gradient_norm_history,
-            plots_dir / "optimization_history.png",
+            plots_dir / "optimization_history.pdf",
         )
 
     # ----------------------------------------------------------------------------------------------

@@ -192,14 +192,14 @@ class McmcRun(Run[McmcRunConfig]):
         render_point_field(
             mesh,
             diagnostics.effective_sample_size,
-            plots_dir / "effective_sample_size_map.png",
+            plots_dir / "effective_sample_size_map.pdf",
             f"effective sample size, minimum {metrics['effective_sample_size_min']:.3g}",
             "effective sample size",
             "viridis",
         )
         plot_histogram(
             diagnostics.effective_sample_size,
-            plots_dir / "effective_sample_size_histogram.png",
+            plots_dir / "effective_sample_size_histogram.pdf",
             "effective sample size",
             f"{100 * metrics['fraction_truncated']:.3g}% of the vertices truncated at "
             f"max_lag = {config.diagnostics.max_lag}",
@@ -209,13 +209,13 @@ class McmcRun(Run[McmcRunConfig]):
         labels = [f"vertex {index}" for index in diagnostics.component_indices]
         plot_traces(
             diagnostics.component_traces,
-            plots_dir / "traces.png",
+            plots_dir / "traces.pdf",
             labels,
             config.diagnostics.burn_in,
         )
         plot_autocorrelation(
             diagnostics.component_autocorrelation,
-            plots_dir / "autocorrelation.png",
+            plots_dir / "autocorrelation.pdf",
             labels,
             "axial autocorrelation after the burn-in",
         )

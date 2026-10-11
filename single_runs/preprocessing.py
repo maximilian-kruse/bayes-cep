@@ -77,7 +77,7 @@ class PreprocessingRun(Run[PreprocessingRunConfig]):
         "vertices.",
         "results/observation_noise_variance.npy": "Variance of the observation noise (scalar).",
         "metrics.json": "num_observed_vertices and prior_mean_angle [rad].",
-        "plots/": "ground_truth.png (study report).",
+        "plots/": "ground_truth.pdf (study report).",
     }
 
     # ----------------------------------------------------------------------------------------------
@@ -94,7 +94,7 @@ class PreprocessingRun(Run[PreprocessingRunConfig]):
         data = PreprocessedData.load(self.results_dir(run_dir))
         mesh = RawDataDirectory.from_configured_path(self.config.raw_dir).load_mesh()
         render_axial_angle_field(
-            mesh, data.ground_truth, plots_dir / "ground_truth.png", "ground truth"
+            mesh, data.ground_truth, plots_dir / "ground_truth.pdf", "ground truth"
         )
 
     # ----------------------------------------------------------------------------------------------

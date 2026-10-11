@@ -24,5 +24,5 @@ STUDY = StudySetup(
         Axis("prior.kappa", (0.025, 0.05, 0.1)),
         Axis("prior.tau", (5.0, 10.0, 20.0)),
     ),
-    root=Path("working_data/prior_investigation"),
+    root=Path(__file__).parent / "../working_data/prior_investigation",
 )

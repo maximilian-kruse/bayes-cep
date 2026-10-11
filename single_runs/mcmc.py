@@ -157,6 +157,7 @@ class McmcRun(Run[McmcRunConfig]):
     """Sample the posterior of the preprocessed data, from the configured initial state."""
 
     config_type = McmcRunConfig
+    name = "mcmc"
     outputs = {
         "results/samples.zarr": "MCMC chain (zarr store, one sample per row).",
         "results/effective_sample_size.npy": "Split-chain effective sample size per vertex.",

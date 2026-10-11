@@ -74,6 +74,7 @@ class PriorRun(Run[PriorRunConfig]):
     """Sample a zero-mean prior, then estimate its pointwise variance and correlation length."""
 
     config_type = PriorRunConfig
+    name = "prior"
     outputs = {
         f"results/{SAMPLE_FILE_NAME}": "One prior sample [rad] per vertex, re-branched onto a "
         "single pi-periodic branch around its axial mean; drawn first, for visualization.",

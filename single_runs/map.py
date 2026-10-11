@@ -76,6 +76,7 @@ class MapRun(Run[MapRunConfig]):
     """Compute the MAP estimate of the posterior of the preprocessed data."""
 
     config_type = MapRunConfig
+    name = "map"
     outputs = {
         f"results/{MapResults.FILE_NAMES['estimate']}": "MAP estimate of the fiber angle [rad] "
         "per vertex.",

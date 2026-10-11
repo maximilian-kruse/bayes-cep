@@ -31,6 +31,6 @@ STUDY = StudySetup(
         ),
         Axis("problem.data_dir", tuple(DATA_DIRS)),
     ),
-    root=Path("working_data/map_patient"),
+    root=Path(__file__).parent / "../working_data/map_patient",
     executor=ExecutorSettings(cluster="slurm", time_min=240, cpus_per_task=4),
 )

@@ -67,6 +67,7 @@ class PreprocessingRun(Run[PreprocessingRunConfig]):
     """Build the ground truth and the prior mean, and generate the synthetic observations."""
 
     config_type = PreprocessingRunConfig
+    name = "preprocessing"
     outputs = {
         "results/ground_truth_angle_field.npy": "Ground-truth fiber angle [rad] per vertex.",
         "results/prior_mean_angle_field.npy": "Constant prior mean [rad] per vertex: the axial "

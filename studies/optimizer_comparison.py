@@ -41,6 +41,6 @@ STUDY = StudySetup(
             ),
         )
     ),
-    root=Path("working_data/optimizer_comparison"),
+    root=Path(__file__).parent / "../working_data/optimizer_comparison",
     executor=ExecutorSettings(cluster="slurm", time_min=240, cpus_per_task=4),
 )

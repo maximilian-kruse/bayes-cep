@@ -98,13 +98,22 @@ parameters; `reference.py` holds them as constants and `reference_*_config` fact
   After sampling, `mcmc.py` streams the chain diagnostics (`ChainDiagnostics` record: ESS and
   autocorrelation time per vertex; trace and autocorrelation of `diagnostics.plotted_components`,
   none/one/several vertices) and its `report` only plots them.
-- A new run kind = config + `Run` subclass in one module, plus its entries in `RUN_TYPES` and the
-  `Config` union of `cli/run_single.py`. Result file names are defined once per run (an `ArrayRecord`
-  or module constants) and used by `outputs`, `_execute` and `report`.
+- A new run kind = config + `Run` subclass in one module, with a class attribute `name` (the
+  `config:<name>` subcommand of `cli/run_single.py`; no name = not on the command line). There is
+  no global registry: `cli/run_single.py` creates a `RunRegistry` (`run/registry.py`), registers
+  every named run defined in the `single_runs` package, plus those of each file given as
+  `--run-file path.py` (repeatable, before the subcommand), and builds its subcommands from it.
+  Result file names are defined once per run (an `ArrayRecord` or module constants) and used by
+  `outputs`, `_execute` and `report`.
 
 `studies/*.py` define `STUDY`, set their own `root` and `RAW_DIR`, and are not archived with a study
-(the recorded commit and patch cover them). A study of inference runs sweeps `problem.data_dir` over
-`PREPROCESSING_STUDY.results_directories()`; that preprocessing study must be created and run first.
+(the recorded commit and patch cover them). A study module sets `root` relative to itself,
+`Path(__file__).parent / "../working_data/<name>"`, so a module (and root) may live outside the
+repository. `StudySetup` makes a `root` inside the repository repo-relative: the run id hashes the
+configuration paths, which derive from `root` for studies that read other studies' results, so an
+absolute `root` would tie run ids (and `Study.load` of existing studies) to the checkout location.
+A study of inference runs sweeps `problem.data_dir` over `PREPROCESSING_STUDY.results_directories()`;
+that preprocessing study must be created and run first.
 
 ## Design & style
 - Priorities: numerical correctness > reproducibility > clear APIs > performance > convenience.

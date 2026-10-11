@@ -61,7 +61,7 @@ class OptimizerStrategy(ABC):
     """ABC interface for building a matched `OptimizationModel`/`BaseOptimizer` pair.
 
     Methods:
-        build: Build the model and optimizer for a given `LogPosterior` and prior.
+        build: Build the model and optimizer for a given `LogPosterior`.
     """
 
     # ----------------------------------------------------------------------------------------------

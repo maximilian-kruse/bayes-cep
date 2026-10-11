@@ -6,7 +6,7 @@ Classes:
     MCMCAlgorithmName: Selectable MCMC algorithms.
     ZarrStorageSettings: Settings for the Zarr sample storage.
     MCMCSettings: Settings for `MCMCBuilder`.
-    MCMCBuilder: Builds a `Sampler` from a posterior, its prior, and `MCMCSettings`.
+    MCMCBuilder: Builds a `Sampler` from a posterior and `MCMCSettings`.
 """
 
 from dataclasses import dataclass, field
@@ -104,7 +104,7 @@ class MCMCSettings:
 
 # ==================================================================================================
 class MCMCBuilder:
-    """Builds a `Sampler` from a posterior, its prior, and `MCMCSettings`.
+    """Builds a `Sampler` from a posterior and `MCMCSettings`; the prior is `LogPosterior.prior`.
 
     Attributes:
         outputs (tuple[MCMCOutput, ...]): The standard outputs updated by the sampler: the running

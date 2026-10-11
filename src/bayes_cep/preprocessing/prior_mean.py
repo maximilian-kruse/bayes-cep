@@ -15,11 +15,10 @@ def build_constant_prior_mean(
 ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
     """Build a spatially constant prior-mean field from a ground-truth angle field.
 
-    Use the spatial axial (mod-$\\pi$) mean of the one ground-truth field as a
-    deliberately uninformative constant prior mean instead. A plain arithmetic mean would be invalid
-    here, the same way it is for `angle_field.interpolate_simplex_field_to_vertices`:
-    `ground_truth_angle_field` is $\\pi$-periodic, so values near opposite ends of its branch can be
-    physically adjacent.
+    The constant is the spatial axial (mod-$\\pi$) mean of the one ground-truth field, a
+    deliberately uninformative prior mean. A plain arithmetic mean would be invalid here, the same
+    way it is for `angle_field.interpolate_simplex_field_to_vertices`: `ground_truth_angle_field`
+    is $\\pi$-periodic, so values near opposite ends of its branch can be physically adjacent.
 
     Args:
         ground_truth_angle_field (np.ndarray): Per-vertex ground-truth fiber angle field, shape

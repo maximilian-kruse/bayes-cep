@@ -8,8 +8,9 @@ Classes:
 
 Note:
     The concrete strategies are (stateless) dataclasses on purpose: `tyro` only exposes a class as
-    a selectable subcommand (e.g. `--interpolation:linear-interpolation-strategy`) in the CLIs'
-    CLIs if it is a dataclass; otherwise it freezes the argument to the default instance.
+    a selectable subcommand (e.g. `--config.problem.interpolation:linear-interpolation-strategy`)
+    in the CLI of `cli/run_single.py` if it is a dataclass; otherwise it freezes the argument to
+    the default instance.
 """
 
 from abc import ABC, abstractmethod

@@ -2,8 +2,8 @@ r"""Ground-truth fiber-angle field: a synthetic (SPDE-sampled) source, and the s
 between it and the real-data source in `angle_field.py`.
 
 A simulation study picks exactly one `GroundTruthStrategy` per run — never both — via
-`PreprocessingRunConfig.ground_truth`. The prior mean is not part of
-this strategy: it's computed uniformly from whichever ground truth comes out, via
+`PreprocessingRunConfig.ground_truth` (in `single_runs/preprocessing.py`). The prior mean is not
+part of this strategy: it is computed uniformly from whichever ground truth comes out, via
 [`prior_mean.build_constant_prior_mean`][bayes_cep.preprocessing.prior_mean.build_constant_prior_mean].
 
 Classes:
@@ -17,9 +17,9 @@ Functions:
 
 Note:
     The concrete strategies and their settings are dataclasses on purpose: `tyro` only exposes a
-    class as a selectable subcommand (e.g. `--ground-truth:synthetic-ground-truth-strategy`) in
-    `cli/run_single.py`'s CLI if it is a dataclass; otherwise it freezes the argument to
-    the default instance.
+    class as a selectable subcommand (e.g.
+    `--config.ground-truth:synthetic-ground-truth-strategy`) in the CLI of `cli/run_single.py` if it
+    is a dataclass; otherwise it freezes the argument to the default instance.
 """
 
 from abc import ABC, abstractmethod

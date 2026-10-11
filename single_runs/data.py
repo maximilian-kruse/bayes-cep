@@ -17,8 +17,7 @@ import numpy as np
 import pyvista as pv
 
 from bayes_cep.mesh.io import load_pyvista_mesh
-from bayes_cep.run.array_record import ArrayRecord
-from bayes_cep.run.directories import resolve_repository_path
+from bayes_cep.run.directories import ArrayRecord, resolve_repository_path
 
 MESH_FILE_NAME = "mesh.vtu"
 BASIS_VECTORS_FILE_NAME = "basis_vecs.npy"

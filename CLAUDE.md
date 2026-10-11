@@ -103,7 +103,9 @@ through the `PYTHONPATH` set by the pixi activation. Modules of `run/`:
   stay headless) and `input_files` (hashed into the metadata). A run's id is its config alone;
   the content of the input files and the code state are in `metadata.json`.
 - `directories.py`: on-disk layout (`RunDirectory`, `StudyDirectory`), atomic JSON records,
-  repository root and `resolve_repository_path`, the time format.
+  repository root and `resolve_repository_path`, the time format, and `ArrayRecord` (a frozen
+  dataclass stored as one `.npy` per field from its `FILE_NAMES` mapping; `save`/`load`/
+  `file_paths`), the base of the result records of the runs.
 - `provenance.py`: `Environment` (git states, editable packages, `pixi.lock` hash; collected once
   per submission), `RunMetadata` (time, host, SLURM ids, input hashes), `EnvironmentArchive`
   (lock/pyproject/conda spec/patch of uncommitted changes, copied into the study directory).
@@ -121,8 +123,6 @@ through the `PYTHONPATH` set by the pixi activation. Modules of `run/`:
   done runs and, unless `include_active`, submitted/running ones; `plot_finished_runs`;
   `build_run_table`/`write_run_table`).
 - `progress.py`: `StepReporter` (numbered, timed steps in the log) and `describe_array`.
-- `array_record.py`: `ArrayRecord`, a frozen dataclass stored as one `.npy` per field from its
-  `FILE_NAMES` mapping (`save`/`load`/`file_paths`); the base of the result records of the runs.
 
 `single_runs/` holds the concrete runs, each module with its own config. The configs have no
 defaults for scientific parameters: `reference.py` holds all of them (constants and

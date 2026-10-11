@@ -26,9 +26,8 @@ from bayes_cep.postprocessing.mesh_plots import (
     render_axial_angle_field,
     render_vertex_field_on_simplices,
 )
-from bayes_cep.run.array_record import ArrayRecord
 from bayes_cep.run.config import RunConfig
-from bayes_cep.run.directories import RunDirectory, resolve_repository_path
+from bayes_cep.run.directories import ArrayRecord, RunDirectory, resolve_repository_path
 from bayes_cep.run.progress import StepReporter
 from bayes_cep.run.template import Metrics, Run
 from bayes_cep.statistics.axial_statistics import compute_axial_data_diff

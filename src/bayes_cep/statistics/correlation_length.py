@@ -29,6 +29,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import scipy.sparse as sp
+from ls_bayesian.mcmc.storage import SampleStore, iterate_sample_blocks
 from scipy.optimize import curve_fit
 from scipy.special import kv
 
@@ -38,7 +39,6 @@ from bayes_cep.statistics.axial_statistics import (
     compute_axial_mean_and_variance,
     compute_axial_sine_deviation,
 )
-from bayes_cep.statistics.sample_blocks import SampleStore, iterate_sample_blocks
 
 
 # ==================================================================================================

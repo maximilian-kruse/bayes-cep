@@ -28,8 +28,7 @@ Functions:
 """
 
 import numpy as np
-
-from bayes_cep.statistics.sample_blocks import SampleStore, iterate_sample_blocks
+from ls_bayesian.mcmc.storage import SampleStore, iterate_sample_blocks
 
 
 # ==================================================================================================

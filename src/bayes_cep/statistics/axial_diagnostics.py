@@ -26,14 +26,14 @@ from ls_bayesian.mcmc.diagnostics import (
     DEFAULT_BLOCK_SIZE,
     EffectiveSampleSizeResult,
     compute_autocorrelation,
-    estimate_effective_sample_size,
+    compute_split_chain_effective_sample_size,
 )
+from ls_bayesian.mcmc.storage import MappedSampleStore, SampleStore
 
 from bayes_cep.statistics.axial_statistics import (
     compute_axial_mean_and_variance,
     compute_axial_sine_deviation,
 )
-from bayes_cep.statistics.sample_blocks import MappedSampleStore, SampleStore
 
 
 # ==================================================================================================
@@ -46,11 +46,11 @@ def compute_axial_effective_sample_size(
     r"""Compute the effective sample size and autocorrelation time of angle samples, per vertex.
 
     The chain, after discarding `burn_in` samples, is split into two halves and treated as two
-    chains; see `ls_bayesian.mcmc.diagnostics.estimate_effective_sample_size` for the estimator and
-    the meaning of `max_lag` and of the `truncated` flag. Reads the store block by block, in three
-    passes over it: for the axial mean, and two for the mean and the autocovariance of $s$. The
-    work is $O(N K d)$ for $N$ samples, $d$ vertices and $K$ = `max_lag`; memory is independent
-    of $N$.
+    chains; see `ls_bayesian.mcmc.diagnostics.compute_split_chain_effective_sample_size` for the
+    estimator and the meaning of `max_lag` and of the `truncated` flag. Reads the store block by
+    block, in three passes over it: for the axial mean, and two for the mean and the
+    autocovariance of $s$. The work is $O(N K d)$ for $N$ samples, $d$ vertices and $K$ =
+    `max_lag`; memory is independent of $N$.
 
     Args:
         samples (SampleStore): Angle samples in radians, shape `(num_samples, num_vertices)`,
@@ -70,7 +70,7 @@ def compute_axial_effective_sample_size(
         ValueError: If `burn_in`, `max_lag` or `block_size` are invalid for the samples.
     """
     centered_sine = _build_centered_sine_store(samples, burn_in, block_size)
-    return estimate_effective_sample_size(
+    return compute_split_chain_effective_sample_size(
         centered_sine, max_lag=max_lag, burn_in=burn_in, block_size=block_size
     )
 

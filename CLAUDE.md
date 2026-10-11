@@ -39,7 +39,8 @@ parameter $m$ is a fiber-orientation angle per mesh vertex.
 
 - `mesh/io.py`: pyvista → dolfinx mesh conversion matching vertex order; `load_pyvista_mesh`
   validates triangle-only. `mesh/topology.py`: `get_triangle_connectivity` is the one place that
-  reads the triangles of a pyvista mesh. `mesh/interpolation.py`: `InterpolationStrategy` ABC assembling the sparse
+  reads the triangles of a pyvista mesh, plus unique edges and boundary vertices.
+  `mesh/geodesic.py`: edge-length graph and graph distances. `mesh/interpolation.py`: `InterpolationStrategy` ABC assembling the sparse
   vertex→simplex matrix (linear-average or nearest-neighbor); the strategy is always passed
   explicitly.
 - `posterior/prior.py`: `PriorParameters` (kappa, tau, seed; the one class for them, used by

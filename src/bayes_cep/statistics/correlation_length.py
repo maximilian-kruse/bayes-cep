@@ -32,11 +32,8 @@ import scipy.sparse as sp
 from scipy.optimize import curve_fit
 from scipy.special import kv
 
-from bayes_cep.mesh.geodesic import (
-    assemble_edge_length_graph,
-    compute_graph_distances,
-    find_boundary_vertices,
-)
+from bayes_cep.mesh.geodesic import assemble_edge_length_graph, compute_graph_distances
+from bayes_cep.mesh.topology import find_boundary_vertices
 from bayes_cep.statistics.axial_statistics import (
     compute_axial_mean_and_variance,
     compute_axial_sine_deviation,

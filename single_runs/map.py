@@ -27,12 +27,22 @@ from bayes_cep.postprocessing.mesh_plots import (
     render_vertex_field_on_simplices,
 )
 from bayes_cep.run.config import RunConfig
-from bayes_cep.run.directories import ArrayRecord, RunDirectory, resolve_repository_path
+from bayes_cep.run.directories import (
+    METRICS_RECORD,
+    ArrayRecord,
+    RunDirectory,
+    resolve_repository_path,
+)
 from bayes_cep.run.progress import StepReporter
 from bayes_cep.run.template import Metrics, Run
 from bayes_cep.statistics.axial_statistics import compute_axial_data_diff
 from single_runs.data import PreprocessedData, RawDataDirectory
 from single_runs.inference import InferenceProblemConfig, assemble_posterior
+
+ESTIMATE_PLOT_FILE_NAME = "map_estimate.pdf"
+DIFFERENCE_PLOT_FILE_NAME = "difference_to_truth.pdf"
+OPTIMIZATION_HISTORY_PLOT_FILE_NAME = "optimization_history.pdf"
+OPTIMIZER_LOG_FILE_NAME = "optimizer.log"
 
 
 # ==================================================================================================
@@ -84,13 +94,13 @@ class MapRun(Run[MapRunConfig]):
         "iterate.",
         f"results/{MapResults.FILE_NAMES['gradient_norm_history']}": "Gradient norm at every "
         "accepted iterate.",
-        "metrics.json": "Optimization statistics (success, num_iterations, loss and gradient norm "
+        METRICS_RECORD: "Optimization statistics (success, num_iterations, loss and gradient norm "
         "first/last, seconds_optimization) and axial error [rad] of the MAP estimate against the "
         "ground truth (error_mean_abs/median_abs/max_abs/rmse), plus the mean absolute error of "
         "the prior mean as a baseline (prior_mean_error_mean_abs).",
-        "optimizer.log": "Iteration table of the optimizer.",
-        "plots/": "map_estimate.pdf, difference_to_truth.pdf, optimization_history.pdf (study "
-        "report).",
+        OPTIMIZER_LOG_FILE_NAME: "Iteration table of the optimizer.",
+        "plots/": f"{ESTIMATE_PLOT_FILE_NAME}, {DIFFERENCE_PLOT_FILE_NAME}, "
+        f"{OPTIMIZATION_HISTORY_PLOT_FILE_NAME} (study report).",
     }
 
     # ----------------------------------------------------------------------------------------------
@@ -109,14 +119,14 @@ class MapRun(Run[MapRunConfig]):
         results = MapResults.load(self.results_dir(run_dir))
         mesh = RawDataDirectory.from_configured_path(problem.raw_dir).load_mesh()
         render_axial_angle_field(
-            mesh, results.estimate, plots_dir / "map_estimate.pdf", "map estimate"
+            mesh, results.estimate, plots_dir / ESTIMATE_PLOT_FILE_NAME, "map estimate"
         )
         difference = compute_axial_data_diff(results.estimate, ground_truth)
         limit = float(np.abs(difference).max())
         render_vertex_field_on_simplices(
             mesh,
             difference,
-            plots_dir / "difference_to_truth.pdf",
+            plots_dir / DIFFERENCE_PLOT_FILE_NAME,
             f"MAP - ground truth, mean abs {metrics['error_mean_abs']:.3g} rad",
             "difference [rad]",
             "coolwarm",
@@ -125,7 +135,7 @@ class MapRun(Run[MapRunConfig]):
         plot_optimization_history(
             results.loss_history,
             results.gradient_norm_history,
-            plots_dir / "optimization_history.pdf",
+            plots_dir / OPTIMIZATION_HISTORY_PLOT_FILE_NAME,
         )
 
     # ----------------------------------------------------------------------------------------------
@@ -135,7 +145,7 @@ class MapRun(Run[MapRunConfig]):
         assembled = assemble_posterior(self.config.problem, steps, logger)
         data = assembled.data
         optimizer_logger_settings = LoggerSettings(
-            print_to_console=self.write_to_console, logfile_path=run_dir / "optimizer.log"
+            print_to_console=self.write_to_console, logfile_path=run_dir / OPTIMIZER_LOG_FILE_NAME
         )
         with BaseLogger(optimizer_logger_settings, prefix="map") as optimizer_logger:
             optimizer_name = type(self.config.optimizer).__name__

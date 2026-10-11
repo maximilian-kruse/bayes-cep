@@ -23,7 +23,7 @@ from bayes_cep.posterior.prior import PriorParameters, build_fiber_angle_prior
 from bayes_cep.postprocessing.curve_plots import plot_correlation_curve
 from bayes_cep.postprocessing.mesh_plots import render_axial_angle_field, render_point_field
 from bayes_cep.run.config import RunConfig
-from bayes_cep.run.directories import RunDirectory
+from bayes_cep.run.directories import METRICS_RECORD, RunDirectory
 from bayes_cep.run.progress import StepReporter, describe_array
 from bayes_cep.run.template import Metrics, Run
 from bayes_cep.statistics.axial_statistics import (
@@ -40,6 +40,9 @@ SAMPLE_FILE_NAME = "sample.npy"
 POINTWISE_VARIANCE_FILE_NAME = "pointwise_variance.npy"
 CORRELATION_CURVE_FILE_NAME = "correlation_curve.npz"
 SAMPLES_FILE_NAME = "samples.npy"
+SAMPLE_PLOT_FILE_NAME = "sample.pdf"
+POINTWISE_VARIANCE_PLOT_FILE_NAME = "pointwise_variance.pdf"
+CORRELATION_CURVE_PLOT_FILE_NAME = "correlation_curve.pdf"
 
 
 # ==================================================================================================
@@ -85,10 +88,11 @@ class PriorRun(Run[PriorRunConfig]):
         "base_vertices.",
         f"results/{SAMPLES_FILE_NAME}": "All samples, shape (num_samples, num_vertices); only if "
         "keep_samples.",
-        "metrics.json": "variance_mean/min/max: statistics of the pointwise variance field; "
+        METRICS_RECORD: "variance_mean/min/max: statistics of the pointwise variance field; "
         "correlation_distance_threshold: distance where the binned correlation first drops below "
         "the threshold (model-free); correlation_length: fitted Matern length; seconds.",
-        "plots/": "sample.pdf, pointwise_variance.pdf, correlation_curve.pdf (study report).",
+        "plots/": f"{SAMPLE_PLOT_FILE_NAME}, {POINTWISE_VARIANCE_PLOT_FILE_NAME}, "
+        f"{CORRELATION_CURVE_PLOT_FILE_NAME} (study report).",
     }
 
     @override
@@ -108,13 +112,13 @@ class PriorRun(Run[PriorRunConfig]):
         render_axial_angle_field(
             mesh,
             np.load(results_dir / SAMPLE_FILE_NAME),
-            plots_dir / "sample.pdf",
+            plots_dir / SAMPLE_PLOT_FILE_NAME,
             f"prior sample ({label})",
         )
         render_point_field(
             mesh,
             np.load(results_dir / POINTWISE_VARIANCE_FILE_NAME),
-            plots_dir / "pointwise_variance.pdf",
+            plots_dir / POINTWISE_VARIANCE_PLOT_FILE_NAME,
             f"pointwise axial variance ({label}), mean {metrics['variance_mean']:.3g}",
             "axial variance",
             "viridis",
@@ -128,7 +132,7 @@ class PriorRun(Run[PriorRunConfig]):
             fitted_length=metrics["correlation_length"],
             correlation_threshold=config.correlation.correlation_threshold,
             distance_threshold=metrics["correlation_distance_threshold"],
-            path=plots_dir / "correlation_curve.pdf",
+            path=plots_dir / CORRELATION_CURVE_PLOT_FILE_NAME,
             title=label,
         )
 

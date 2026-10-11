@@ -29,7 +29,7 @@ from ls_bayesian.mcmc.diagnostics import MINIMUM_NUM_SAMPLES_PER_CHAIN
 from ls_bayesian.mcmc.sampler import SamplerSettings
 from ls_bayesian.mcmc.storage import open_zarr_samples
 
-from bayes_cep.mcmc.builder import MCMCBuilder, MCMCSettings
+from bayes_cep.mcmc.builder import MCMCBuilder, MCMCSettings, ZarrStorageSettings
 from bayes_cep.postprocessing.curve_plots import (
     plot_autocorrelation,
     plot_histogram,
@@ -37,7 +37,12 @@ from bayes_cep.postprocessing.curve_plots import (
 )
 from bayes_cep.postprocessing.mesh_plots import render_point_field
 from bayes_cep.run.config import RunConfig
-from bayes_cep.run.directories import ArrayRecord, RunDirectory, resolve_repository_path
+from bayes_cep.run.directories import (
+    METRICS_RECORD,
+    ArrayRecord,
+    RunDirectory,
+    resolve_repository_path,
+)
 from bayes_cep.run.progress import StepReporter, describe_array
 from bayes_cep.run.template import Metrics, Run
 from bayes_cep.statistics.axial_diagnostics import (
@@ -46,6 +51,12 @@ from bayes_cep.statistics.axial_diagnostics import (
 )
 from single_runs.data import RawDataDirectory
 from single_runs.inference import InferenceProblemConfig, assemble_posterior
+
+EFFECTIVE_SAMPLE_SIZE_MAP_PLOT_FILE_NAME = "effective_sample_size_map.pdf"
+EFFECTIVE_SAMPLE_SIZE_HISTOGRAM_PLOT_FILE_NAME = "effective_sample_size_histogram.pdf"
+TRACES_PLOT_FILE_NAME = "traces.pdf"
+AUTOCORRELATION_PLOT_FILE_NAME = "autocorrelation.pdf"
+SAMPLER_LOG_FILE_NAME = "sampler.log"
 
 
 # ==================================================================================================
@@ -152,6 +163,9 @@ class ChainDiagnostics(ArrayRecord):
     component_autocorrelation: np.ndarray
 
 
+_FILES = ChainDiagnostics.FILE_NAMES  # the names of the result files, defined once there
+
+
 # ==================================================================================================
 class McmcRun(Run[McmcRunConfig]):
     """Sample the posterior of the preprocessed data, from the configured initial state."""
@@ -159,17 +173,24 @@ class McmcRun(Run[McmcRunConfig]):
     config_type = McmcRunConfig
     name = "mcmc"
     outputs = {
-        "results/samples.zarr": "MCMC chain (zarr store, one sample per row).",
-        "results/effective_sample_size.npy": "Split-chain effective sample size per vertex.",
-        "results/integrated_autocorrelation_time.npy": "Autocorrelation time per vertex.",
-        "results/truncated.npy": "Vertices whose autocorrelation was cut off at max_lag.",
-        "results/component_indices.npy": "Vertices of the trace and autocorrelation plots.",
-        "results/component_traces.npy": "Angle chain of these vertices.",
-        "results/component_autocorrelation.npy": "Axial autocorrelation of these vertices.",
-        "metrics.json": (
+        f"results/{ZarrStorageSettings.store_name}": "MCMC chain (zarr store, one sample per row).",
+        f"results/{_FILES['effective_sample_size']}": "Split-chain effective sample size per "
+        "vertex.",
+        f"results/{_FILES['integrated_autocorrelation_time']}": "Autocorrelation time per vertex.",
+        f"results/{_FILES['truncated']}": "Vertices whose autocorrelation was cut off at max_lag.",
+        f"results/{_FILES['component_indices']}": "Vertices of the trace and autocorrelation "
+        "plots.",
+        f"results/{_FILES['component_traces']}": "Angle chain of these vertices.",
+        f"results/{_FILES['component_autocorrelation']}": "Axial autocorrelation of these "
+        "vertices.",
+        METRICS_RECORD: (
             "acceptance_rate (final), seconds_sampling and summaries of the effective sample size."
         ),
-        "sampler.log": "Progress table of the sampler.",
+        SAMPLER_LOG_FILE_NAME: "Progress table of the sampler.",
+        "plots/": f"{EFFECTIVE_SAMPLE_SIZE_MAP_PLOT_FILE_NAME}, "
+        f"{EFFECTIVE_SAMPLE_SIZE_HISTOGRAM_PLOT_FILE_NAME}, {TRACES_PLOT_FILE_NAME}, "
+        f"{AUTOCORRELATION_PLOT_FILE_NAME} (study report; the last two only if vertices are "
+        "plotted).",
     }
 
     # ----------------------------------------------------------------------------------------------
@@ -192,14 +213,14 @@ class McmcRun(Run[McmcRunConfig]):
         render_point_field(
             mesh,
             diagnostics.effective_sample_size,
-            plots_dir / "effective_sample_size_map.pdf",
+            plots_dir / EFFECTIVE_SAMPLE_SIZE_MAP_PLOT_FILE_NAME,
             f"effective sample size, minimum {metrics['effective_sample_size_min']:.3g}",
             "effective sample size",
             "viridis",
         )
         plot_histogram(
             diagnostics.effective_sample_size,
-            plots_dir / "effective_sample_size_histogram.pdf",
+            plots_dir / EFFECTIVE_SAMPLE_SIZE_HISTOGRAM_PLOT_FILE_NAME,
             "effective sample size",
             f"{100 * metrics['fraction_truncated']:.3g}% of the vertices truncated at "
             f"max_lag = {config.diagnostics.max_lag}",
@@ -209,13 +230,13 @@ class McmcRun(Run[McmcRunConfig]):
         labels = [f"vertex {index}" for index in diagnostics.component_indices]
         plot_traces(
             diagnostics.component_traces,
-            plots_dir / "traces.pdf",
+            plots_dir / TRACES_PLOT_FILE_NAME,
             labels,
             config.diagnostics.burn_in,
         )
         plot_autocorrelation(
             diagnostics.component_autocorrelation,
-            plots_dir / "autocorrelation.pdf",
+            plots_dir / AUTOCORRELATION_PLOT_FILE_NAME,
             labels,
             "axial autocorrelation after the burn-in",
         )
@@ -241,7 +262,7 @@ class McmcRun(Run[McmcRunConfig]):
             output_dir=results_dir,
         )
         sampler_logger_settings = LoggerSettings(
-            print_to_console=self.write_to_console, logfile_path=run_dir / "sampler.log"
+            print_to_console=self.write_to_console, logfile_path=run_dir / SAMPLER_LOG_FILE_NAME
         )
         with BaseLogger(sampler_logger_settings, prefix="mcmc") as sampler_logger:
             with steps.step(f"Building the sampler ({config.sampler.algorithm.name})"):

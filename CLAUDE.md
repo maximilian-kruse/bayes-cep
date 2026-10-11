@@ -107,8 +107,9 @@ parameters; `reference.py` holds them as constants and `reference_*_config` fact
   no global registry: `bayes_cep.cli.run_single` creates a `RunRegistry` (`run/registry.py`), registers
   every named run type defined in the `single_runs` package, plus those of each file given as
   `--run-file path.py` (repeatable, before the subcommand), and builds its subcommands from it.
-  Result file names are defined once per run (an `ArrayRecord` or module constants) and used by
-  `outputs`, `_execute` and `report`.
+  Result, plot and log file names are defined once per run (an `ArrayRecord` or module constants,
+  `METRICS_RECORD` for the metrics) and used by `outputs`, `_execute` and `report`; never repeat a
+  file name as a string literal there.
 
 `studies/*.py` define `STUDY`, set their own `root` and `RAW_DIR`, and are not archived with a study
 (the recorded commit and patch cover them). A bare relative path in a config is relative to the

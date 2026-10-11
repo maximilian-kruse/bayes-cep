@@ -31,9 +31,13 @@ from bayes_cep.preprocessing.synthetic_observations import (
     generate_synthetic_observations,
 )
 from bayes_cep.run.config import RunConfig
+from bayes_cep.run.directories import METRICS_RECORD
 from bayes_cep.run.progress import StepReporter, describe_array
 from bayes_cep.run.template import Metrics, Run
 from single_runs.data import PreprocessedData, RawDataDirectory
+
+GROUND_TRUTH_PLOT_FILE_NAME = "ground_truth.pdf"
+_FILES = PreprocessedData.FILE_NAMES  # the names of the result files, defined once there
 
 
 # ==================================================================================================
@@ -69,15 +73,15 @@ class PreprocessingRun(Run[PreprocessingRunConfig]):
     config_type = PreprocessingRunConfig
     name = "preprocessing"
     outputs = {
-        "results/ground_truth_angle_field.npy": "Ground-truth fiber angle [rad] per vertex.",
-        "results/prior_mean_angle_field.npy": "Constant prior mean [rad] per vertex: the axial "
-        "mean of the ground truth.",
-        "results/observed_vertex_indices.npy": "Indices of the observed vertices.",
-        "results/observed_activation_times.npy": "Noisy synthetic activation times at those "
-        "vertices.",
-        "results/observation_noise_variance.npy": "Variance of the observation noise (scalar).",
-        "metrics.json": "num_observed_vertices and prior_mean_angle [rad].",
-        "plots/": "ground_truth.pdf (study report).",
+        f"results/{_FILES['ground_truth']}": "Ground-truth fiber angle [rad] per vertex.",
+        f"results/{_FILES['prior_mean']}": "Constant prior mean [rad] per vertex: the axial mean "
+        "of the ground truth.",
+        f"results/{_FILES['observed_vertex_indices']}": "Indices of the observed vertices.",
+        f"results/{_FILES['observed_activation_times']}": "Noisy synthetic activation times at "
+        "those vertices.",
+        f"results/{_FILES['noise_variance']}": "Variance of the observation noise (scalar).",
+        METRICS_RECORD: "num_observed_vertices and prior_mean_angle [rad].",
+        "plots/": f"{GROUND_TRUTH_PLOT_FILE_NAME} (study report).",
     }
 
     # ----------------------------------------------------------------------------------------------
@@ -94,7 +98,7 @@ class PreprocessingRun(Run[PreprocessingRunConfig]):
         data = PreprocessedData.load(self.results_dir(run_dir))
         mesh = RawDataDirectory.from_configured_path(self.config.raw_dir).load_mesh()
         render_axial_angle_field(
-            mesh, data.ground_truth, plots_dir / "ground_truth.pdf", "ground truth"
+            mesh, data.ground_truth, plots_dir / GROUND_TRUTH_PLOT_FILE_NAME, "ground truth"
         )
 
     # ----------------------------------------------------------------------------------------------

@@ -1,0 +1,38 @@
+Run started 2026-10-16T14:39:53+02:00
+Command: /home/max/4-Code/bayes-cep/.pixi/envs/default/bin/bcep-single --overwrite --flat-results --run-dir example_data/preprocessing config:reference-synthetic-preprocessing --config.raw-dir example_data/raw
+Log file: example_data/preprocessing/run.log
+
+PreprocessingRun ae0a2244
+PreprocessingRunConfig
+  raw_dir       : example_data/raw
+  ground_truth (SyntheticGroundTruthStrategy):
+    prior (PriorParameters):
+      kappa : 0.1
+      tau   : 5.0
+      seed  : 0
+  observations (ObservationSamplingSettings):
+    num_observations : 1000
+    noise_variance   : 0.001
+    seed             : 0
+  eikonal (EikonalSolverSettings):
+    initial_site_ind      : 12650
+    longitudinal_velocity : 1.5
+    transversal_velocity  : 1.0
+    solver_tolerance      : 1e-06
+    max_num_iterations    : 1000
+    max_value             : 1000.0
+    use_soft_update       : True
+    softminmax_order      : 20
+    softminmax_cutoff     : 0.01
+  interpolation (NearestNeighborInterpolationStrategy):
+
+[1] Loading the mesh and basis vectors from /home/max/4-Code/bayes-cep/example_data/raw ...
+      done in 0.06 s
+      mesh: 15820 vertices, 31375 triangles
+[2] Building ground truth and prior mean (SyntheticGroundTruthStrategy) ...
+      done in 1.48 s
+      ground truth [rad]: shape (15820,), min -1.739, max 1.4, mean -0.1745, nan 0, inf 0
+      prior mean angle: -0.1691 rad
+[3] Generating synthetic observations ...
+      done in 5.81 s
+      observed 1000 of 15820 vertices

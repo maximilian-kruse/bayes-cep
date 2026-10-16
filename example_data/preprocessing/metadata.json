@@ -1,0 +1,39 @@
+{
+  "environment": {
+    "python": "3.14.6",
+    "pixi_environment": "default",
+    "pixi_lock_sha256": "d7d03d7b5277b7763712ad1a25a490103b29a14cfddcaf6aacfbce3a7d7cd7a3",
+    "git": {
+      "commit": "27ca5c29da849929abac32352f22345ddbab27dc",
+      "dirty": true,
+      "diff_sha256": "9e60b68ff0b1f348e13de5564b4178810989c76d00fcd79074f6d6f7b1f17b0c"
+    },
+    "editable_packages": {
+      "eikonax": {
+        "path": "/home/max/4-Code/eikonax",
+        "git": {
+          "commit": "8105841e8df86032796f815e20961e5a4994ee53",
+          "dirty": false,
+          "diff_sha256": null
+        }
+      },
+      "ls-bayesian": {
+        "path": "/home/max/4-Code/ls-bayesian",
+        "git": {
+          "commit": "6a5838c720ad362315fa584803e3f13e941ebb34",
+          "dirty": false,
+          "diff_sha256": null
+        }
+      }
+    }
+  },
+  "input_sha256": {
+    "example_data/raw/mesh.vtu": "567765bb00ea5cc293f3748112f5870f79a7438311a46d4d97360b75f06dc848",
+    "example_data/raw/basis_vecs.npy": "9e3a824e1a5c17d07c786f24f174974769532474716bbd07ee11516db584b29b",
+    "example_data/raw/fiber_field.npy": "93650904216385e9669c1706a8eded7ac5a106efdd545e8212c2dc06e6f5fba7"
+  },
+  "host": "work",
+  "cpu_count": 12,
+  "slurm_job_id": null,
+  "slurm_array_task_id": null
+}

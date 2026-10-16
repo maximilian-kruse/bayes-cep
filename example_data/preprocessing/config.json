@@ -1,0 +1,34 @@
+{
+  "__type__": "PreprocessingRunConfig",
+  "raw_dir": "example_data/raw",
+  "ground_truth": {
+    "__type__": "SyntheticGroundTruthStrategy",
+    "prior": {
+      "__type__": "PriorParameters",
+      "kappa": 0.1,
+      "tau": 5.0,
+      "seed": 0
+    }
+  },
+  "observations": {
+    "__type__": "ObservationSamplingSettings",
+    "num_observations": 1000,
+    "noise_variance": 0.001,
+    "seed": 0
+  },
+  "eikonal": {
+    "__type__": "EikonalSolverSettings",
+    "initial_site_ind": 12650,
+    "longitudinal_velocity": 1.5,
+    "transversal_velocity": 1.0,
+    "solver_tolerance": 1e-06,
+    "max_num_iterations": 1000,
+    "max_value": 1000.0,
+    "use_soft_update": true,
+    "softminmax_order": 20,
+    "softminmax_cutoff": 0.01
+  },
+  "interpolation": {
+    "__type__": "NearestNeighborInterpolationStrategy"
+  }
+}

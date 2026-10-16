@@ -10,6 +10,7 @@ Classes:
 """
 
 import time
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import override
@@ -20,7 +21,10 @@ from ls_bayesian.common.logging import BaseLogger
 from bayes_cep.mesh.io import create_dolfinx_mesh
 from bayes_cep.mesh.topology import get_triangle_connectivity
 from bayes_cep.posterior.prior import PriorParameters, build_fiber_angle_prior
-from bayes_cep.postprocessing.curve_plots import plot_correlation_curve
+from bayes_cep.postprocessing.curve_plots import (
+    plot_correlation_curve,
+    plot_correlation_histogram,
+)
 from bayes_cep.postprocessing.mesh_plots import render_axial_angle_field, render_point_field
 from bayes_cep.run.config import RunConfig
 from bayes_cep.run.directories import METRICS_RECORD, PLOTS_DIR_NAME, RunDirectory
@@ -43,6 +47,7 @@ SAMPLES_FILE_NAME = "samples.npy"
 SAMPLE_PLOT_FILE_NAME = "sample.pdf"
 POINTWISE_VARIANCE_PLOT_FILE_NAME = "pointwise_variance.pdf"
 CORRELATION_CURVE_PLOT_FILE_NAME = "correlation_curve.pdf"
+CORRELATION_HISTOGRAM_PLOT_FILE_NAME = "correlation_histogram.pdf"
 
 
 # ==================================================================================================
@@ -84,15 +89,19 @@ class PriorRun(Run[PriorRunConfig]):
         f"results/{POINTWISE_VARIANCE_FILE_NAME}": "Axial variance per vertex (-ln(R)/2, with R "
         "the length of the mean resultant of the doubled angles) over the samples.",
         f"results/{CORRELATION_CURVE_FILE_NAME}": "Binned correlation versus distance: "
-        "bin_distances, bin_correlations, bin_counts, fitted_correlations, fit_mask, "
-        "base_vertices.",
+        "bin_distances, bin_correlations, bin_counts, fitted_correlations (nan if the fit "
+        "failed), fit_mask, base_vertices, and the histogram of the pooled pair correlations: "
+        "histogram_counts, histogram_edges, noise_floor.",
         f"results/{SAMPLES_FILE_NAME}": "All samples, shape (num_samples, num_vertices); only if "
         "keep_samples.",
         METRICS_RECORD: "variance_mean/min/max: statistics of the pointwise variance field; "
         "correlation_distance_threshold: distance where the binned correlation first drops below "
-        "the threshold (model-free); correlation_length: fitted Matern length; seconds.",
+        "the threshold (model-free); correlation_length: fitted Matern length (nan if the fit "
+        "failed); correlation_fit_succeeded and correlation_fit_failure_reason (empty if it "
+        "succeeded): a failed fit does not fail the run; seconds.",
         "plots/": f"{SAMPLE_PLOT_FILE_NAME}, {POINTWISE_VARIANCE_PLOT_FILE_NAME}, "
-        f"{CORRELATION_CURVE_PLOT_FILE_NAME} (study report).",
+        f"{CORRELATION_CURVE_PLOT_FILE_NAME}, {CORRELATION_HISTOGRAM_PLOT_FILE_NAME} "
+        "(study report).",
     }
 
     optional_outputs = frozenset({f"results/{SAMPLES_FILE_NAME}"})
@@ -126,6 +135,7 @@ class PriorRun(Run[PriorRunConfig]):
             "viridis",
         )
         curve = np.load(results_dir / CORRELATION_CURVE_FILE_NAME)
+        fit_failure_reason = str(metrics["correlation_fit_failure_reason"]) or None
         plot_correlation_curve(
             bin_distances=curve["bin_distances"],
             bin_correlations=curve["bin_correlations"],
@@ -136,6 +146,15 @@ class PriorRun(Run[PriorRunConfig]):
             distance_threshold=metrics["correlation_distance_threshold"],
             path=plots_dir / CORRELATION_CURVE_PLOT_FILE_NAME,
             title=label,
+            fit_failure_reason=fit_failure_reason,
+        )
+        plot_correlation_histogram(
+            histogram_counts=curve["histogram_counts"],
+            histogram_edges=curve["histogram_edges"],
+            noise_floor=float(curve["noise_floor"]),
+            path=plots_dir / CORRELATION_HISTOGRAM_PLOT_FILE_NAME,
+            title=label,
+            fit_failure_reason=fit_failure_reason,
         )
 
     # ----------------------------------------------------------------------------------------------
@@ -169,17 +188,25 @@ class PriorRun(Run[PriorRunConfig]):
             _, pointwise_variance = compute_axial_mean_and_variance(samples)
         logger.info(f"      {describe_array('pointwise variance', pointwise_variance)}")
 
-        with steps.step("Estimating the correlation length"):
+        # Saved before the correlation length, so that they exist whatever happens to it
+        np.save(results_dir / SAMPLE_FILE_NAME, sample)
+        np.save(results_dir / POINTWISE_VARIANCE_FILE_NAME, pointwise_variance)
+        if config.keep_samples:
+            np.save(results_dir / SAMPLES_FILE_NAME, samples)
+
+        with steps.step("Estimating the correlation length"), warnings.catch_warnings():
+            # A failed fit is reported once below, in the log of the run
+            warnings.simplefilter("ignore", RuntimeWarning)
             correlation = estimate_correlation_length(
                 mesh.points, connectivity, samples, config.correlation
             )
         logger.info(
             f"      correlation distance : {correlation.correlation_distance_threshold:.4g}"
         )
-        logger.info(f"      fitted Matern length : {correlation.length:.4g}")
-
-        np.save(results_dir / SAMPLE_FILE_NAME, sample)
-        np.save(results_dir / POINTWISE_VARIANCE_FILE_NAME, pointwise_variance)
+        if correlation.fit_succeeded:
+            logger.info(f"      fitted Matern length : {correlation.length:.4g}")
+        else:
+            logger.warning(f"Correlation length fit failed: {correlation.fit_failure_reason}")
         np.savez(
             results_dir / CORRELATION_CURVE_FILE_NAME,
             bin_distances=correlation.bin_distances,
@@ -188,9 +215,10 @@ class PriorRun(Run[PriorRunConfig]):
             fitted_correlations=correlation.fitted_correlations,
             fit_mask=correlation.fit_mask,
             base_vertices=correlation.base_vertices,
+            histogram_counts=correlation.histogram_counts,
+            histogram_edges=correlation.histogram_edges,
+            noise_floor=correlation.noise_floor,
         )
-        if config.keep_samples:
-            np.save(results_dir / SAMPLES_FILE_NAME, samples)
 
         return {
             "variance_mean": float(pointwise_variance.mean()),
@@ -198,5 +226,7 @@ class PriorRun(Run[PriorRunConfig]):
             "variance_max": float(pointwise_variance.max()),
             "correlation_distance_threshold": float(correlation.correlation_distance_threshold),
             "correlation_length": float(correlation.length),
+            "correlation_fit_succeeded": correlation.fit_succeeded,
+            "correlation_fit_failure_reason": correlation.fit_failure_reason or "",
             "seconds": time.perf_counter() - start_time,
         }

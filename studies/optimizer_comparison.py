@@ -1,6 +1,6 @@
 """Optimizer comparison.
 
-One fixed problem (the reference one: prior kappa 0.05, tau 10, and the preprocessing run of
+One fixed problem (the reference one: prior kappa 0.1, tau 5, and the preprocessing run of
 `preprocessing_synthetic` with 1000 observations and noise variance 1e-3), solved with the
 Cameron-Martin L-BFGS and with scipy's Euclidean L-BFGS-B. Create and run the
 `preprocessing_synthetic` study first.

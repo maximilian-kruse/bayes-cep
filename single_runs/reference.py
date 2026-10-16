@@ -8,7 +8,7 @@ otherwise, read this module and nothing else.
 The data locations (the raw data directory, the directory of the preprocessed data, the initial
 state of a chain) are arguments, set by the study module or script that builds a config. The values
 are those of the example data (`example_data/`): the single retained patient mesh, the standard
-prior (kappa 0.05, tau 10), 1000 observations with noise variance 1e-3. Mesh-specific values (the
+prior (kappa 0.1, tau 5), 1000 observations with noise variance 1e-3. Mesh-specific values (the
 initial site of the eikonal solver, the velocities) belong to that patient.
 
 Constants:
@@ -69,8 +69,8 @@ EIKONAL_SOFTMINMAX_ORDER = 20
 EIKONAL_SOFTMINMAX_CUTOFF = 0.01
 
 # Bilaplacian SPDE prior
-PRIOR_KAPPA = 0.05
-PRIOR_TAU = 10.0
+PRIOR_KAPPA = 0.1
+PRIOR_TAU = 5.0
 PRIOR_SEED = 0
 
 # Prior investigation

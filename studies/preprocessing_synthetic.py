@@ -1,6 +1,6 @@
 """Preprocessing for the synthetic studies: synthetic observations from the standard prior field.
 
-The ground truth is the standard prior field of the example data (kappa 0.05, tau 10, seed 0).
+The ground truth is the standard prior field of the example data (kappa 0.1, tau 5, seed 0).
 Synthetic observations are generated from it for the number of observations and the noise variance
 (all combinations). The MAP and MCMC studies of the synthetic problem read these runs.
 """

@@ -20,11 +20,13 @@ $d = \ell$; read $\ell$ as an effective length, not as the exact parameter of th
 Classes:
     CorrelationLengthSettings: Parameters of the estimation.
     CorrelationLengthResult: Correlation distance threshold, fitted length and the binned curve.
+        If the Matérn fit is not possible, the fit entries are `nan` and the reason is recorded.
 
 Functions:
     estimate_correlation_length: Estimate the correlation distance from samples.
 """
 
+import warnings
 from dataclasses import dataclass
 
 import numpy as np
@@ -39,6 +41,11 @@ from bayes_cep.statistics.axial_statistics import (
     compute_axial_mean_and_variance,
     compute_axial_sine_deviation,
 )
+
+# The histogram of the pair correlations has a fixed range, so that histograms of different runs
+# are comparable and the settings (and with them the run ids) are unaffected.
+NUM_HISTOGRAM_BINS = 50
+HISTOGRAM_EDGES = np.linspace(-1.0, 1.0, NUM_HISTOGRAM_BINS + 1)
 
 
 # ==================================================================================================
@@ -108,14 +115,27 @@ class CorrelationLengthResult:
             below `correlation_threshold`, linearly interpolated; `nan` if it never does. The
             primary, model-free estimate.
         length (float): Secondary summary: correlation length $\\ell$ of the fitted Matérn
-            ($\\nu = 1$) correlation, an effective length rather than the field's exact parameter.
+            ($\\nu = 1$) correlation, an effective length rather than the field's exact parameter;
+            `nan` if the fit failed.
         bin_distances (np.ndarray): Mean pair distance per bin, shape `(num_bins,)`; `nan` for
             empty bins.
         bin_correlations (np.ndarray): Mean correlation per bin, shape `(num_bins,)`.
         bin_counts (np.ndarray): Number of pairs per bin, shape `(num_bins,)`.
-        fitted_correlations (np.ndarray): The fitted correlation at `bin_distances`.
-        fit_mask (np.ndarray): Which bins entered the fit, shape `(num_bins,)`.
+        fitted_correlations (np.ndarray): The fitted correlation at `bin_distances`; all `nan` if
+            the fit failed.
+        fit_mask (np.ndarray): Which bins entered the fit, shape `(num_bins,)`; the bins above the
+            noise floor, also if there were too few of them to fit.
         base_vertices (np.ndarray): The base vertices used.
+        noise_floor (float): Correlation level below which the binned correlation is dominated by
+            sampling noise.
+        histogram_counts (np.ndarray): Histogram of the correlations of all pooled vertex pairs,
+            shape `(NUM_HISTOGRAM_BINS,)`, over `histogram_edges`. Available also if the fit
+            failed.
+        histogram_edges (np.ndarray): Edges of that histogram, shape `(NUM_HISTOGRAM_BINS + 1,)`,
+            equally spaced in $[-1, 1]$.
+        fit_failure_reason (str | None): Why the Matérn fit failed, or `None` if it succeeded. The
+            binned curve and the model-free `correlation_distance_threshold` do not depend on the
+            fit and are valid either way.
     """
 
     correlation_distance_threshold: float
@@ -126,6 +146,15 @@ class CorrelationLengthResult:
     fitted_correlations: np.ndarray[tuple[int], np.dtype[np.float64]]
     fit_mask: np.ndarray[tuple[int], np.dtype[np.bool_]]
     base_vertices: np.ndarray[tuple[int], np.dtype[np.int64]]
+    noise_floor: float
+    histogram_counts: np.ndarray[tuple[int], np.dtype[np.int64]]
+    histogram_edges: np.ndarray[tuple[int], np.dtype[np.float64]]
+    fit_failure_reason: str | None = None
+
+    @property
+    def fit_succeeded(self) -> bool:
+        """Whether the Matérn fit succeeded."""
+        return self.fit_failure_reason is None
 
 
 # ==================================================================================================
@@ -229,12 +258,14 @@ def _bin_pair_correlations(
     np.ndarray[tuple[int], np.dtype[np.int64]],
     np.ndarray[tuple[int], np.dtype[np.float64]],
     np.ndarray[tuple[int], np.dtype[np.float64]],
+    np.ndarray[tuple[int], np.dtype[np.int64]],
 ]:
     """Pool all vertex pairs (excluding each base vertex with itself) by distance bin.
 
     Returns:
-        tuple[np.ndarray, np.ndarray, np.ndarray]: Pair count, mean pair distance and mean
-            correlation per bin, each of shape `(num_bins,)`; the means are `nan` for empty bins.
+        tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]: Pair count, mean pair distance and
+            mean correlation per bin, each of shape `(num_bins,)`; the means are `nan` for empty
+            bins. Last, the histogram of the pooled pair correlations over `HISTOGRAM_EDGES`.
     """
     pair_mask = np.isfinite(distance) & np.isfinite(correlation) & (distance > 0)
     pair_distance = distance[pair_mask]
@@ -252,31 +283,24 @@ def _bin_pair_correlations(
             np.bincount(bin_index, weights=pair_correlation, minlength=settings.num_bins)
             / bin_counts
         )
-    return bin_counts, bin_distances, bin_correlations
+    histogram_counts, _ = np.histogram(np.clip(pair_correlation, -1.0, 1.0), bins=HISTOGRAM_EDGES)
+    return bin_counts, bin_distances, bin_correlations, histogram_counts
 
 
 # --------------------------------------------------------------------------------------------------
 def _select_fit_bins(
     bin_counts: np.ndarray[tuple[int], np.dtype[np.int64]],
     bin_correlations: np.ndarray[tuple[int], np.dtype[np.float64]],
-    num_kept: int,
-    settings: CorrelationLengthSettings,
+    noise_floor: float,
 ) -> np.ndarray[tuple[int], np.dtype[np.bool_]]:
     """Select the leading bins whose correlation is above the sampling noise floor.
 
-    Raises:
-        ValueError: If fewer than 2 bins are selected.
+    There may be fewer than the 2 bins needed for a fit; `estimate_correlation_length` checks.
     """
-    noise_floor = settings.noise_floor_scale / np.sqrt(num_kept)
     above_floor = (bin_counts > 0) & (bin_correlations > noise_floor)
     num_leading = above_floor.size if above_floor.all() else int(np.argmin(above_floor))
     fit_mask = np.zeros_like(above_floor)
     fit_mask[:num_leading] = above_floor[:num_leading]
-    if fit_mask.sum() < 2:
-        raise ValueError(
-            "Fewer than 2 distance bins have correlation above the noise floor "
-            f"({noise_floor:.3f}); increase the number of samples or reduce max_distance."
-        )
     return fit_mask
 
 
@@ -318,9 +342,13 @@ def estimate_correlation_length(
         settings (CorrelationLengthSettings): Estimation parameters.
 
     Raises:
-        ValueError: If `samples` does not match the mesh, `settings.burn_in` leaves no samples, no
-            vertex is farther than `settings.boundary_margin` from the boundary, or too few bins
-            are above the noise floor to fit.
+        ValueError: If `samples` does not match the mesh, `settings.burn_in` leaves no samples, or
+            no vertex is farther than `settings.boundary_margin` from the boundary.
+
+    Warns:
+        RuntimeWarning: If the Matérn fit is not possible (fewer than 2 bins above the noise floor,
+            or the optimizer does not converge). The result is still returned, with a `nan`
+            `length` and `fitted_correlations` and the reason in `fit_failure_reason`.
 
     Returns:
         CorrelationLengthResult: Model-free correlation distance threshold and fitted Matérn
@@ -342,12 +370,12 @@ def estimate_correlation_length(
     )
     distance = compute_graph_distances(graph, base_vertices, settings.max_distance)
 
-    bin_counts, bin_distances, bin_correlations = _bin_pair_correlations(
+    bin_counts, bin_distances, bin_correlations, histogram_counts = _bin_pair_correlations(
         distance, correlation, settings
     )
-    fit_mask = _select_fit_bins(
-        bin_counts, bin_correlations, num_samples - settings.burn_in, settings
-    )
+    num_kept = num_samples - settings.burn_in
+    noise_floor = settings.noise_floor_scale / np.sqrt(num_kept)
+    fit_mask = _select_fit_bins(bin_counts, bin_correlations, noise_floor)
 
     correlation_distance_threshold = _find_crossing(
         bin_distances, bin_correlations, settings.correlation_threshold
@@ -357,16 +385,40 @@ def estimate_correlation_length(
         if np.isfinite(correlation_distance_threshold)
         else settings.max_distance
     )
-    length = _fit_matern_length(
-        bin_distances, bin_correlations, bin_counts, fit_mask, initial_length, settings.max_distance
-    )
+    length = np.nan
+    failure_reason = None
+    if fit_mask.sum() < 2:
+        failure_reason = (
+            "Fewer than 2 distance bins have correlation above the noise floor "
+            f"({noise_floor:.3f}); increase the number of samples or reduce max_distance."
+        )
+    else:
+        try:
+            length = _fit_matern_length(
+                bin_distances,
+                bin_correlations,
+                bin_counts,
+                fit_mask,
+                initial_length,
+                settings.max_distance,
+            )
+        except RuntimeError as error:  # `curve_fit` did not converge
+            failure_reason = f"The Matérn fit did not converge: {error}"
+    if failure_reason is not None:
+        warnings.warn(
+            f"Correlation length fit failed: {failure_reason}", RuntimeWarning, stacklevel=2
+        )
     return CorrelationLengthResult(
         correlation_distance_threshold=correlation_distance_threshold,
-        length=length,
+        length=float(length),
         bin_distances=bin_distances,
         bin_correlations=bin_correlations,
         bin_counts=bin_counts,
         fitted_correlations=_matern_correlation(bin_distances, length),
         fit_mask=fit_mask,
         base_vertices=base_vertices,
+        noise_floor=float(noise_floor),
+        histogram_counts=histogram_counts,
+        histogram_edges=HISTOGRAM_EDGES,
+        fit_failure_reason=failure_reason,
     )

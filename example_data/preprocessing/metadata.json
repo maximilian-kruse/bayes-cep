@@ -4,9 +4,9 @@
     "pixi_environment": "default",
     "pixi_lock_sha256": "d7d03d7b5277b7763712ad1a25a490103b29a14cfddcaf6aacfbce3a7d7cd7a3",
     "git": {
-      "commit": "27ca5c29da849929abac32352f22345ddbab27dc",
+      "commit": "cdcd63dcd85f8575e8f790f33026a7437a201004",
       "dirty": true,
-      "diff_sha256": "9e60b68ff0b1f348e13de5564b4178810989c76d00fcd79074f6d6f7b1f17b0c"
+      "diff_sha256": "583f8cb7a0ad5acdd379ba07b4889e6b34b67effbafb3cdd18902bd78ba0bb8e"
     },
     "editable_packages": {
       "eikonax": {

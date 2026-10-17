@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import override
 
+import numpy as np
 from ls_bayesian.common.logging import BaseLogger
 
 from bayes_cep.mesh.interpolation import (
@@ -25,7 +26,6 @@ from bayes_cep.preprocessing.ground_truth import (
     RealDataGroundTruthStrategy,
     SyntheticGroundTruthStrategy,
 )
-from bayes_cep.preprocessing.prior_mean import build_constant_prior_mean
 from bayes_cep.preprocessing.synthetic_observations import (
     ObservationSamplingSettings,
     generate_synthetic_observations,
@@ -74,8 +74,7 @@ class PreprocessingRun(Run[PreprocessingRunConfig]):
     name = "preprocessing"
     outputs = {
         f"results/{_FILES['ground_truth']}": "Ground-truth fiber angle [rad] per vertex.",
-        f"results/{_FILES['prior_mean']}": "Constant prior mean [rad] per vertex: the axial mean "
-        "of the ground truth.",
+        f"results/{_FILES['prior_mean']}": "Prior mean [rad] per vertex: zero.",
         f"results/{_FILES['observed_vertex_indices']}": "Indices of the observed vertices.",
         f"results/{_FILES['observed_activation_times']}": "Noisy synthetic activation times at "
         "those vertices.",
@@ -117,7 +116,8 @@ class PreprocessingRun(Run[PreprocessingRunConfig]):
         with steps.step(f"Building ground truth and prior mean ({strategy_name})"):
             fiber_field = raw_data.load_fiber_field()
             ground_truth = config.ground_truth.build(mesh, fiber_field, basis_vectors)
-            prior_mean = build_constant_prior_mean(ground_truth)
+            # Always zero: in a realistic scenario the mean of the ground truth is not known.
+            prior_mean = np.zeros_like(ground_truth)
         logger.info(f"      {describe_array('ground truth [rad]', ground_truth)}")
         logger.info(f"      prior mean angle: {prior_mean[0]:.4f} rad")
 

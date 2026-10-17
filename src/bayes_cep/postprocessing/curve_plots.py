@@ -7,10 +7,13 @@ backend, so the functions are safe on a headless machine and in parallel.
 
 Functions:
     plot_autocorrelation: Autocorrelation functions of a few chains.
+    plot_error_cdf: Cumulative distributions of absolute angular errors, with reference thresholds.
+    plot_error_by_distance: Error quantiles against the distance to the nearest observation.
     plot_correlation_curve: Binned correlation against distance, with the fitted curve.
     plot_correlation_histogram: Histogram of the pooled pair correlations, with the noise floor.
     plot_histogram: Histogram of the finite values of one array.
     plot_optimization_history: Loss and gradient norm over the iterations of an optimizer.
+    plot_optimization_histories: The same for several optimizations in one figure.
     plot_traces: Traces of a few chain components, with the burn-in marked.
 """
 
@@ -164,12 +167,90 @@ def plot_correlation_histogram(
 
 
 # --------------------------------------------------------------------------------------------------
+def plot_error_cdf(
+    absolute_errors_degrees: Sequence[np.ndarray[tuple[int], np.dtype[np.float64]]],
+    labels: Sequence[str],
+    path: Path,
+    thresholds_degrees: Sequence[float] = (),
+    title: str = "",
+) -> None:
+    """Plot the cumulative distribution of absolute angular errors, one curve per error array.
+
+    The curve at an error `e` is the fraction of simplices with an error below `e`, so a curve that
+    rises early is better. Overlaying the runs of several initial guesses shows their spread.
+
+    Args:
+        absolute_errors_degrees (Sequence[np.ndarray]): Absolute errors in degrees, each of shape
+            `(num_simplices,)`.
+        labels (Sequence[str]): Legend entry of each curve.
+        path (Path): Output file; the format follows the suffix, e.g. `.pdf`.
+        thresholds_degrees (Sequence[float]): Errors marked by vertical lines. Defaults to none.
+        title (str): Title of the plot. Defaults to none.
+
+    Raises:
+        ValueError: If `labels` does not match `absolute_errors_degrees`.
+    """
+    if len(labels) != len(absolute_errors_degrees):
+        raise ValueError(f"Got {len(labels)} labels for {len(absolute_errors_degrees)} curves.")
+    figure = Figure(figsize=(6, 4))
+    axis = figure.subplots()
+    for errors, label in zip(absolute_errors_degrees, labels, strict=True):
+        sorted_errors = np.sort(errors)
+        fractions = np.arange(1, sorted_errors.shape[0] + 1) / sorted_errors.shape[0]
+        axis.plot(sorted_errors, fractions, label=label)
+    for threshold in thresholds_degrees:
+        axis.axvline(threshold, color="gray", linestyle=":")
+    axis.set_xlabel("absolute axial error [deg]")
+    axis.set_ylabel("fraction of simplices below")
+    axis.set_ylim(0.0, 1.0)
+    axis.set_title(title)
+    axis.legend()
+    _save(figure, path)
+
+
+# --------------------------------------------------------------------------------------------------
+def plot_error_by_distance(
+    bin_distances: np.ndarray[tuple[int], np.dtype[np.float64]],
+    bin_quantiles: np.ndarray[tuple[int, int], np.dtype[np.float64]],
+    quantile_labels: Sequence[str],
+    path: Path,
+    title: str = "",
+) -> None:
+    """Plot error quantiles against the distance to the nearest observation.
+
+    Args:
+        bin_distances (np.ndarray): Mean distance per bin, shape `(num_bins,)`.
+        bin_quantiles (np.ndarray): Error quantiles in degrees per bin, shape
+            `(num_bins, num_quantiles)`, e.g. from `compute_error_by_distance` in degrees.
+        quantile_labels (Sequence[str]): Legend entry of each quantile.
+        path (Path): Output file; the format follows the suffix, e.g. `.pdf`.
+        title (str): Title of the plot. Defaults to none.
+
+    Raises:
+        ValueError: If `quantile_labels` does not match the columns of `bin_quantiles`.
+    """
+    if len(quantile_labels) != bin_quantiles.shape[1]:
+        raise ValueError(
+            f"Got {len(quantile_labels)} labels for {bin_quantiles.shape[1]} quantiles."
+        )
+    figure = Figure(figsize=(6, 4))
+    axis = figure.subplots()
+    for quantiles, label in zip(bin_quantiles.T, quantile_labels, strict=True):
+        axis.plot(bin_distances, quantiles, "o-", label=label)
+    axis.set_xlabel("distance to the nearest observation")
+    axis.set_ylabel("absolute axial error [deg]")
+    axis.set_title(title)
+    axis.legend()
+    _save(figure, path)
+
+
+# --------------------------------------------------------------------------------------------------
 def plot_optimization_history(
     loss_history: np.ndarray[tuple[int], np.dtype[np.float64]],
     gradient_norm_history: np.ndarray[tuple[int], np.dtype[np.float64]],
     path: Path,
 ) -> None:
-    """Plot the loss and, on a log scale, the gradient norm over the optimizer iterations.
+    """Plot the loss and the gradient norm, both on a log scale, over the optimizer iterations.
 
     Args:
         loss_history (np.ndarray): Loss per iteration, shape `(num_iterations,)`.
@@ -178,12 +259,56 @@ def plot_optimization_history(
     """
     figure = Figure(figsize=(10, 4))
     loss_axis, gradient_axis = figure.subplots(1, 2)
-    loss_axis.plot(loss_history)
+    loss_axis.semilogy(loss_history)
     loss_axis.set_xlabel("iteration")
     loss_axis.set_ylabel("loss")
     gradient_axis.semilogy(gradient_norm_history)
     gradient_axis.set_xlabel("iteration")
     gradient_axis.set_ylabel("gradient norm")
+    _save(figure, path)
+
+
+# --------------------------------------------------------------------------------------------------
+def plot_optimization_histories(
+    loss_histories: Sequence[np.ndarray[tuple[int], np.dtype[np.float64]]],
+    gradient_norm_histories: Sequence[np.ndarray[tuple[int], np.dtype[np.float64]]],
+    labels: Sequence[str],
+    path: Path,
+    title: str = "",
+) -> None:
+    """Plot the losses and gradient norms of several optimizations over the iterations.
+
+    Both are drawn on a log scale, as the loss of different initial guesses spans orders of
+    magnitude at the start.
+
+    Args:
+        loss_histories (Sequence[np.ndarray]): Loss per iteration, one array per optimization.
+        gradient_norm_histories (Sequence[np.ndarray]): Gradient norm per iteration, same layout.
+        labels (Sequence[str]): Legend entry of each optimization.
+        path (Path): Output file; the format follows the suffix, e.g. `.pdf`.
+        title (str): Title of the plot. Defaults to none.
+
+    Raises:
+        ValueError: If the sequences differ in length.
+    """
+    if not len(loss_histories) == len(gradient_norm_histories) == len(labels):
+        raise ValueError(
+            f"Got {len(loss_histories)} losses, {len(gradient_norm_histories)} gradient norms and "
+            f"{len(labels)} labels."
+        )
+    figure = Figure(figsize=(10, 4))
+    loss_axis, gradient_axis = figure.subplots(1, 2)
+    for loss, gradient_norm, label in zip(
+        loss_histories, gradient_norm_histories, labels, strict=True
+    ):
+        loss_axis.semilogy(loss, label=label)
+        gradient_axis.semilogy(gradient_norm, label=label)
+    loss_axis.set_xlabel("iteration")
+    loss_axis.set_ylabel("loss")
+    gradient_axis.set_xlabel("iteration")
+    gradient_axis.set_ylabel("gradient norm")
+    gradient_axis.legend()
+    figure.suptitle(title)
     _save(figure, path)
 
 

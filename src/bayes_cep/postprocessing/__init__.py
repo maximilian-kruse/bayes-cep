@@ -8,4 +8,5 @@ which run type is decided in the `report` method of that run in `single_runs/`.
 Modules:
     mesh_plots: Fields on the mesh, rendered off-screen.
     curve_plots: Line plots, e.g. autocorrelation functions and optimization histories.
+    summary_plots: Plots that summarize a whole study, e.g. heatmaps over parameters.
 """

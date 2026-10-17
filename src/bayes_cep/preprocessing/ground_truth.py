@@ -3,8 +3,8 @@ between it and the real-data source in `angle_field.py`.
 
 A simulation study picks exactly one `GroundTruthStrategy` per run — never both — via
 `PreprocessingRunConfig.ground_truth` (in `single_runs/preprocessing.py`). The prior mean is not
-part of this strategy: it is computed uniformly from whichever ground truth comes out, via
-[`prior_mean.build_constant_prior_mean`][bayes_cep.preprocessing.prior_mean.build_constant_prior_mean].
+part of this strategy: it is zero for any ground truth, as the mean of the ground truth is not
+known in a realistic scenario.
 
 Classes:
     GroundTruthStrategy: ABC interface for producing a ground-truth angle field.
@@ -32,7 +32,6 @@ import pyvista as pv
 from bayes_cep.mesh.io import create_dolfinx_mesh
 from bayes_cep.posterior.prior import PriorParameters, build_fiber_angle_prior
 from bayes_cep.preprocessing.angle_field import build_angle_field_from_fiber_field
-from bayes_cep.statistics.axial_statistics import shift_angles_to_minimize_axial_variance
 
 
 # ==================================================================================================
@@ -41,8 +40,9 @@ def build_synthetic_ground_truth(
 ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
     r"""Sample a synthetic ground-truth angle field from the Bilaplacian SPDE prior.
 
-    Draws one sample from a zero-mean Bilaplacian SPDE prior (`prior_parameters`) and
-    re-branches it onto a single $\pi$-periodic branch.
+    Draws one sample from a zero-mean Bilaplacian SPDE prior (`prior_parameters`). The sample is
+    kept as drawn: shifting it by multiples of $\pi$ would add jumps that the real-valued prior
+    does not allow. The forward map is $\pi$-periodic, and errors are measured axially.
 
     Args:
         mesh (pv.UnstructuredGrid): Triangular surface mesh to sample the prior on.
@@ -58,7 +58,7 @@ def build_synthetic_ground_truth(
         np.zeros(num_vertices),
         prior_parameters,
     )
-    return shift_angles_to_minimize_axial_variance(prior.generate_sample())
+    return prior.generate_sample()
 
 
 # ==================================================================================================

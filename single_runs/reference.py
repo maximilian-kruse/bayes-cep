@@ -87,7 +87,7 @@ CORRELATION_SEED = 0
 
 # MAP optimizer
 MAP_MAX_NUM_ITERATIONS = 1000
-MAP_GRADIENT_NORM_TOLERANCE = 100.0
+MAP_GRADIENT_NORM_TOLERANCE = 1
 
 # MCMC sampler. The data (many observations, tiny noise variance) make the likelihood potential
 # very sharp relative to the broad prior, so large proposal steps are practically never accepted;

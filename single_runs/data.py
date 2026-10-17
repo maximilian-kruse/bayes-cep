@@ -82,8 +82,8 @@ class PreprocessedData(ArrayRecord):
 
     Attributes:
         ground_truth (np.ndarray): Ground-truth fiber angle [rad] per vertex.
-        prior_mean (np.ndarray): Constant prior mean [rad] per vertex: the axial mean of the ground
-            truth.
+        prior_mean (np.ndarray): Prior mean [rad] per vertex: zero, as the mean of the ground truth
+            is not known in a realistic scenario.
         observed_vertex_indices (np.ndarray): Indices of the observed vertices.
         observed_activation_times (np.ndarray): Noisy activation times at those vertices.
         noise_variance (float): Variance of the noise of the observations; the likelihood of the

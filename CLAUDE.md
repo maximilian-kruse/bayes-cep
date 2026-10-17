@@ -55,7 +55,7 @@ fiber-orientation angle per mesh vertex.
   model as one pair, never mix them: `CameronMartinPosteriorModel` (the gradient
   is a dual vector; the prior covariance maps it to the Cameron-Martin representer) for
   `CustomLBFGSStrategy`, `EuclideanPosteriorModel` (raw gradient) for `ScipyLBFGSBStrategy`.
-- `preprocessing/` (ground-truth strategies, constant prior mean, synthetic observations), `mcmc/`
+- `preprocessing/` (ground-truth strategies, synthetic observations; the prior mean is always zero), `mcmc/`
   (sampler builder) and `statistics/` serve the runs. `statistics/` reads (zarr) chains block by
   block through `SampleStore`; angles are axial (mod $\pi$): means via the doubled-angle resultant,
   diagnostics and correlations on `sin(2(theta - mean))`. The in-memory and the streamed axial mean
@@ -115,6 +115,9 @@ parameters; `reference.py` holds them as constants and `reference_*_config` fact
   Result, plot and log file names are defined once per run (an `ArrayRecord` or module constants,
   `METRICS_RECORD` for the metrics) and used by `outputs`, `_execute` and `report`; never repeat a
   file name as a string literal there.
+
+`scripts/postprocess_map_study.py STUDY_DIR` writes the study-level plots of a MAP study (heatmaps over
+the prior parameters, error distributions and histories of the seeds) into its `summary/`.
 
 `studies/*.py` define `STUDY`, set their own `root` and `RAW_DIR`, and are not archived with a study
 (the recorded commit and patch cover them). A bare relative path in a config is relative to the

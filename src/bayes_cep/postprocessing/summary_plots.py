@@ -4,6 +4,8 @@ Functions:
     plot_parameter_heatmap: A value over a grid of two study parameters, cells without a value
         marked.
     plot_loss_maps: Loss over the $(\\kappa, \\tau)$ plane, one panel per loss surface.
+    plot_estimates_versus_truth: Estimated against true values of several quantities, one panel
+        each.
 """
 
 from collections.abc import Sequence
@@ -96,6 +98,7 @@ def plot_loss_maps(
     path: Path,
     title: str = "",
     max_num_columns: int = 4,
+    true_parameters: Sequence[tuple[float, float]] | None = None,
 ) -> None:
     r"""Plot loss surfaces over the $(\kappa, \tau)$ plane, one panel per surface.
 
@@ -113,6 +116,8 @@ def plot_loss_maps(
         path (Path): Output file; the format follows the suffix, e.g. `.pdf`.
         title (str): Title of the figure. Defaults to none.
         max_num_columns (int): Panels per row at most. Defaults to 4.
+        true_parameters (Sequence[tuple[float, float]] | None): The known $(\kappa, \tau)$ of
+            each surface, marked by a white cross. Defaults to none.
 
     Raises:
         ValueError: If there are no surfaces, the labels do not match them, or a surface does not
@@ -120,6 +125,8 @@ def plot_loss_maps(
     """
     if len(losses) == 0 or len(labels) != len(losses):
         raise ValueError(f"Got {len(labels)} labels for {len(losses)} loss surfaces.")
+    if true_parameters is not None and len(true_parameters) != len(losses):
+        raise ValueError(f"Got {len(true_parameters)} true parameters for {len(losses)} surfaces.")
     for loss in losses:
         if loss.shape != (len(kappas), len(taus)):
             raise ValueError(
@@ -130,7 +137,7 @@ def plot_loss_maps(
     figure = Figure(figsize=(4.2 * num_columns, 3.6 * num_rows), layout="constrained")
     axes = np.atleast_1d(figure.subplots(num_rows, num_columns, squeeze=False)).ravel()
     kappa_grid = np.geomspace(kappas.min(), kappas.max(), 200)
-    for axis, loss, label in zip(axes, losses, labels, strict=False):
+    for panel, (axis, loss, label) in enumerate(zip(axes, losses, labels, strict=False)):
         finite = np.isfinite(loss) & (loss > 0.0)
         image = axis.pcolormesh(
             taus,
@@ -144,6 +151,10 @@ def plot_loss_maps(
             np.argmin(np.where(finite, loss, np.inf)), loss.shape
         )
         axis.plot(taus[best_column], kappas[best_row], "r*", markersize=12)
+        if true_parameters is not None:
+            axis.plot(
+                true_parameters[panel][1], true_parameters[panel][0], "wx", markersize=9, mew=2
+            )
         axis.plot(
             taus[best_column] * kappas[best_row] / kappa_grid,
             kappa_grid,
@@ -164,6 +175,57 @@ def plot_loss_maps(
         figure.colorbar(image, ax=axis, label="loss")
     for axis in axes[len(losses) :]:
         axis.set_visible(False)
+    if title:
+        figure.suptitle(title)
+    figure.savefig(path, dpi=FIGURE_DPI)
+
+
+# ==================================================================================================
+def plot_estimates_versus_truth(
+    quantity_names: Sequence[str],
+    truths: np.ndarray[tuple[int, int], np.dtype[np.float64]],
+    estimates: np.ndarray[tuple[int, int], np.dtype[np.float64]],
+    group_labels: Sequence[str],
+    path: Path,
+    title: str = "",
+) -> None:
+    """Plot estimated against true values on logarithmic axes, one panel per quantity.
+
+    Args:
+        quantity_names (Sequence[str]): Name of each quantity, e.g. `kappa`, `tau`, `kappa * tau`.
+        truths (np.ndarray): Positive true values, shape `(num_points, num_quantities)`.
+        estimates (np.ndarray): Positive estimates, same shape.
+        group_labels (Sequence[str]): Group of each point, shape `(num_points,)`; every group has
+            its own color and legend entry.
+        path (Path): Output file; the format follows the suffix, e.g. `.pdf`.
+        title (str): Title of the figure. Defaults to none.
+
+    Raises:
+        ValueError: If the shapes do not match.
+    """
+    if truths.shape != estimates.shape or truths.shape != (len(group_labels), len(quantity_names)):
+        raise ValueError(
+            f"Got truths of shape {truths.shape}, estimates of shape {estimates.shape}, "
+            f"{len(group_labels)} group labels and {len(quantity_names)} quantities."
+        )
+    labels = np.asarray(group_labels)
+    figure = Figure(figsize=(4.2 * len(quantity_names), 4.0), layout="constrained")
+    axes = np.atleast_1d(figure.subplots(1, len(quantity_names)))
+    for column, (axis, name) in enumerate(zip(axes, quantity_names, strict=True)):
+        low = min(truths[:, column].min(), estimates[:, column].min())
+        high = max(truths[:, column].max(), estimates[:, column].max())
+        axis.plot([low, high], [low, high], "k--", linewidth=0.8)
+        for group in dict.fromkeys(labels):
+            chosen = labels == group
+            axis.scatter(
+                truths[chosen, column], estimates[chosen, column], s=14, alpha=0.7, label=group
+            )
+        axis.set_xscale("log")
+        axis.set_yscale("log")
+        axis.set_xlabel(f"true {name}")
+        axis.set_ylabel(f"estimated {name}")
+        axis.set_aspect("equal")
+    axes[0].legend(fontsize=8)
     if title:
         figure.suptitle(title)
     figure.savefig(path, dpi=FIGURE_DPI)

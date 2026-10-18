@@ -22,6 +22,7 @@ Functions:
     reference_correlation_length_settings: Estimation of the correlation length of the prior.
     reference_moment_fit_settings: Estimation of kappa and tau of a patient fiber field.
     reference_prior_moment_fit_config: The prior parameter estimation run.
+    reference_prior_recovery_config: The recovery test of the prior parameter estimation.
     reference_inference_problem: The posterior of the example data.
     reference_prior_config: The prior investigation run.
     reference_preprocessing_config: The preprocessing run, for a given ground truth.
@@ -58,6 +59,7 @@ from single_runs.mcmc import ChainDiagnosticsSettings, McmcRunConfig
 from single_runs.preprocessing import PreprocessingRunConfig
 from single_runs.prior import PriorRunConfig
 from single_runs.prior_fit import PriorMomentFitRunConfig
+from single_runs.prior_recovery import PriorRecoveryRunConfig
 
 # Data
 NUM_OBSERVATIONS = 1000
@@ -213,6 +215,35 @@ def reference_prior_moment_fit_config(
     """
     return PriorMomentFitRunConfig(
         raw_dir=raw_dir,
+        fit=reference_moment_fit_settings(smoothing_scale, distance_metric),
+        kappas=MOMENT_FIT_KAPPAS,
+        taus=MOMENT_FIT_TAUS,
+        interpolation=NearestNeighborInterpolationStrategy(),
+    )
+
+
+# ==================================================================================================
+def reference_prior_recovery_config(
+    raw_dir: Path,
+    true_prior: PriorParameters,
+    smoothing_scale: float,
+    distance_metric: DistanceMetric,
+) -> PriorRecoveryRunConfig:
+    """The recovery test of the prior parameter estimation, on the reference grid.
+
+    Args:
+        raw_dir (Path): Patient directory with the mesh; there is deliberately no default.
+        true_prior (PriorParameters): Parameters and seed of the fitted prior sample; the seed must
+            differ from `MOMENT_FIT_SEED`.
+        smoothing_scale (float): `0` for no smoothing, else the scale the sample is smoothed with.
+        distance_metric (DistanceMetric): Distance that bins the simplex pairs.
+
+    Returns:
+        PriorRecoveryRunConfig: The reference configuration for the given truth.
+    """
+    return PriorRecoveryRunConfig(
+        raw_dir=raw_dir,
+        true_prior=true_prior,
         fit=reference_moment_fit_settings(smoothing_scale, distance_metric),
         kappas=MOMENT_FIT_KAPPAS,
         taus=MOMENT_FIT_TAUS,

@@ -11,6 +11,8 @@ Functions:
     plot_error_by_distance: Error quantiles against the distance to the nearest observation.
     plot_correlation_curve: Binned correlation against distance, with the fitted curve.
     plot_correlation_histogram: Histogram of the pooled pair correlations, with the noise floor.
+    plot_binned_correlation_comparison: Binned correlation of an observed field and of simulated
+        fields against distance.
     plot_histogram: Histogram of the finite values of one array.
     plot_optimization_history: Loss and gradient norm over the iterations of an optimizer.
     plot_optimization_histories: The same for several optimizations in one figure.
@@ -398,5 +400,48 @@ def _mark_failure(axis: Axes, headline: str, reason: str) -> None:
 # --------------------------------------------------------------------------------------------------
 def _save(figure: Figure, path: Path) -> None:
     """Write `figure` to `path` with a tight layout."""
+    figure.tight_layout()
+    figure.savefig(path, dpi=FIGURE_DPI)
+
+
+# ==================================================================================================
+def plot_binned_correlation_comparison(
+    bin_edges: np.ndarray[tuple[int], np.dtype[np.float64]],
+    observed: np.ndarray[tuple[int], np.dtype[np.float64]],
+    simulated: Sequence[np.ndarray[tuple[int], np.dtype[np.float64]]],
+    simulated_labels: Sequence[str],
+    num_fitted_bins: int,
+    path: Path,
+    title: str = "",
+) -> None:
+    """Plot the binned correlation of an observed field and of simulated fields against distance.
+
+    Args:
+        bin_edges (np.ndarray): Edges of the distance bins, shape `(num_bins + 1,)`; the bins are
+            plotted at their midpoints, with the last edge, which may be a mere upper bound,
+            limited to twice the one before.
+        observed (np.ndarray): Correlation of the observed field per bin, shape `(num_bins,)`.
+        simulated (Sequence[np.ndarray]): Correlation per bin of each simulated field.
+        simulated_labels (Sequence[str]): Legend entry of each simulated field.
+        num_fitted_bins (int): Number of leading bins that enter the fit; the others are drawn
+            lighter.
+        path (Path): Output file; the format follows the suffix, e.g. `.pdf`.
+        title (str): Title of the plot. Defaults to none.
+    """
+    shown_edges = bin_edges.copy()
+    shown_edges[-1] = min(shown_edges[-1], 2.0 * shown_edges[-2])
+    midpoints = 0.5 * (shown_edges[:-1] + shown_edges[1:])
+    figure = Figure(figsize=(6, 4))
+    axis = figure.subplots()
+    axis.axhline(0.0, color="gray", linewidth=0.8)
+    axis.axvspan(shown_edges[num_fitted_bins], shown_edges[-1], color="gray", alpha=0.12)
+    axis.plot(midpoints, observed, "ko-", label="observed")
+    for correlation, label in zip(simulated, simulated_labels, strict=True):
+        axis.plot(midpoints, correlation, "o--", label=label)
+    axis.set_xscale("log")
+    axis.set_xlabel("distance (shaded: not fitted)")
+    axis.set_ylabel("mean cos 2(angle difference)")
+    axis.set_title(title)
+    axis.legend()
     figure.tight_layout()
     figure.savefig(path, dpi=FIGURE_DPI)

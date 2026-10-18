@@ -60,6 +60,12 @@ class RawDataDirectory:
         return self.path / FIBER_FIELD_FILE_NAME
 
     # ----------------------------------------------------------------------------------------------
+    def smoothed_angle_field_path(self, scale: float) -> Path:
+        """The per-vertex angles [rad] of the field smoothed at `scale`, as written by
+        `scripts/smooth_patient_fibers.py`."""
+        return self.path / f"smoothed_scale_{scale:g}" / "angle_field.npy"
+
+    # ----------------------------------------------------------------------------------------------
     def load_mesh(self) -> pv.UnstructuredGrid:
         """Load and validate the triangular surface mesh."""
         return load_pyvista_mesh(self.mesh_path)

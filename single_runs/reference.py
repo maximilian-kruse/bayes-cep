@@ -20,11 +20,15 @@ Functions:
     reference_eikonal_settings: Eikonal forward-solver settings of the reference patient.
     reference_optimizer_strategy: Cameron-Martin L-BFGS with the loose reference tolerance.
     reference_correlation_length_settings: Estimation of the correlation length of the prior.
+    reference_moment_fit_settings: Estimation of kappa and tau of a patient fiber field.
+    reference_prior_moment_fit_config: The prior parameter estimation run.
     reference_inference_problem: The posterior of the example data.
     reference_prior_config: The prior investigation run.
     reference_preprocessing_config: The preprocessing run, for a given ground truth.
     reference_synthetic_preprocessing_config: The preprocessing run with a synthetic ground truth.
     reference_patient_preprocessing_config: The preprocessing run with the real patient fibers.
+    reference_smoothed_patient_preprocessing_config: The preprocessing run with a stored smoothed
+        patient field.
     reference_map_config: The MAP run.
     reference_mcmc_config: The MCMC run, for a given initial state.
 """
@@ -42,15 +46,18 @@ from bayes_cep.posterior.eikonal_map import EikonalSolverSettings
 from bayes_cep.posterior.prior import PriorParameters
 from bayes_cep.preprocessing.ground_truth import (
     RealDataGroundTruthStrategy,
+    SmoothedFieldGroundTruthStrategy,
     SyntheticGroundTruthStrategy,
 )
 from bayes_cep.preprocessing.synthetic_observations import ObservationSamplingSettings
 from bayes_cep.statistics.correlation_length import CorrelationLengthSettings
+from bayes_cep.statistics.prior_moment_fit import DistanceMetric, MomentFitSettings
 from single_runs.inference import InferenceProblemConfig
 from single_runs.map import MapRunConfig
 from single_runs.mcmc import ChainDiagnosticsSettings, McmcRunConfig
 from single_runs.preprocessing import PreprocessingRunConfig
 from single_runs.prior import PriorRunConfig
+from single_runs.prior_fit import PriorMomentFitRunConfig
 
 # Data
 NUM_OBSERVATIONS = 1000
@@ -84,6 +91,18 @@ CORRELATION_NOISE_FLOOR_SCALE = 2.0
 CORRELATION_THRESHOLD = float(np.exp(-1.0))
 CORRELATION_BURN_IN = 0
 CORRELATION_SEED = 0
+
+# Estimation of kappa and tau from a patient fiber field (simulated moments). The distances are in
+# the units of the patient meshes; the outer two bins are not fitted.
+MOMENT_FIT_DISTANCE_BIN_EDGES = (0.0, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 1000.0)
+MOMENT_FIT_NUM_FITTED_BINS = 6
+MOMENT_FIT_NUM_PAIRS = 400_000
+MOMENT_FIT_NUM_SOURCE_SIMPLICES = 400
+MOMENT_FIT_CONCENTRATION_WEIGHT = 6.0
+MOMENT_FIT_NUM_PRIOR_SAMPLES = 8
+MOMENT_FIT_SEED = 0
+MOMENT_FIT_KAPPAS = (0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.6, 0.8)
+MOMENT_FIT_TAUS = (0.3, 0.45, 0.6, 0.8, 1.0, 1.4, 2.0, 3.0)
 
 # MAP optimizer
 MAP_MAX_NUM_ITERATIONS = 1000
@@ -149,6 +168,55 @@ def reference_correlation_length_settings() -> CorrelationLengthSettings:
         correlation_threshold=CORRELATION_THRESHOLD,
         burn_in=CORRELATION_BURN_IN,
         seed=CORRELATION_SEED,
+    )
+
+
+# ==================================================================================================
+def reference_moment_fit_settings(
+    smoothing_scale: float, distance_metric: DistanceMetric
+) -> MomentFitSettings:
+    """Estimation of kappa and tau of a patient fiber field.
+
+    Args:
+        smoothing_scale (float): Scale of the smoothing of the prior samples; `0` for a raw field,
+            the scale of the field for a smoothed one. There is deliberately no default.
+        distance_metric (DistanceMetric): Distance that bins the simplex pairs; deliberately no
+            default.
+    """
+    return MomentFitSettings(
+        distance_bin_edges=MOMENT_FIT_DISTANCE_BIN_EDGES,
+        num_fitted_bins=MOMENT_FIT_NUM_FITTED_BINS,
+        num_pairs=MOMENT_FIT_NUM_PAIRS,
+        distance_metric=distance_metric,
+        num_source_simplices=MOMENT_FIT_NUM_SOURCE_SIMPLICES,
+        concentration_weight=MOMENT_FIT_CONCENTRATION_WEIGHT,
+        num_prior_samples=MOMENT_FIT_NUM_PRIOR_SAMPLES,
+        seed=MOMENT_FIT_SEED,
+        smoothing_scale=smoothing_scale,
+    )
+
+
+# ==================================================================================================
+def reference_prior_moment_fit_config(
+    raw_dir: Path, smoothing_scale: float, distance_metric: DistanceMetric
+) -> PriorMomentFitRunConfig:
+    """The prior parameter estimation run on the reference grid.
+
+    Args:
+        raw_dir (Path): Patient directory with the mesh and the fiber field; there is deliberately
+            no default.
+        smoothing_scale (float): `0` for the raw field, else the scale of the smoothed field.
+        distance_metric (DistanceMetric): Distance that bins the simplex pairs.
+
+    Returns:
+        PriorMomentFitRunConfig: The reference configuration for the given field.
+    """
+    return PriorMomentFitRunConfig(
+        raw_dir=raw_dir,
+        fit=reference_moment_fit_settings(smoothing_scale, distance_metric),
+        kappas=MOMENT_FIT_KAPPAS,
+        taus=MOMENT_FIT_TAUS,
+        interpolation=NearestNeighborInterpolationStrategy(),
     )
 
 
@@ -242,6 +310,22 @@ def reference_patient_preprocessing_config(raw_dir: Path) -> PreprocessingRunCon
         raw_dir (Path): Directory containing the raw data; there is deliberately no default.
     """
     return reference_preprocessing_config(raw_dir, RealDataGroundTruthStrategy())
+
+
+# ==================================================================================================
+def reference_smoothed_patient_preprocessing_config(
+    raw_dir: Path, angle_field_path: Path
+) -> PreprocessingRunConfig:
+    """The preprocessing run with a stored smoothed angle field of the patient as ground truth.
+
+    Args:
+        raw_dir (Path): Directory containing the raw data; there is deliberately no default.
+        angle_field_path (Path): `.npy` file with the smoothed angle [rad] per vertex (written by
+            `scripts/smooth_patient_fibers.py`); there is deliberately no default.
+    """
+    return reference_preprocessing_config(
+        raw_dir, SmoothedFieldGroundTruthStrategy(path=angle_field_path)
+    )
 
 
 # ==================================================================================================

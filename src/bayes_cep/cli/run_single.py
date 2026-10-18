@@ -4,7 +4,8 @@ Choose the run type as a subcommand: a run defined in `single_runs/` by its `nam
 `preprocessing`, `map`, `mcmc`; every option given as a flag), a run of a file given with
 `--run-file` (see below), or one of the reference setups of
 `single_runs.reference`: `reference-synthetic-preprocessing`, `reference-patient-preprocessing`,
-`reference-map` and `reference-mcmc`, with the data directories (and the initial state file of the
+`reference-smoothed-patient-preprocessing`, `reference-map` and
+`reference-mcmc`, with the data directories (and the initial state file of the
 chain) as arguments (`--config.raw-dir`, ...); no path is a default. Single reference values
 are changed by `--config.overrides dotted.path=value ...` (value as JSON, several separated by
 spaces), e.g. `--config.overrides problem.prior.kappa=0.1 num_samples=500`; the run then gets a
@@ -63,6 +64,7 @@ from single_runs.reference import (
     reference_map_config,
     reference_mcmc_config,
     reference_patient_preprocessing_config,
+    reference_smoothed_patient_preprocessing_config,
     reference_synthetic_preprocessing_config,
 )
 
@@ -71,6 +73,7 @@ CONFIG_FILE_SUBCOMMAND = "from-file"
 REFERENCE_FACTORIES = {
     "reference-synthetic-preprocessing": reference_synthetic_preprocessing_config,
     "reference-patient-preprocessing": reference_patient_preprocessing_config,
+    "reference-smoothed-patient-preprocessing": reference_smoothed_patient_preprocessing_config,
     "reference-map": reference_map_config,
     "reference-mcmc": reference_mcmc_config,
 }

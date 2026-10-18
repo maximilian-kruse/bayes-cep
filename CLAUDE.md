@@ -55,7 +55,7 @@ fiber-orientation angle per mesh vertex.
   model as one pair, never mix them: `CameronMartinPosteriorModel` (the gradient
   is a dual vector; the prior covariance maps it to the Cameron-Martin representer) for
   `CustomLBFGSStrategy`, `EuclideanPosteriorModel` (raw gradient) for `ScipyLBFGSBStrategy`.
-- `preprocessing/` (ground-truth strategies, synthetic observations; the prior mean is always zero), `mcmc/`
+- `preprocessing/` (ground-truth strategies: synthetic, raw patient, or a stored smoothed patient field from `scripts/smooth_patient_fibers.py`; synthetic observations; the prior mean is always zero), `mcmc/`
   (sampler builder) and `statistics/` serve the runs. `statistics/` reads (zarr) chains block by
   block through `SampleStore`; angles are axial (mod $\pi$): means via the doubled-angle resultant,
   diagnostics and correlations on `sin(2(theta - mean))`. The in-memory and the streamed axial mean
@@ -115,6 +115,12 @@ parameters; `reference.py` holds them as constants and `reference_*_config` fact
   Result, plot and log file names are defined once per run (an `ArrayRecord` or module constants,
   `METRICS_RECORD` for the metrics) and used by `outputs`, `_execute` and `report`; never repeat a
   file name as a string literal there.
+
+`prior_fit.py` scores a kappa/tau grid against one patient field (`statistics/prior_moment_fit.py`,
+simulated moments; raw or smoothed field, Euclidean or geodesic pair distance) and keeps the whole
+loss surface; `studies/prior_moment_fit.py` sweeps patients x smoothing scales x metrics (needs
+`scripts/smooth_patient_fibers.py` output for every scale first) and
+`scripts/postprocess_prior_fit_study.py STUDY_DIR` pools the losses over the patients.
 
 `scripts/postprocess_map_study.py STUDY_DIR` writes the study-level plots of a MAP study (heatmaps over
 the prior parameters, error distributions and histories of the seeds) into its `summary/`.

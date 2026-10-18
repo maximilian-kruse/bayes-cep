@@ -24,6 +24,7 @@ from bayes_cep.posterior.eikonal_map import EikonalParameterToSolutionMap, Eikon
 from bayes_cep.postprocessing.mesh_plots import render_axial_angle_field
 from bayes_cep.preprocessing.ground_truth import (
     RealDataGroundTruthStrategy,
+    SmoothedFieldGroundTruthStrategy,
     SyntheticGroundTruthStrategy,
 )
 from bayes_cep.preprocessing.synthetic_observations import (
@@ -31,7 +32,7 @@ from bayes_cep.preprocessing.synthetic_observations import (
     generate_synthetic_observations,
 )
 from bayes_cep.run.config import RunConfig
-from bayes_cep.run.directories import METRICS_RECORD, PLOTS_DIR_NAME
+from bayes_cep.run.directories import METRICS_RECORD, PLOTS_DIR_NAME, resolve_repository_path
 from bayes_cep.run.progress import StepReporter, describe_array
 from bayes_cep.run.template import Metrics, Run
 from single_runs.data import PreprocessedData, RawDataDirectory
@@ -50,8 +51,8 @@ class PreprocessingRunConfig(RunConfig):
 
     Attributes:
         raw_dir (Path): Directory containing `mesh.vtu`, `basis_vecs.npy` and `fiber_field.npy`.
-        ground_truth (RealDataGroundTruthStrategy | SyntheticGroundTruthStrategy): Source of the
-            ground-truth angle field.
+        ground_truth (RealDataGroundTruthStrategy | SmoothedFieldGroundTruthStrategy |
+            SyntheticGroundTruthStrategy): Source of the ground-truth angle field.
         observations (ObservationSamplingSettings): Number of observations, noise variance and
             seed of the synthetic data.
         eikonal (EikonalSolverSettings): Forward-solver settings that generate the data.
@@ -60,7 +61,11 @@ class PreprocessingRunConfig(RunConfig):
     """
 
     raw_dir: Path
-    ground_truth: RealDataGroundTruthStrategy | SyntheticGroundTruthStrategy
+    ground_truth: (
+        RealDataGroundTruthStrategy
+        | SmoothedFieldGroundTruthStrategy
+        | SyntheticGroundTruthStrategy
+    )
     observations: ObservationSamplingSettings
     eikonal: EikonalSolverSettings
     interpolation: LinearInterpolationStrategy | NearestNeighborInterpolationStrategy
@@ -87,7 +92,10 @@ class PreprocessingRun(Run[PreprocessingRunConfig]):
     @override
     def input_files(self) -> list[Path]:
         raw_data = RawDataDirectory.from_configured_path(self.config.raw_dir)
-        return [raw_data.mesh_path, raw_data.basis_vectors_path, raw_data.fiber_field_path]
+        files = [raw_data.mesh_path, raw_data.basis_vectors_path, raw_data.fiber_field_path]
+        if isinstance(self.config.ground_truth, SmoothedFieldGroundTruthStrategy):
+            files.append(resolve_repository_path(self.config.ground_truth.path))
+        return files
 
     # ----------------------------------------------------------------------------------------------
     @override

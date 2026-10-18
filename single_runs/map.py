@@ -140,7 +140,10 @@ class MapRun(Run[MapRunConfig]):
     # ----------------------------------------------------------------------------------------------
     @override
     def input_files(self) -> list[Path]:
-        return self.config.problem.input_files()
+        files = self.config.problem.input_files()
+        if isinstance(self.config.initial_guess, FileInitialGuess):
+            files.append(resolve_repository_path(self.config.initial_guess.path))
+        return files
 
     # ----------------------------------------------------------------------------------------------
     @override
@@ -166,20 +169,20 @@ class MapRun(Run[MapRunConfig]):
         difference = compute_axial_data_diff(
             to_simplices @ results.estimate, to_simplices @ data.ground_truth
         )
-        difference_degrees = np.degrees(difference)
-        limit = float(np.abs(difference_degrees).max())
+        # The absolute error: the sign of an axial difference is not defined near 90 degrees
+        error_degrees = np.degrees(np.abs(difference))
         render_cell_field(
             mesh,
-            difference_degrees,
+            error_degrees,
             plots_dir / DIFFERENCE_PLOT_FILE_NAME,
-            f"MAP - ground truth, mean {metrics['error_mean_deg']:.3g} deg, "
+            f"|MAP - ground truth|, mean {metrics['error_mean_deg']:.3g} deg, "
             f"median {metrics['error_median_deg']:.3g} deg",
-            "axial difference [deg]",
-            "coolwarm",
-            (-limit, limit),
+            "absolute axial error [deg]",
+            "viridis",
+            (0.0, 90.0),
         )
         plot_error_cdf(
-            [np.abs(difference_degrees)],
+            [error_degrees],
             ["MAP"],
             plots_dir / ERROR_CDF_PLOT_FILE_NAME,
             ERROR_THRESHOLDS_DEGREES,
@@ -200,7 +203,7 @@ class MapRun(Run[MapRunConfig]):
         )
         bin_distances, bin_quantiles = compute_error_by_distance(
             to_simplices @ vertex_distances,
-            np.abs(difference_degrees),
+            error_degrees,
             NUM_DISTANCE_BINS,
             DISTANCE_QUANTILES,
         )

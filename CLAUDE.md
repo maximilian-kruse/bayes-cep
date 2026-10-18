@@ -102,8 +102,8 @@ parameters; `reference.py` holds them as constants and `reference_*_config` fact
 - `preprocessing.py`: the only place where data is generated. `inference.py`: `InferenceProblemConfig`
   (embedded as `problem` in the MAP and MCMC configs) and `assemble_posterior`.
 - `map.py` only optimizes (from its `initial_guess` strategy; the MAP studies sweep
-  `initial_guess.seed` for multi-start); `mcmc.py` only samples (from `initial_state_path`, a `.npy`:
-  the prior mean or a MAP estimate). Both read the preprocessed data and nothing else of the data side, so many inference runs share one preprocessing run. `prior.py` samples the prior.
+  `initial_guess.seed` for multi-start); `mcmc.py` only samples (from its `initial_state` strategy, the same
+  ones as the MAP initial guess: prior mean, prior draw or a `.npy` such as a MAP estimate). Both read the preprocessed data and nothing else of the data side, so many inference runs share one preprocessing run. `prior.py` samples the prior.
   After sampling, `mcmc.py` streams the chain diagnostics (`ChainDiagnostics` record: ESS and
   autocorrelation time per vertex; trace and autocorrelation of `diagnostics.plotted_components`,
   none/one/several vertices) and its `report` only plots them.

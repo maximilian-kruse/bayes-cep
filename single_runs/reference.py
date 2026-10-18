@@ -41,7 +41,7 @@ from ls_bayesian.optimization.algorithms.custom_lbfgs import CustomLBFGSSettings
 
 from bayes_cep.mcmc.builder import MCMCAlgorithmName, MCMCSettings, ZarrStorageSettings
 from bayes_cep.mesh.interpolation import NearestNeighborInterpolationStrategy
-from bayes_cep.optimization.initial_guess import PriorMeanInitialGuess
+from bayes_cep.optimization.initial_guess import FileInitialGuess, PriorMeanInitialGuess
 from bayes_cep.optimization.strategies import CustomLBFGSStrategy
 from bayes_cep.posterior.eikonal_map import EikonalSolverSettings
 from bayes_cep.posterior.prior import PriorParameters
@@ -400,7 +400,7 @@ def reference_mcmc_config(
     """
     return McmcRunConfig(
         problem=reference_inference_problem(raw_dir, data_dir),
-        initial_state_path=initial_state_path,
+        initial_state=FileInitialGuess(path=initial_state_path),
         sampler=MCMCSettings(
             algorithm=MCMC_ALGORITHM,
             step_width=MCMC_STEP_WIDTH,

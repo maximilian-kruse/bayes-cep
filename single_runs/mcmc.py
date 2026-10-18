@@ -2,8 +2,8 @@ r"""MCMC run: sample the posterior of the preprocessed data.
 
 The run reads the data of a preprocessing run (see
 [`InferenceProblemConfig`][single_runs.inference.InferenceProblemConfig]) and does nothing but the
-sampling. The chain starts at the vertex array in a `.npy` file, e.g. the prior mean of the
-preprocessing run or the estimate of a MAP run; the MAP run is not part of this run, only its output
+sampling. The chain starts at the prior mean, at a draw from the prior or at the vertex array in a
+`.npy` file, e.g. the estimate of a MAP run; the MAP run is not part of this run, only its output
 file is read.
 
 After the sampling, the posterior summary and the chain diagnostics are computed by streaming over
@@ -32,6 +32,11 @@ from ls_bayesian.mcmc.sampler import SamplerSettings
 from ls_bayesian.mcmc.storage import open_zarr_samples
 
 from bayes_cep.mcmc.builder import SAMPLE_STORE_NAME, MCMCBuilder, MCMCSettings
+from bayes_cep.optimization.initial_guess import (
+    FileInitialGuess,
+    PriorMeanInitialGuess,
+    PriorSampleInitialGuess,
+)
 from bayes_cep.postprocessing.curve_plots import (
     plot_autocorrelation,
     plot_histogram,
@@ -107,9 +112,11 @@ class McmcRunConfig(RunConfig):
 
     Attributes:
         problem (InferenceProblemConfig): The data and the model of the posterior.
-        initial_state_path (Path): `.npy` file with the state the chain starts at, one angle [rad]
-            per vertex (e.g. `prior_mean_angle_field.npy` of the preprocessing run, or
-            `map_estimate.npy` of a MAP run of the same problem).
+        initial_state (PriorMeanInitialGuess | PriorSampleInitialGuess | FileInitialGuess): Where
+            the chain starts: the prior mean, a draw from the prior (its own seed, which must
+            differ from that of a synthetic ground truth of the same prior), or the `.npy` file of
+            a state, one angle [rad] per vertex (e.g. `map_estimate.npy` of a MAP run of the same
+            problem).
         sampler (MCMCSettings): Sampling algorithm, step width and sample storage.
         diagnostics (ChainDiagnosticsSettings): Burn-in, lags and plotted vertices of the chain
             diagnostics.
@@ -119,7 +126,7 @@ class McmcRunConfig(RunConfig):
     """
 
     problem: InferenceProblemConfig
-    initial_state_path: Path
+    initial_state: PriorMeanInitialGuess | PriorSampleInitialGuess | FileInitialGuess
     sampler: MCMCSettings
     diagnostics: ChainDiagnosticsSettings
     num_samples: int
@@ -237,10 +244,10 @@ class McmcRun(Run[McmcRunConfig]):
     # ----------------------------------------------------------------------------------------------
     @override
     def input_files(self) -> list[Path]:
-        return [
-            *self.config.problem.input_files(),
-            resolve_repository_path(self.config.initial_state_path),
-        ]
+        files = self.config.problem.input_files()
+        if isinstance(self.config.initial_state, FileInitialGuess):
+            files.append(resolve_repository_path(self.config.initial_state.path))
+        return files
 
     # ----------------------------------------------------------------------------------------------
     @override
@@ -324,13 +331,9 @@ class McmcRun(Run[McmcRunConfig]):
         config = self.config
         steps = StepReporter(logger)
         assembled = assemble_posterior(config.problem, steps, logger)
-        initial_state_path = resolve_repository_path(config.initial_state_path)
-        initial_state = np.load(initial_state_path)
-        if initial_state.shape != assembled.data.prior_mean.shape:
-            raise ValueError(
-                f"The initial state in {initial_state_path} has shape {initial_state.shape}, but "
-                f"the problem has {assembled.data.prior_mean.shape}."
-            )
+        with steps.step(f"Building the initial state ({type(config.initial_state).__name__})"):
+            initial_state = config.initial_state.build(assembled.log_posterior.prior)
+        logger.info(f"      {describe_array('initial state [rad]', initial_state)}")
         results_dir = self.results_dir(run_dir)
         results_dir.mkdir(parents=True, exist_ok=True)
         mcmc_builder = MCMCBuilder(

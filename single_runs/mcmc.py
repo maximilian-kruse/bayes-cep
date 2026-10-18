@@ -6,13 +6,15 @@ sampling. The chain starts at the vertex array in a `.npy` file, e.g. the prior 
 preprocessing run or the estimate of a MAP run; the MAP run is not part of this run, only its output
 file is read.
 
-After the sampling, the chain diagnostics are computed by streaming over the Zarr store: effective
-sample size and autocorrelation time of every vertex, and trace and autocorrelation of the vertices
-chosen in the configuration. The report only plots these results.
+After the sampling, the posterior summary and the chain diagnostics are computed by streaming over
+the Zarr store: the axial posterior mean and variance, the effective sample size and the
+autocorrelation time of every vertex, and trace and autocorrelation of the vertices chosen in the
+configuration. The report only plots these results.
 
 Classes:
     ChainDiagnosticsSettings: Burn-in, lags and the vertices to plot traces of.
     McmcRunConfig: Which posterior to sample, and with which sampler.
+    PosteriorSummary: The axial posterior mean and variance per vertex.
     ChainDiagnostics: The arrays of the chain diagnostics.
     McmcRun: The MCMC run.
 """
@@ -35,7 +37,7 @@ from bayes_cep.postprocessing.curve_plots import (
     plot_histogram,
     plot_traces,
 )
-from bayes_cep.postprocessing.mesh_plots import render_point_field
+from bayes_cep.postprocessing.mesh_plots import render_axial_angle_field_pair, render_point_field
 from bayes_cep.run.config import RunConfig
 from bayes_cep.run.directories import (
     METRICS_RECORD,
@@ -50,11 +52,16 @@ from bayes_cep.statistics.axial_diagnostics import (
     compute_axial_autocorrelation,
     compute_axial_effective_sample_size,
 )
-from single_runs.data import RawDataDirectory
+from bayes_cep.statistics.axial_statistics import compute_axial_mean_and_variance
+from single_runs.data import PreprocessedData, RawDataDirectory
 from single_runs.inference import InferenceProblemConfig, assemble_posterior
 
 EFFECTIVE_SAMPLE_SIZE_MAP_PLOT_FILE_NAME = "effective_sample_size_map.pdf"
 EFFECTIVE_SAMPLE_SIZE_HISTOGRAM_PLOT_FILE_NAME = "effective_sample_size_histogram.pdf"
+AUTOCORRELATION_TIME_MAP_PLOT_FILE_NAME = "autocorrelation_time_map.pdf"
+AUTOCORRELATION_TIME_HISTOGRAM_PLOT_FILE_NAME = "autocorrelation_time_histogram.pdf"
+POSTERIOR_MEAN_PLOT_FILE_NAME = "posterior_mean.pdf"
+POSTERIOR_VARIANCE_PLOT_FILE_NAME = "posterior_variance.pdf"
 TRACES_PLOT_FILE_NAME = "traces.pdf"
 AUTOCORRELATION_PLOT_FILE_NAME = "autocorrelation.pdf"
 SAMPLER_LOG_FILE_NAME = "sampler.log"
@@ -131,6 +138,29 @@ class McmcRunConfig(RunConfig):
 
 # ==================================================================================================
 @dataclass(frozen=True)
+class PosteriorSummary(ArrayRecord):
+    r"""The axial posterior mean and variance of the chain after the burn-in.
+
+    Attributes:
+        axial_mean (np.ndarray): Axial (mod-$\pi$) mean angle [rad] per vertex in
+            $(-\pi/2, \pi/2]$, shape `(num_vertices,)`: the angle of the mean of the doubled-angle
+            unit vectors, halved.
+        axial_variance (np.ndarray): Axial variance $-\tfrac{1}{2}\ln R$ per vertex, with $R$
+            the length of that mean resultant, shape `(num_vertices,)`; zero for a constant
+            vertex.
+    """
+
+    FILE_NAMES: ClassVar[Mapping[str, str]] = {
+        "axial_mean": "posterior_axial_mean.npy",
+        "axial_variance": "posterior_axial_variance.npy",
+    }
+
+    axial_mean: np.ndarray
+    axial_variance: np.ndarray
+
+
+# ==================================================================================================
+@dataclass(frozen=True)
 class ChainDiagnostics(ArrayRecord):
     """The arrays of the chain diagnostics.
 
@@ -165,6 +195,7 @@ class ChainDiagnostics(ArrayRecord):
 
 
 _FILES = ChainDiagnostics.FILE_NAMES  # the names of the result files, defined once there
+_SUMMARY_FILES = PosteriorSummary.FILE_NAMES
 
 
 # ==================================================================================================
@@ -175,6 +206,11 @@ class McmcRun(Run[McmcRunConfig]):
     name = "mcmc"
     outputs = {
         f"results/{SAMPLE_STORE_NAME}": "MCMC chain (zarr store, one sample per row).",
+        f"results/{_SUMMARY_FILES['axial_mean']}": "Axial posterior mean angle [rad] per vertex, "
+        "after the burn-in.",
+        f"results/{_SUMMARY_FILES['axial_variance']}": "Axial posterior variance per vertex "
+        "(-ln(R)/2, with R the length of the mean resultant of the doubled angles), after the "
+        "burn-in.",
         f"results/{_FILES['effective_sample_size']}": "Split-chain effective sample size per "
         "vertex.",
         f"results/{_FILES['integrated_autocorrelation_time']}": "Autocorrelation time per vertex.",
@@ -185,11 +221,15 @@ class McmcRun(Run[McmcRunConfig]):
         f"results/{_FILES['component_autocorrelation']}": "Axial autocorrelation of these "
         "vertices.",
         METRICS_RECORD: (
-            "acceptance_rate (final), seconds_sampling and summaries of the effective sample size."
+            "acceptance_rate (final), seconds_sampling, summaries of the effective sample size and "
+            "the autocorrelation time, and of the posterior variance."
         ),
         SAMPLER_LOG_FILE_NAME: "Progress table of the sampler.",
-        "plots/": f"{EFFECTIVE_SAMPLE_SIZE_MAP_PLOT_FILE_NAME}, "
-        f"{EFFECTIVE_SAMPLE_SIZE_HISTOGRAM_PLOT_FILE_NAME}, {TRACES_PLOT_FILE_NAME}, "
+        "plots/": f"{POSTERIOR_MEAN_PLOT_FILE_NAME}, {POSTERIOR_VARIANCE_PLOT_FILE_NAME}, "
+        f"{EFFECTIVE_SAMPLE_SIZE_MAP_PLOT_FILE_NAME}, "
+        f"{EFFECTIVE_SAMPLE_SIZE_HISTOGRAM_PLOT_FILE_NAME}, "
+        f"{AUTOCORRELATION_TIME_MAP_PLOT_FILE_NAME}, "
+        f"{AUTOCORRELATION_TIME_HISTOGRAM_PLOT_FILE_NAME}, {TRACES_PLOT_FILE_NAME}, "
         f"{AUTOCORRELATION_PLOT_FILE_NAME} (study report; the last two only if vertices are "
         "plotted).",
     }
@@ -210,7 +250,25 @@ class McmcRun(Run[McmcRunConfig]):
         plots_dir.mkdir(exist_ok=True)
         metrics = RunDirectory(run_dir).read_metrics()
         diagnostics = ChainDiagnostics.load(self.results_dir(run_dir))
+        summary = PosteriorSummary.load(self.results_dir(run_dir))
+        data = PreprocessedData.load(resolve_repository_path(config.problem.data_dir))
         mesh = RawDataDirectory.from_configured_path(config.problem.raw_dir).load_mesh()
+        render_axial_angle_field_pair(
+            mesh,
+            data.ground_truth,
+            summary.axial_mean,
+            plots_dir / POSTERIOR_MEAN_PLOT_FILE_NAME,
+            "ground truth",
+            "posterior mean",
+        )
+        render_point_field(
+            mesh,
+            summary.axial_variance,
+            plots_dir / POSTERIOR_VARIANCE_PLOT_FILE_NAME,
+            f"axial posterior variance, mean {metrics['posterior_variance_mean']:.3g}",
+            "axial variance",
+            "viridis",
+        )
         render_point_field(
             mesh,
             diagnostics.effective_sample_size,
@@ -219,12 +277,30 @@ class McmcRun(Run[McmcRunConfig]):
             "effective sample size",
             "viridis",
         )
+        truncation_note = (
+            f"{100 * metrics['fraction_truncated']:.3g}% of the vertices truncated at "
+            f"max_lag = {config.diagnostics.max_lag}"
+        )
         plot_histogram(
             diagnostics.effective_sample_size,
             plots_dir / EFFECTIVE_SAMPLE_SIZE_HISTOGRAM_PLOT_FILE_NAME,
             "effective sample size",
-            f"{100 * metrics['fraction_truncated']:.3g}% of the vertices truncated at "
-            f"max_lag = {config.diagnostics.max_lag}",
+            truncation_note,
+        )
+        render_point_field(
+            mesh,
+            diagnostics.integrated_autocorrelation_time,
+            plots_dir / AUTOCORRELATION_TIME_MAP_PLOT_FILE_NAME,
+            f"integrated autocorrelation time [samples], maximum "
+            f"{metrics['autocorrelation_time_max']:.3g}",
+            "autocorrelation time",
+            "viridis",
+        )
+        plot_histogram(
+            diagnostics.integrated_autocorrelation_time,
+            plots_dir / AUTOCORRELATION_TIME_HISTOGRAM_PLOT_FILE_NAME,
+            "integrated autocorrelation time [samples]",
+            truncation_note,
         )
         if diagnostics.component_indices.size == 0:
             return
@@ -280,6 +356,10 @@ class McmcRun(Run[McmcRunConfig]):
             sampling_seconds = time.perf_counter() - sampling_start
         acceptance_rate = float(mcmc_builder.outputs[0].all_values[-1])
         logger.info(f"      final acceptance rate: {acceptance_rate:.3f}")
+        with steps.step("Computing the posterior summary"):
+            summary = self._compute_posterior_summary(results_dir)
+            summary.save(results_dir)
+        logger.info(f"      {describe_array('axial posterior variance', summary.axial_variance)}")
         with steps.step("Computing the chain diagnostics"):
             diagnostics = self._compute_chain_diagnostics(results_dir)
             diagnostics.save(results_dir)
@@ -293,11 +373,25 @@ class McmcRun(Run[McmcRunConfig]):
             "effective_sample_size_per_second_min": float(
                 np.nanmin(effective_sample_size) / sampling_seconds
             ),
+            "autocorrelation_time_median": float(
+                np.nanmedian(diagnostics.integrated_autocorrelation_time)
+            ),
             "autocorrelation_time_max": float(
                 np.nanmax(diagnostics.integrated_autocorrelation_time)
             ),
+            "posterior_variance_mean": float(np.mean(summary.axial_variance)),
+            "posterior_variance_max": float(np.max(summary.axial_variance)),
             "fraction_truncated": float(diagnostics.truncated.mean()),
         }
+
+    # ----------------------------------------------------------------------------------------------
+    def _compute_posterior_summary(self, results_dir: Path) -> PosteriorSummary:
+        """Stream over the stored chain for the axial mean and variance of all vertices."""
+        chain = open_zarr_samples(results_dir / SAMPLE_STORE_NAME)
+        axial_mean, axial_variance = compute_axial_mean_and_variance(
+            chain, self.config.diagnostics.burn_in
+        )
+        return PosteriorSummary(axial_mean=axial_mean, axial_variance=axial_variance)
 
     # ----------------------------------------------------------------------------------------------
     def _compute_chain_diagnostics(self, results_dir: Path) -> ChainDiagnostics:

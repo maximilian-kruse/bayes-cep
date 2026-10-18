@@ -126,7 +126,8 @@ class MapRun(Run[MapRunConfig]):
         "accepted iterate.",
         METRICS_RECORD: "Optimization statistics (success, num_iterations, loss and gradient norm "
         "first/last, seconds_optimization); the final loss split into likelihood and prior part "
-        "and the loss of the ground truth (loss_truth*); the axial error per simplex in degrees "
+        "and the loss of the ground truth on the branch of the estimate (loss_truth*); the axial "
+        "error per simplex in degrees "
         "(error_mean/median/p90/p95/p99/max_deg, fraction_below_<t>_deg, axial_concentration); "
         "the mean error of the prior mean and the skill_score against it; and the RMSE of the "
         "activation times of the estimate against those of the ground truth "
@@ -304,11 +305,16 @@ class MapRun(Run[MapRunConfig]):
         metrics["skill_score"] = compute_skill_score(metrics["error_mean_deg"], prior_mean_error)
 
         # The final loss is the optimizer's own; the loss of the ground truth tells whether the
-        # optimizer stopped above it (it is then in a local minimum) or below it.
+        # optimizer stopped above it (it is then in a local minimum) or below it. The prior is
+        # real-valued, but the stored truth is only one representative of each axial angle (a
+        # patient field has cuts where the representative jumps by pi, which the prior would
+        # count as roughness). The same axial field on the branch of the estimate, within pi/2 of
+        # it at every vertex, is the fair comparison.
+        truth_on_estimate_branch = estimate + compute_axial_data_diff(data.ground_truth, estimate)
         final_likelihood = log_posterior.evaluate_likelihood_cost(estimate)
         final_prior = log_posterior.evaluate_prior_cost(estimate)
-        truth_likelihood = log_posterior.evaluate_likelihood_cost(data.ground_truth)
-        truth_prior = log_posterior.evaluate_prior_cost(data.ground_truth)
+        truth_likelihood = log_posterior.evaluate_likelihood_cost(truth_on_estimate_branch)
+        truth_prior = log_posterior.evaluate_prior_cost(truth_on_estimate_branch)
         metrics["loss_final_likelihood"] = float(final_likelihood)
         metrics["loss_final_prior"] = float(final_prior)
         metrics["loss_truth"] = float(truth_likelihood + truth_prior)

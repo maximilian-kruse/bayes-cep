@@ -11,6 +11,9 @@ Classes:
     RunOutcome: What became of a run in an execution request.
     ExecutorSettings: Where and with which resources to run the tasks.
     Executor: Execute runs in their run directories.
+
+Functions:
+    jit_cache_setup: Job script lines for a dolfinx JIT cache of one's own per SLURM task.
 """
 
 import sys
@@ -30,6 +33,11 @@ from bayes_cep.run.template import Run
 
 DIVIDER_WIDTH = 100
 
+# FFCx compiles a form once per distinct form and lets other processes wait for the result, 10
+# seconds by default; a busy node needs longer. Every SLURM task also gets its own cache, see
+# `jit_cache_setup`.
+JIT_COMPILATION_TIMEOUT_SECONDS = 600
+
 
 # ==================================================================================================
 class RunOutcome(StrEnum):
@@ -44,6 +52,31 @@ class RunOutcome(StrEnum):
     SKIPPED = "skipped"
     ACTIVE = "active"
     SUBMITTED = "submitted"
+
+
+# ==================================================================================================
+def jit_cache_setup() -> list[str]:
+    """Shell lines for the job script that give a SLURM task its own dolfinx JIT cache.
+
+    The compiled forms of the Bilaplacian prior differ for every pair of kappa and tau, so the tasks
+    of a job array compile the same forms at the same time. With one shared cache, the tasks that
+    find a module being compiled wait for it and fail with a timeout if it takes longer than the
+    compilation timeout, or if the compiling job died, which leaves the module unfinished for good.
+    A cache per task (in the node-local `$TMPDIR`) shares nothing and starts empty. The lines also
+    raise the compilation timeout, by a dolfinx options file in the task's own configuration
+    directory. They must run before Python starts: dolfinx reads both locations when imported.
+
+    Returns:
+        list[str]: The lines of the `slurm_setup` of the job.
+    """
+    directory = '"${TMPDIR:-/tmp}/bayes-cep-jit-${SLURM_JOB_ID}"'
+    return [
+        f"export XDG_CACHE_HOME={directory}/cache",
+        f"export XDG_CONFIG_HOME={directory}/config",
+        'mkdir -p "$XDG_CACHE_HOME" "$XDG_CONFIG_HOME/dolfinx"',
+        f"echo '{{\"timeout\": {JIT_COMPILATION_TIMEOUT_SECONDS}}}' "
+        '> "$XDG_CONFIG_HOME/dolfinx/dolfinx_jit_options.json"',
+    ]
 
 
 # ==================================================================================================
@@ -191,6 +224,7 @@ class Executor:
             "slurm_setup": [
                 f"export OMP_NUM_THREADS={settings.cpus_per_task}",
                 f"export OPENBLAS_NUM_THREADS={settings.cpus_per_task}",
+                *jit_cache_setup(),
             ],
         }
         try:

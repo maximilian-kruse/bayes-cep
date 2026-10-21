@@ -1,0 +1,43 @@
+{
+  "environment": {
+    "python": "3.14.6",
+    "pixi_environment": "default",
+    "pixi_lock_sha256": "d7d03d7b5277b7763712ad1a25a490103b29a14cfddcaf6aacfbce3a7d7cd7a3",
+    "git": {
+      "commit": "42c1e47919e6a4adc33f47cf095b18822b35ed47",
+      "dirty": true,
+      "diff_sha256": "d88ac933727cafedeab647eddc8918fccbb00f8aefef2f4826d68e73325ab3b1"
+    },
+    "editable_packages": {
+      "eikonax": {
+        "path": "/home/max/4-Code/eikonax",
+        "git": {
+          "commit": "8105841e8df86032796f815e20961e5a4994ee53",
+          "dirty": false,
+          "diff_sha256": null
+        }
+      },
+      "ls-bayesian": {
+        "path": "/home/max/4-Code/ls-bayesian",
+        "git": {
+          "commit": "72775e7b4b0b6a62e72e26d07ea6df94323fef23",
+          "dirty": true,
+          "diff_sha256": "5b3e71c0a8f172850ace9b62fea51ad58b2971c998247a581be4970bb345cf0e"
+        }
+      }
+    }
+  },
+  "input_sha256": {
+    "example_data/raw/mesh.vtu": "567765bb00ea5cc293f3748112f5870f79a7438311a46d4d97360b75f06dc848",
+    "example_data/raw/basis_vecs.npy": "9e3a824e1a5c17d07c786f24f174974769532474716bbd07ee11516db584b29b",
+    "example_data/preprocessing/ground_truth_angle_field.npy": "824afb2d625f3fb9c33637672bd03fb610be73d69b9140dfdef153ca490d63d4",
+    "example_data/preprocessing/prior_mean_angle_field.npy": "5208ea47d897196d46fc3dec1deece148e93ad0bf5db206803a3278267bfb3a8",
+    "example_data/preprocessing/observed_vertex_indices.npy": "4c179ffc3a85c4aff356a1e96c504fc57d44df9b69fb05d42dd8d1bcc593d75b",
+    "example_data/preprocessing/observed_activation_times.npy": "93072f0c5a0e318d7d2f95ec9cc278682c3a9cc78af5bd3b2f08978010bc502f",
+    "example_data/preprocessing/observation_noise_variance.npy": "b9bef447aab0e1b4d1419fb6451b1d9dbf93a8a33e343fc73f8d69971da0d36a"
+  },
+  "host": "work",
+  "cpu_count": 12,
+  "slurm_job_id": null,
+  "slurm_array_task_id": null
+}

@@ -1,0 +1,59 @@
+{
+  "__type__": "MapRunConfig",
+  "problem": {
+    "__type__": "InferenceProblemConfig",
+    "raw_dir": "example_data/raw",
+    "data_dir": "example_data/preprocessing",
+    "prior": {
+      "__type__": "PriorParameters",
+      "kappa": 0.1,
+      "tau": 5.0,
+      "seed": 0
+    },
+    "eikonal": {
+      "__type__": "EikonalSolverSettings",
+      "initial_site_ind": 12650,
+      "longitudinal_velocity": 1.5,
+      "transversal_velocity": 1.0,
+      "solver_tolerance": 1e-06,
+      "max_num_iterations": 1000,
+      "max_value": 1000.0,
+      "use_soft_update": true,
+      "softminmax_order": 20,
+      "softminmax_cutoff": 0.01
+    },
+    "interpolation": {
+      "__type__": "NearestNeighborInterpolationStrategy"
+    }
+  },
+  "optimizer": {
+    "__type__": "CustomLBFGSStrategy",
+    "lbfgs_settings": {
+      "__type__": "CustomLBFGSSettings",
+      "memory_size": 10,
+      "maximum_num_iterations": 1000,
+      "gradient_norm_tolerance": 1
+    },
+    "line_search_settings": {
+      "__type__": "ArmijoBacktrackingLineSearchSettings",
+      "initial_step_size": 1.0,
+      "sufficient_decrease_constant": 0.0001,
+      "backtracking_factor": 2.0,
+      "max_backtracking_steps": 50
+    },
+    "cautious_update_settings": {
+      "__type__": "CautiousUpdateSettings",
+      "epsilon": 1e-06,
+      "alpha": 1.0
+    },
+    "seed_scaling_settings": {
+      "__type__": "BarzilaiBorweinSeedScalingSettings",
+      "gamma_min": 1e-10,
+      "gamma_max": 100.0,
+      "fallback_value": 1e-06
+    }
+  },
+  "initial_guess": {
+    "__type__": "PriorMeanInitialGuess"
+  }
+}

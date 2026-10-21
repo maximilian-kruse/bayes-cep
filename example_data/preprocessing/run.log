@@ -1,4 +1,4 @@
-Run started 2026-10-17T12:10:54+02:00
+Run started 2026-10-21T21:09:06+02:00
 Command: /home/max/4-Code/bayes-cep/.pixi/envs/default/bin/bcep-single --overwrite --flat-results --run-dir example_data/preprocessing config:reference-synthetic-preprocessing --config.raw-dir example_data/raw
 Log file: example_data/preprocessing/run.log
 
@@ -27,12 +27,12 @@ PreprocessingRunConfig
   interpolation (NearestNeighborInterpolationStrategy):
 
 [1] Loading the mesh and basis vectors from /home/max/4-Code/bayes-cep/example_data/raw ...
-      done in 0.03 s
+      done in 0.02 s
       mesh: 15820 vertices, 31375 triangles
 [2] Building ground truth and prior mean (SyntheticGroundTruthStrategy) ...
-      done in 0.75 s
+      done in 0.76 s
       ground truth [rad]: shape (15820,), min -1.308, max 2.252, mean -0.07742, nan 0, inf 0
       prior mean angle: 0.0000 rad
 [3] Generating synthetic observations ...
-      done in 3.03 s
+      done in 2.90 s
       observed 1000 of 15820 vertices

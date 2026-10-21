@@ -4,9 +4,9 @@
     "pixi_environment": "default",
     "pixi_lock_sha256": "d7d03d7b5277b7763712ad1a25a490103b29a14cfddcaf6aacfbce3a7d7cd7a3",
     "git": {
-      "commit": "cdcd63dcd85f8575e8f790f33026a7437a201004",
+      "commit": "42c1e47919e6a4adc33f47cf095b18822b35ed47",
       "dirty": true,
-      "diff_sha256": "583f8cb7a0ad5acdd379ba07b4889e6b34b67effbafb3cdd18902bd78ba0bb8e"
+      "diff_sha256": "9c8b4a4245f429f39cc11a8e3bd1f235563f06c81f20001df2092a4d93fedc6a"
     },
     "editable_packages": {
       "eikonax": {
@@ -20,9 +20,9 @@
       "ls-bayesian": {
         "path": "/home/max/4-Code/ls-bayesian",
         "git": {
-          "commit": "6a5838c720ad362315fa584803e3f13e941ebb34",
-          "dirty": false,
-          "diff_sha256": null
+          "commit": "72775e7b4b0b6a62e72e26d07ea6df94323fef23",
+          "dirty": true,
+          "diff_sha256": "5b3e71c0a8f172850ace9b62fea51ad58b2971c998247a581be4970bb345cf0e"
         }
       }
     }

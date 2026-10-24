@@ -10,6 +10,7 @@ are those of the plain run, so the two are directly comparable; the metrics also
 and cost of the approximation.
 
 Classes:
+    LaplaceSampleInitialState: Start the chain at a draw from the Laplace approximation.
     PreconditionedMcmcRunConfig: The configuration of the plain run and the Laplace approximation.
     LaplaceSpectrum: The eigenvalues of the Laplace approximation.
     PreconditionedMcmcRun: The Laplace-preconditioned MCMC run.
@@ -26,6 +27,11 @@ from ls_bayesian.common.logging import BaseLogger
 
 from bayes_cep.laplace.builder import LaplaceBuilder, LaplaceSettings
 from bayes_cep.mcmc.measures import LowRankGaussianMeasure
+from bayes_cep.optimization.initial_guess import (
+    FileInitialGuess,
+    PriorMeanInitialGuess,
+    PriorSampleInitialGuess,
+)
 from bayes_cep.run.directories import ArrayRecord, resolve_repository_path
 from bayes_cep.run.progress import StepReporter, describe_array
 from single_runs.inference import assemble_posterior_components
@@ -34,10 +40,41 @@ from single_runs.mcmc import McmcRun, McmcRunConfig, SamplingProblem
 
 # ==================================================================================================
 @dataclass(frozen=True)
+class LaplaceSampleInitialState:
+    r"""Start the chain at a draw $m_0 = m_\mathrm{MAP} + \widehat\Gamma\,\xi$ from the Laplace
+    approximation.
+
+    The standard normal vector $\xi$ is drawn from a generator seeded with `seed`, independent of
+    the seed of the chain and of `LaplaceSettings.sample_seed`, so the start varies with `seed`
+    alone. The approximation exists only inside the run, so unlike the strategies of
+    [`InitialGuessStrategy`][bayes_cep.optimization.initial_guess.InitialGuessStrategy] this one is
+    built from it.
+
+    Attributes:
+        seed (int): Seed of the draw.
+    """
+
+    seed: int
+
+    # ----------------------------------------------------------------------------------------------
+    def build(
+        self, approximation: LowRankGaussianMeasure
+    ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
+        """Draw the initial state, shape `(approximation.random_vector_size,)`."""
+        random_vector = np.random.default_rng(self.seed).standard_normal(
+            approximation.random_vector_size
+        )
+        return approximation.mean + approximation.apply_covariance_factorization(random_vector)
+
+
+# ==================================================================================================
+@dataclass(frozen=True)
 class PreconditionedMcmcRunConfig(McmcRunConfig):
     """The configuration of the plain run and of the Laplace approximation it is preconditioned by.
 
     Attributes:
+        initial_state (PriorMeanInitialGuess | PriorSampleInitialGuess | FileInitialGuess |
+            LaplaceSampleInitialState): As in the plain run, or a draw from the approximation.
         laplace (LaplaceSettings): Eigensolver and rank of the Laplace approximation.
         map_estimate_path (Path): `.npy` file with the MAP estimate, one angle [rad] per vertex,
             e.g. the `map_estimate.npy` of a MAP run of the same problem; a relative path is
@@ -45,6 +82,12 @@ class PreconditionedMcmcRunConfig(McmcRunConfig):
             there. The chain starts at `initial_state`, which is usually the same file.
     """
 
+    initial_state: (
+        PriorMeanInitialGuess
+        | PriorSampleInitialGuess
+        | FileInitialGuess
+        | LaplaceSampleInitialState
+    )
     laplace: LaplaceSettings
     map_estimate_path: Path
 
@@ -89,6 +132,16 @@ class PreconditionedMcmcRun(McmcRun):
     def input_files(self) -> list[Path]:
         config = cast(PreconditionedMcmcRunConfig, self.config)
         return [*super().input_files(), resolve_repository_path(config.map_estimate_path)]
+
+    # ----------------------------------------------------------------------------------------------
+    @override
+    def _build_initial_state(
+        self, sampling_problem: SamplingProblem
+    ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
+        initial_state = self.config.initial_state
+        if isinstance(initial_state, LaplaceSampleInitialState):
+            return initial_state.build(cast(LowRankGaussianMeasure, sampling_problem.approximation))
+        return super()._build_initial_state(sampling_problem)
 
     # ----------------------------------------------------------------------------------------------
     @override

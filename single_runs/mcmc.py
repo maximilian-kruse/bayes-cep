@@ -360,13 +360,20 @@ class McmcRun(Run[McmcRunConfig]):
         return SamplingProblem(assemble_posterior(self.config.problem, steps, logger).log_posterior)
 
     # ----------------------------------------------------------------------------------------------
+    def _build_initial_state(
+        self, sampling_problem: SamplingProblem
+    ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
+        """Build the state the chain starts at, one angle [rad] per vertex."""
+        return self.config.initial_state.build(sampling_problem.log_posterior.prior)
+
+    # ----------------------------------------------------------------------------------------------
     @override
     def _execute(self, run_dir: Path, logger: BaseLogger) -> Metrics:
         config = self.config
         steps = StepReporter(logger)
         sampling_problem = self._assemble_sampling_problem(steps, logger)
         with steps.step(f"Building the initial state ({type(config.initial_state).__name__})"):
-            initial_state = config.initial_state.build(sampling_problem.log_posterior.prior)
+            initial_state = self._build_initial_state(sampling_problem)
         logger.info(f"      {describe_array('initial state [rad]', initial_state)}")
         results_dir = self.results_dir(run_dir)
         results_dir.mkdir(parents=True, exist_ok=True)

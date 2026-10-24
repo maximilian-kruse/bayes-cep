@@ -59,5 +59,7 @@ STUDY = StudySetup(
     ),
     root=module_relative_path(__file__, "../working_data/prior_moment_fit_sensitivity"),
     # 32 samples of a smoothed field take about 40 minutes for the 256 grid points
-    executor=ExecutorSettings(cluster="slurm", time_min=90, cpus_per_task=1, max_parallel=500),
+    executor=ExecutorSettings(
+        cluster="slurm", time_min=90, cpus_per_task=1, mem_gb=4, max_parallel=500
+    ),
 )

@@ -7,11 +7,14 @@ log-likelihood of the forward-mapped parameter, $\Phi(m) = \Phi(F(m))$.
 Classes:
     LikelihoodTargetMeasure: `DifferentiableTargetMeasure` for $\Phi$, from a `LogPosterior`.
     PriorGaussianMeasure: `GaussianMeasure` for the prior, from a `GaussianPrior`.
+    LowRankGaussianMeasure: `GaussianMeasure` for a low-rank Gaussian such as a Laplace
+        approximation, from a `LowRankGaussian`.
 """
 
 from typing import override
 
 import numpy as np
+from ls_bayesian.lowrank.gaussian import LowRankGaussian
 from ls_bayesian.mcmc.measures import DifferentiableTargetMeasure, GaussianMeasure
 from ls_bayesian.posterior import interfaces
 from ls_bayesian.posterior.posterior import LogPosterior
@@ -93,3 +96,61 @@ class PriorGaussianMeasure(GaussianMeasure):
         self, vector: np.ndarray[tuple[int], np.dtype[np.float64]]
     ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
         return self._prior.apply_precision_operator(vector)
+
+
+# ==================================================================================================
+class LowRankGaussianMeasure(GaussianMeasure):
+    r"""A low-rank Gaussian $\mathcal N(\bar m, \Gamma)$ as a `GaussianMeasure`, by delegation.
+
+    `ls_bayesian.lowrank` and `ls_bayesian.mcmc` are independent subpackages, so a
+    [`LowRankGaussian`][ls_bayesian.lowrank.gaussian.LowRankGaussian] does not implement the measure
+    interface itself, which the MCMC model checks at runtime. For a Laplace approximation, $\bar m$
+    is the MAP estimate and $\Gamma$ the low-rank update of the prior covariance; the measure is the
+    `approximation` of the model, i.e. the proposal of preconditioned pCN or the preconditioner of
+    preconditioned MALA. `evaluate_cost` is delegated, since the low-rank form needs only one
+    application of the prior precision.
+    """
+
+    # ----------------------------------------------------------------------------------------------
+    def __init__(self, gaussian: LowRankGaussian) -> None:
+        """Wrap `gaussian`, whose reference covariance must be the covariance of the prior that
+        serves as reference measure of the model."""
+        self._gaussian = gaussian
+
+    # ----------------------------------------------------------------------------------------------
+    @property
+    @override
+    def mean(self) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
+        return self._gaussian.mean
+
+    # ----------------------------------------------------------------------------------------------
+    @property
+    @override
+    def random_vector_size(self) -> int:
+        return self._gaussian.random_vector_size
+
+    # ----------------------------------------------------------------------------------------------
+    @override
+    def apply_covariance_factorization(
+        self, random_vector: np.ndarray[tuple[int], np.dtype[np.float64]]
+    ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
+        return self._gaussian.apply_covariance_factorization(random_vector)
+
+    # ----------------------------------------------------------------------------------------------
+    @override
+    def apply_covariance_operator(
+        self, vector: np.ndarray[tuple[int], np.dtype[np.float64]]
+    ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
+        return self._gaussian.apply_covariance_operator(vector)
+
+    # ----------------------------------------------------------------------------------------------
+    @override
+    def apply_precision_operator(
+        self, vector: np.ndarray[tuple[int], np.dtype[np.float64]]
+    ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
+        return self._gaussian.apply_precision_operator(vector)
+
+    # ----------------------------------------------------------------------------------------------
+    @override
+    def evaluate_cost(self, state: np.ndarray[tuple[int], np.dtype[np.float64]]) -> float:
+        return self._gaussian.evaluate_cost(state)

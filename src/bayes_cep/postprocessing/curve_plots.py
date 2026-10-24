@@ -17,6 +17,7 @@ Functions:
     plot_optimization_history: Loss and gradient norm over the iterations of an optimizer.
     plot_optimization_histories: The same for several optimizations in one figure.
     plot_traces: Traces of a few chain components, with the burn-in marked.
+    plot_eigenvalue_spectrum: Eigenvalues of a low-rank operator in descending order.
 """
 
 import textwrap
@@ -64,6 +65,39 @@ def plot_autocorrelation(
         axis.legend()
     axis.set_xlabel("lag")
     axis.set_ylabel("autocorrelation")
+    axis.set_title(title)
+    _save(figure, path)
+
+
+# --------------------------------------------------------------------------------------------------
+def plot_eigenvalue_spectrum(
+    eigenvalues: np.ndarray[tuple[int], np.dtype[np.float64]],
+    path: Path,
+    title: str = "",
+) -> None:
+    r"""Plot the eigenvalues against their index on a logarithmic axis.
+
+    The horizontal line at $1$ marks where a direction of the data-misfit Hessian, relative to
+    the prior precision, starts to reduce the prior variance by more than half.
+
+    Args:
+        eigenvalues (np.ndarray): Positive eigenvalues in descending order, shape `(rank,)`.
+        path (Path): Output file; the format follows the suffix, e.g. `.pdf`.
+        title (str): Title of the plot. Defaults to none.
+
+    Raises:
+        ValueError: If `eigenvalues` is not a non-empty 1D array of positive values.
+    """
+    if eigenvalues.ndim != 1 or eigenvalues.size == 0 or np.any(eigenvalues <= 0.0):
+        raise ValueError(
+            f"eigenvalues must be a non-empty 1D array of positive values, got {eigenvalues}."
+        )
+    figure = Figure(figsize=(6, 4))
+    axis = figure.subplots()
+    axis.axhline(1.0, color="gray", linewidth=0.8)
+    axis.semilogy(np.arange(1, eigenvalues.size + 1), eigenvalues, marker=".")
+    axis.set_xlabel("index")
+    axis.set_ylabel("eigenvalue")
     axis.set_title(title)
     _save(figure, path)
 

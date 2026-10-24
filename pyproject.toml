@@ -72,7 +72,7 @@ tyro = ">=1.0.16,<2"
 [tool.pixi.tasks]
 single = "bcep-single"
 study = "bcep-study"
-example = { depends-on = ["example-map", "example-mcmc"] }
+example = { depends-on = ["example-map", "example-mcmc", "example-laplace", "example-mcmc-laplace"] }
 
 [tool.pixi.tasks.example-preprocessing]
 cmd = """bcep-single --overwrite --flat-results \
@@ -95,6 +95,25 @@ cmd = """bcep-single --overwrite --flat-results \
     --config.raw-dir example_data/raw \
     --config.data-dir example_data/preprocessing \
     --config.initial-state-path example_data/map/map_estimate.npy"""
+depends-on = ["example-map"]
+
+[tool.pixi.tasks.example-laplace]
+cmd = """bcep-single --overwrite --flat-results \
+    --run-dir example_data/laplace \
+    config:reference-laplace \
+    --config.raw-dir example_data/raw \
+    --config.data-dir example_data/preprocessing \
+    --config.map-estimate-path example_data/map/map_estimate.npy"""
+depends-on = ["example-map"]
+
+[tool.pixi.tasks.example-mcmc-laplace]
+cmd = """bcep-single --overwrite --flat-results \
+    --run-dir example_data/mcmc_laplace \
+    config:reference-mcmc-laplace \
+    --config.raw-dir example_data/raw \
+    --config.data-dir example_data/preprocessing \
+    --config.map-estimate-path example_data/map/map_estimate.npy \
+    --config.algorithm PMALA"""
 depends-on = ["example-map"]
 
 # --- Features -------------------------------------------------------------------------------------

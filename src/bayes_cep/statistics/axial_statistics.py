@@ -21,6 +21,7 @@ Note:
 Functions:
     compute_axial_mean: Axial mean of an in-memory array of angles.
     compute_axial_mean_and_variance: Axial mean and variance of angle samples, read block by block.
+    compute_standard_deviation_degrees: Standard deviation in degrees from a variance in rad$^2$.
     compute_axial_sine_deviation: Sine of the doubled deviation from an axial mean.
     shift_angles_to_minimize_axial_variance: Re-branch an angle field around its own axial mean.
     compute_axial_data_diff: Signed axial angle difference between two fields.
@@ -29,6 +30,34 @@ Functions:
 
 import numpy as np
 from ls_bayesian.mcmc.storage import SampleStore, iterate_sample_blocks
+
+ROUNDING_TOLERANCE_OF_VARIANCE = 1e-9
+
+
+# ==================================================================================================
+def compute_standard_deviation_degrees(
+    variance: np.ndarray[tuple[int], np.dtype[np.float64]],
+) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
+    r"""Convert a variance in rad$^2$ to the standard deviation in degrees.
+
+    The axial variance $-\tfrac{1}{2}\ln R$ of `compute_axial_mean_and_variance` is a variance in
+    rad$^2$ (for a narrow distribution it equals the variance of the angle), so its square root is
+    an angle in radians. Summaries are reported as this standard deviation in degrees.
+
+    Args:
+        variance (np.ndarray): Variances in rad$^2$, any shape; must be non-negative up to
+            rounding (`-1e-9`): the axial variance of a constant component is $-\tfrac{1}{2}\ln R$
+            with $R = 1 + \varepsilon$, and slightly negative. Such values count as zero.
+
+    Returns:
+        np.ndarray: Standard deviations in degrees, same shape.
+
+    Raises:
+        ValueError: If a variance is below the rounding tolerance.
+    """
+    if np.any(variance < -ROUNDING_TOLERANCE_OF_VARIANCE):
+        raise ValueError(f"variance must be non-negative, got minimum {np.min(variance)}.")
+    return np.degrees(np.sqrt(np.maximum(variance, 0.0)))
 
 
 # ==================================================================================================

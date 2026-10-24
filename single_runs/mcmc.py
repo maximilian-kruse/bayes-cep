@@ -14,6 +14,7 @@ configuration. The report only plots these results.
 Classes:
     ChainDiagnosticsSettings: Burn-in, lags and the vertices to plot traces of.
     McmcRunConfig: Which posterior to sample, and with which sampler.
+    SamplingProblem: The posterior to sample and the optional approximation the sampler uses.
     PosteriorSummary: The axial posterior mean and variance per vertex.
     ChainDiagnostics: The arrays of the chain diagnostics.
     McmcRun: The MCMC run.
@@ -21,15 +22,17 @@ Classes:
 
 import time
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import ClassVar, override
 
 import numpy as np
 from ls_bayesian.common.logging import BaseLogger, LoggerSettings
 from ls_bayesian.mcmc.diagnostics import MINIMUM_NUM_SAMPLES_PER_CHAIN
+from ls_bayesian.mcmc.measures import GaussianMeasure
 from ls_bayesian.mcmc.sampler import SamplerSettings
 from ls_bayesian.mcmc.storage import open_zarr_samples
+from ls_bayesian.posterior.posterior import LogPosterior
 
 from bayes_cep.mcmc.builder import SAMPLE_STORE_NAME, MCMCBuilder, MCMCSettings
 from bayes_cep.optimization.initial_guess import (
@@ -57,7 +60,10 @@ from bayes_cep.statistics.axial_diagnostics import (
     compute_axial_autocorrelation,
     compute_axial_effective_sample_size,
 )
-from bayes_cep.statistics.axial_statistics import compute_axial_mean_and_variance
+from bayes_cep.statistics.axial_statistics import (
+    compute_axial_mean_and_variance,
+    compute_standard_deviation_degrees,
+)
 from single_runs.data import PreprocessedData, RawDataDirectory
 from single_runs.inference import InferenceProblemConfig, assemble_posterior
 
@@ -66,7 +72,7 @@ EFFECTIVE_SAMPLE_SIZE_HISTOGRAM_PLOT_FILE_NAME = "effective_sample_size_histogra
 AUTOCORRELATION_TIME_MAP_PLOT_FILE_NAME = "autocorrelation_time_map.pdf"
 AUTOCORRELATION_TIME_HISTOGRAM_PLOT_FILE_NAME = "autocorrelation_time_histogram.pdf"
 POSTERIOR_MEAN_PLOT_FILE_NAME = "posterior_mean.pdf"
-POSTERIOR_VARIANCE_PLOT_FILE_NAME = "posterior_variance.pdf"
+POSTERIOR_STD_PLOT_FILE_NAME = "posterior_std.pdf"
 TRACES_PLOT_FILE_NAME = "traces.pdf"
 AUTOCORRELATION_PLOT_FILE_NAME = "autocorrelation.pdf"
 SAMPLER_LOG_FILE_NAME = "sampler.log"
@@ -206,6 +212,26 @@ _SUMMARY_FILES = PosteriorSummary.FILE_NAMES
 
 
 # ==================================================================================================
+@dataclass(frozen=True)
+class SamplingProblem:
+    """The posterior to sample and what the sampler needs besides it.
+
+    Attributes:
+        log_posterior (LogPosterior): The posterior; its prior is the reference measure.
+        approximation (GaussianMeasure | None): Gaussian approximation of the posterior for the
+            preconditioned algorithms, `None` for the others.
+        metrics (Metrics): Entries of the run's metrics that come from setting up the problem.
+        results (ArrayRecord | None): Further result arrays of the set-up, written next to the
+            chain; their file names must be in the `outputs` of the run.
+    """
+
+    log_posterior: LogPosterior
+    approximation: GaussianMeasure | None = None
+    metrics: Metrics = field(default_factory=dict)
+    results: ArrayRecord | None = None
+
+
+# ==================================================================================================
 class McmcRun(Run[McmcRunConfig]):
     """Sample the posterior of the preprocessed data, from the configured initial state."""
 
@@ -229,10 +255,11 @@ class McmcRun(Run[McmcRunConfig]):
         "vertices.",
         METRICS_RECORD: (
             "acceptance_rate (final), seconds_sampling, summaries of the effective sample size and "
-            "the autocorrelation time, and of the posterior variance."
+            "the autocorrelation time, and posterior_std_mean/max_deg: the mean and maximum of the "
+            "axial posterior standard deviation in degrees."
         ),
         SAMPLER_LOG_FILE_NAME: "Progress table of the sampler.",
-        "plots/": f"{POSTERIOR_MEAN_PLOT_FILE_NAME}, {POSTERIOR_VARIANCE_PLOT_FILE_NAME}, "
+        "plots/": f"{POSTERIOR_MEAN_PLOT_FILE_NAME}, {POSTERIOR_STD_PLOT_FILE_NAME}, "
         f"{EFFECTIVE_SAMPLE_SIZE_MAP_PLOT_FILE_NAME}, "
         f"{EFFECTIVE_SAMPLE_SIZE_HISTOGRAM_PLOT_FILE_NAME}, "
         f"{AUTOCORRELATION_TIME_MAP_PLOT_FILE_NAME}, "
@@ -270,10 +297,10 @@ class McmcRun(Run[McmcRunConfig]):
         )
         render_point_field(
             mesh,
-            summary.axial_variance,
-            plots_dir / POSTERIOR_VARIANCE_PLOT_FILE_NAME,
-            f"axial posterior variance, mean {metrics['posterior_variance_mean']:.3g}",
-            "axial variance",
+            compute_standard_deviation_degrees(summary.axial_variance),
+            plots_dir / POSTERIOR_STD_PLOT_FILE_NAME,
+            f"axial posterior standard deviation, mean {metrics['posterior_std_mean_deg']:.3g} deg",
+            "axial standard deviation [deg]",
             "viridis",
         )
         render_point_field(
@@ -326,20 +353,30 @@ class McmcRun(Run[McmcRunConfig]):
         )
 
     # ----------------------------------------------------------------------------------------------
+    def _assemble_sampling_problem(
+        self, steps: StepReporter, logger: BaseLogger
+    ) -> SamplingProblem:
+        """Build the posterior to sample; the algorithm of this run uses no approximation."""
+        return SamplingProblem(assemble_posterior(self.config.problem, steps, logger).log_posterior)
+
+    # ----------------------------------------------------------------------------------------------
     @override
     def _execute(self, run_dir: Path, logger: BaseLogger) -> Metrics:
         config = self.config
         steps = StepReporter(logger)
-        assembled = assemble_posterior(config.problem, steps, logger)
+        sampling_problem = self._assemble_sampling_problem(steps, logger)
         with steps.step(f"Building the initial state ({type(config.initial_state).__name__})"):
-            initial_state = config.initial_state.build(assembled.log_posterior.prior)
+            initial_state = config.initial_state.build(sampling_problem.log_posterior.prior)
         logger.info(f"      {describe_array('initial state [rad]', initial_state)}")
         results_dir = self.results_dir(run_dir)
         results_dir.mkdir(parents=True, exist_ok=True)
+        if sampling_problem.results is not None:
+            sampling_problem.results.save(results_dir)
         mcmc_builder = MCMCBuilder(
             config.sampler,
-            assembled.log_posterior,
+            sampling_problem.log_posterior,
             output_dir=results_dir,
+            approximation=sampling_problem.approximation,
         )
         sampler_logger_settings = LoggerSettings(
             print_to_console=self.write_to_console, logfile_path=run_dir / SAMPLER_LOG_FILE_NAME
@@ -362,13 +399,21 @@ class McmcRun(Run[McmcRunConfig]):
         with steps.step("Computing the posterior summary"):
             summary = self._compute_posterior_summary(results_dir)
             summary.save(results_dir)
-        logger.info(f"      {describe_array('axial posterior variance', summary.axial_variance)}")
+        logger.info(
+            "      "
+            + describe_array(
+                "axial posterior std [deg]",
+                compute_standard_deviation_degrees(summary.axial_variance),
+            )
+        )
         with steps.step("Computing the chain diagnostics"):
             diagnostics = self._compute_chain_diagnostics(results_dir)
             diagnostics.save(results_dir)
         effective_sample_size = diagnostics.effective_sample_size
+        posterior_std_degrees = compute_standard_deviation_degrees(summary.axial_variance)
         logger.info(f"      {describe_array('effective sample size', effective_sample_size)}")
         return {
+            **sampling_problem.metrics,
             "acceptance_rate": acceptance_rate,
             "seconds_sampling": sampling_seconds,
             "effective_sample_size_min": float(np.nanmin(effective_sample_size)),
@@ -382,8 +427,8 @@ class McmcRun(Run[McmcRunConfig]):
             "autocorrelation_time_max": float(
                 np.nanmax(diagnostics.integrated_autocorrelation_time)
             ),
-            "posterior_variance_mean": float(np.mean(summary.axial_variance)),
-            "posterior_variance_max": float(np.max(summary.axial_variance)),
+            "posterior_std_mean_deg": float(np.mean(posterior_std_degrees)),
+            "posterior_std_max_deg": float(np.max(posterior_std_degrees)),
             "fraction_truncated": float(diagnostics.truncated.mean()),
         }
 

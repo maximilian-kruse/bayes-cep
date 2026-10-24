@@ -8,9 +8,11 @@ is a pure description; `assemble_posterior` loads the files it names and builds 
 Classes:
     InferenceProblemConfig: Which data and which model the posterior is built from.
     AssembledPosterior: The posterior and the data it was built from.
+    AssembledPosteriorComponents: The parts of the posterior and the data they were built from.
 
 Functions:
     assemble_posterior: Load the mesh and the preprocessed data and build the posterior.
+    assemble_posterior_components: The same, without composing the parts into a posterior.
 """
 
 from dataclasses import dataclass
@@ -23,7 +25,7 @@ from bayes_cep.mesh.interpolation import (
     LinearInterpolationStrategy,
     NearestNeighborInterpolationStrategy,
 )
-from bayes_cep.posterior.builder import PosteriorBuilder, PosteriorSettings
+from bayes_cep.posterior.builder import PosteriorBuilder, PosteriorComponents, PosteriorSettings
 from bayes_cep.posterior.eikonal_map import EikonalSolverSettings
 from bayes_cep.posterior.likelihood import LikelihoodSettings
 from bayes_cep.posterior.prior import PriorParameters
@@ -83,6 +85,20 @@ class AssembledPosterior:
 
 
 # ==================================================================================================
+@dataclass(frozen=True)
+class AssembledPosteriorComponents:
+    """The likelihood, forward map and prior of the posterior, and the data they were built from.
+
+    Attributes:
+        components (PosteriorComponents): Likelihood, forward map and prior.
+        data (PreprocessedData): The data the components were built from.
+    """
+
+    components: PosteriorComponents
+    data: PreprocessedData
+
+
+# ==================================================================================================
 def assemble_posterior(
     problem: InferenceProblemConfig, steps: StepReporter, logger: BaseLogger
 ) -> AssembledPosterior:
@@ -99,6 +115,43 @@ def assemble_posterior(
     Raises:
         ValueError: If the preprocessed data does not belong to the mesh in `raw_dir`.
     """
+    builder, data = _load_posterior_builder(problem, steps, logger)
+    with steps.step("Building the posterior"):
+        log_posterior = builder.build()
+    return AssembledPosterior(log_posterior, data)
+
+
+# ==================================================================================================
+def assemble_posterior_components(
+    problem: InferenceProblemConfig, steps: StepReporter, logger: BaseLogger
+) -> AssembledPosteriorComponents:
+    """Load the mesh and the preprocessed data and build the parts of the posterior.
+
+    For runs that need the forward map and the likelihood themselves, which a `LogPosterior`
+    keeps private (e.g. the Gauss-Newton Hessian of the Laplace approximation).
+
+    Args:
+        problem (InferenceProblemConfig): Which data and which model to use.
+        steps (StepReporter): Reporter of the run, for the numbered progress steps.
+        logger (BaseLogger): Logger of the run.
+
+    Returns:
+        AssembledPosteriorComponents: The likelihood, forward map and prior, and the data.
+
+    Raises:
+        ValueError: If the preprocessed data does not belong to the mesh in `raw_dir`.
+    """
+    builder, data = _load_posterior_builder(problem, steps, logger)
+    with steps.step("Building the posterior components"):
+        components = builder.build_components()
+    return AssembledPosteriorComponents(components, data)
+
+
+# ==================================================================================================
+def _load_posterior_builder(
+    problem: InferenceProblemConfig, steps: StepReporter, logger: BaseLogger
+) -> tuple[PosteriorBuilder, PreprocessedData]:
+    """Load the mesh and the preprocessed data and set up the builder of their posterior."""
     raw_data = RawDataDirectory.from_configured_path(problem.raw_dir)
     data_dir = resolve_repository_path(problem.data_dir)
     with steps.step(f"Loading the mesh and basis vectors from {raw_data.path}"):
@@ -113,21 +166,20 @@ def assemble_posterior(
             f"{data.ground_truth.shape}, but the mesh in {raw_data.path} has {mesh.n_points} "
             "vertices: the raw data is not the one the preprocessing run used."
         )
-    with steps.step("Building the posterior"):
-        log_posterior = PosteriorBuilder(
-            PosteriorSettings(
-                mesh=mesh,
-                basis_vectors=basis_vectors,
-                prior_mean_vector=data.prior_mean,
-                prior_parameters=problem.prior,
-                eikonal_settings=problem.eikonal,
-                likelihood_settings=LikelihoodSettings(
-                    num_vertices=mesh.n_points,
-                    observed_vertex_indices=data.observed_vertex_indices,
-                    data_vector=data.observed_activation_times,
-                    noise_variance=data.noise_variance,
-                ),
+    builder = PosteriorBuilder(
+        PosteriorSettings(
+            mesh=mesh,
+            basis_vectors=basis_vectors,
+            prior_mean_vector=data.prior_mean,
+            prior_parameters=problem.prior,
+            eikonal_settings=problem.eikonal,
+            likelihood_settings=LikelihoodSettings(
+                num_vertices=mesh.n_points,
+                observed_vertex_indices=data.observed_vertex_indices,
+                data_vector=data.observed_activation_times,
+                noise_variance=data.noise_variance,
             ),
-            interpolation_strategy=problem.interpolation,
-        ).build()
-    return AssembledPosterior(log_posterior, data)
+        ),
+        interpolation_strategy=problem.interpolation,
+    )
+    return builder, data

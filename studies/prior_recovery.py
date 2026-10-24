@@ -56,5 +56,7 @@ STUDY = StudySetup(
         Axis("true_prior.seed", TRUE_SEEDS),
     ),
     root=module_relative_path(__file__, "../working_data/prior_recovery"),
-    executor=ExecutorSettings(cluster="slurm", time_min=45, cpus_per_task=1, max_parallel=500),
+    executor=ExecutorSettings(
+        cluster="slurm", time_min=45, cpus_per_task=1, mem_gb=4, max_parallel=500
+    ),
 )

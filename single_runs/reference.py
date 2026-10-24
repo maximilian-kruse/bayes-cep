@@ -32,13 +32,17 @@ Functions:
         patient field.
     reference_map_config: The MAP run.
     reference_mcmc_config: The MCMC run, for a given initial state.
+    reference_laplace_config: The Laplace run, for a given MAP estimate.
+    reference_preconditioned_mcmc_config: The Laplace-preconditioned MCMC run.
 """
 
 from pathlib import Path
 
 import numpy as np
+from ls_bayesian.lowrank.eigensolvers import RandomizedDoublePassSolver
 from ls_bayesian.optimization.algorithms.custom_lbfgs import CustomLBFGSSettings
 
+from bayes_cep.laplace.builder import LaplaceSettings
 from bayes_cep.mcmc.builder import MCMCAlgorithmName, MCMCSettings, ZarrStorageSettings
 from bayes_cep.mesh.interpolation import NearestNeighborInterpolationStrategy
 from bayes_cep.optimization.initial_guess import FileInitialGuess, PriorMeanInitialGuess
@@ -54,8 +58,10 @@ from bayes_cep.preprocessing.synthetic_observations import ObservationSamplingSe
 from bayes_cep.statistics.correlation_length import CorrelationLengthSettings
 from bayes_cep.statistics.prior_moment_fit import DistanceMetric, MomentFitSettings
 from single_runs.inference import InferenceProblemConfig
+from single_runs.laplace import LaplaceRunConfig
 from single_runs.map import MapRunConfig
 from single_runs.mcmc import ChainDiagnosticsSettings, McmcRunConfig
+from single_runs.mcmc_laplace import PreconditionedMcmcRunConfig
 from single_runs.preprocessing import PreprocessingRunConfig
 from single_runs.prior import PriorRunConfig
 from single_runs.prior_fit import PriorMomentFitRunConfig
@@ -123,6 +129,25 @@ MCMC_LOG_INTERVAL = 1
 MCMC_BURN_IN = 100
 MCMC_MAX_LAG = 200
 MCMC_PLOTTED_COMPONENTS = (0, 42, 100, 1000)
+
+# Laplace-preconditioned samplers. With the exact Gaussian posterior as approximation they would
+# be rejection-free at a step width near 1, but the posterior is far from Gaussian over the
+# 15820 dimensions: measured from the MAP estimate, the pCN log acceptance is about -65 at 0.5,
+# -3 at 0.2 and 0 at 0.05. The values are conservative starting points, not tuned ones.
+MCMC_PRECONDITIONED_STEP_WIDTHS = {
+    MCMCAlgorithmName.PCN_PRECONDITIONED: 0.05,
+    MCMCAlgorithmName.PMALA: 0.05,
+}
+
+# Laplace approximation. The misfit Hessian has at most one nonzero eigenvalue per observation, so
+# the rank is at most the number of observations (1000); the log shows the smallest kept
+# eigenvalue, and directions beyond it are not corrected. With 200 it is still above 1.
+LAPLACE_NUM_EIGENVALUES = 500
+LAPLACE_OVERSAMPLING = 20
+LAPLACE_EIGENSOLVER_SEED = 0
+LAPLACE_MINIMUM_EIGENVALUE = 1e-6
+LAPLACE_NUM_SAMPLES = 1000
+LAPLACE_SAMPLE_SEED = 0
 
 
 # ==================================================================================================
@@ -414,4 +439,88 @@ def reference_mcmc_config(
         num_samples=MCMC_NUM_SAMPLES,
         seed=MCMC_SEED,
         log_interval=MCMC_LOG_INTERVAL,
+    )
+
+
+# ==================================================================================================
+def reference_laplace_config(
+    raw_dir: Path,
+    data_dir: Path,
+    map_estimate_path: Path,
+) -> LaplaceRunConfig:
+    """The Laplace run of the example data.
+
+    Args:
+        data_dir (Path): Directory with the data and the ground truth (the files of
+            `PreprocessedData`, e.g. the `results` directory of a preprocessing run); there is
+            deliberately no default.
+        map_estimate_path (Path): `.npy` file with the MAP estimate the approximation is centered
+            at; there is deliberately no default.
+        raw_dir (Path): Directory containing the raw data; there is deliberately no default.
+
+    Returns:
+        LaplaceRunConfig: The reference configuration for the given data.
+    """
+    return LaplaceRunConfig(
+        problem=reference_inference_problem(raw_dir, data_dir),
+        map_estimate_path=map_estimate_path,
+        laplace=LaplaceSettings(
+            eigensolver=RandomizedDoublePassSolver(
+                oversampling=LAPLACE_OVERSAMPLING, seed=LAPLACE_EIGENSOLVER_SEED
+            ),
+            num_eigenvalues=LAPLACE_NUM_EIGENVALUES,
+            minimum_eigenvalue=LAPLACE_MINIMUM_EIGENVALUE,
+            sample_seed=LAPLACE_SAMPLE_SEED,
+        ),
+        num_samples=LAPLACE_NUM_SAMPLES,
+    )
+
+
+# ==================================================================================================
+def reference_preconditioned_mcmc_config(
+    raw_dir: Path,
+    data_dir: Path,
+    map_estimate_path: Path,
+    algorithm: MCMCAlgorithmName,
+) -> PreconditionedMcmcRunConfig:
+    """The Laplace-preconditioned MCMC run of the example data.
+
+    The chain starts at the MAP estimate, which is also the center of the approximation.
+
+    Args:
+        data_dir (Path): Directory with the data and the ground truth (the files of
+            `PreprocessedData`, e.g. the `results` directory of a preprocessing run); there is
+            deliberately no default.
+        map_estimate_path (Path): `.npy` file with the MAP estimate the approximation is centered
+            at and the chain starts at; there is deliberately no default.
+        raw_dir (Path): Directory containing the raw data; there is deliberately no default.
+        algorithm (MCMCAlgorithmName): `PCN_PRECONDITIONED` or `PMALA`; there is deliberately no
+            default. The step width is the reference value of that algorithm.
+
+    Returns:
+        PreconditionedMcmcRunConfig: The reference configuration for the given data.
+
+    Raises:
+        ValueError: If `algorithm` is not a preconditioned one.
+    """
+    if algorithm not in MCMC_PRECONDITIONED_STEP_WIDTHS:
+        raise ValueError(
+            f"algorithm must be one of {[name.name for name in MCMC_PRECONDITIONED_STEP_WIDTHS]}, "
+            f"got {algorithm.name}."
+        )
+    plain = reference_mcmc_config(raw_dir, data_dir, map_estimate_path)
+    return PreconditionedMcmcRunConfig(
+        problem=plain.problem,
+        initial_state=plain.initial_state,
+        sampler=MCMCSettings(
+            algorithm=algorithm,
+            step_width=MCMC_PRECONDITIONED_STEP_WIDTHS[algorithm],
+            storage=plain.sampler.storage,
+        ),
+        diagnostics=plain.diagnostics,
+        num_samples=plain.num_samples,
+        seed=plain.seed,
+        log_interval=plain.log_interval,
+        laplace=reference_laplace_config(raw_dir, data_dir, map_estimate_path).laplace,
+        map_estimate_path=map_estimate_path,
     )

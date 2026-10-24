@@ -1,11 +1,11 @@
 """Run one configuration into a run directory.
 
 Choose the run type as a subcommand: a run defined in `single_runs/` by its `name` (`prior`,
-`preprocessing`, `map`, `mcmc`; every option given as a flag), a run of a file given with
-`--run-file` (see below), or one of the reference setups of
+`preprocessing`, `map`, `mcmc`, `mcmc-laplace`; every option given as a flag), a run of a file
+given with `--run-file` (see below), or one of the reference setups of
 `single_runs.reference`: `reference-synthetic-preprocessing`, `reference-patient-preprocessing`,
-`reference-smoothed-patient-preprocessing`, `reference-map` and
-`reference-mcmc`, with the data directories (and the initial state file of the
+`reference-smoothed-patient-preprocessing`, `reference-map`, `reference-mcmc` and
+`reference-mcmc-laplace`, with the data directories (and the initial state file of the
 chain) as arguments (`--config.raw-dir`, ...); no path is a default. Single reference values
 are changed by `--config.overrides dotted.path=value ...` (value as JSON, several separated by
 spaces), e.g. `--config.overrides problem.prior.kappa=0.1 num_samples=500`; the run then gets a
@@ -61,9 +61,11 @@ from bayes_cep.run.executor import Executor, ExecutorSettings, RunOutcome
 from bayes_cep.run.provenance import Environment
 from bayes_cep.run.registry import RunRegistry
 from single_runs.reference import (
+    reference_laplace_config,
     reference_map_config,
     reference_mcmc_config,
     reference_patient_preprocessing_config,
+    reference_preconditioned_mcmc_config,
     reference_smoothed_patient_preprocessing_config,
     reference_synthetic_preprocessing_config,
 )
@@ -76,6 +78,8 @@ REFERENCE_FACTORIES = {
     "reference-smoothed-patient-preprocessing": reference_smoothed_patient_preprocessing_config,
     "reference-map": reference_map_config,
     "reference-mcmc": reference_mcmc_config,
+    "reference-laplace": reference_laplace_config,
+    "reference-mcmc-laplace": reference_preconditioned_mcmc_config,
 }
 OVERRIDES_ARGUMENT = "overrides"
 

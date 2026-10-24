@@ -24,10 +24,10 @@ change → run checks → review diff.
   `pixi run --manifest-path <repo> bcep-single ...` (relative paths then resolve against that
   directory). They still import `single_runs`/`studies` from the repository root via `PYTHONPATH`.
 - Tasks (run from the repository root; relative config paths resolve against it): `single`, `study`,
-  `example` and `example-preprocessing`/`-map`/`-mcmc` (regenerate the example data; map depends on preprocessing, mcmc on map). The
+  `example` and `example-preprocessing`/`-map`/`-mcmc`/`-laplace` (regenerate the example data; map depends on preprocessing, mcmc and laplace on map). The
   example directories are arguments of these tasks in `pyproject.toml`, not defaults in Python code.
-- `example_data/` (git-tracked): `raw/` (mesh, fiber field, basis vectors) and the output of three
-  reference runs (`preprocessing/`, `map/`, `mcmc/`, chain gitignored), written flat
+- `example_data/` (git-tracked): `raw/` (mesh, fiber field, basis vectors) and the output of the
+  reference runs (`preprocessing/`, `map/`, `mcmc/` with the chain gitignored, `laplace/`), written flat
   (`--flat-results`); other runs keep results in `results/`. `working_data/` (gitignored) holds
   study directories.
 
@@ -43,13 +43,22 @@ fiber-orientation angle per mesh vertex.
 - `posterior/`: `PriorParameters` (kappa, tau, seed; the one class for them; the mean is passed
   separately), `FiberAnglePrior` (delegating adapter of an `ls_bayesian` `SPDEPrior`),
   `FiberTensor` (per-simplex conductivity from the angle; `jax.jacfwd` derivative),
-  `EikonalParameterToSolutionMap` (eikonax forward + discrete adjoint; Jacobian-/Hessian-vector
-  products not implemented, not needed for MAP), `GaussianLogLikelihood`, and `PosteriorBuilder`
-  (everything built in `build()`, stateless; a `LogPosterior` is tied to one dataset).
+  `EikonalParameterToSolutionMap` (eikonax forward, discrete adjoint and the matching forward
+  triangular solve for Jacobian-vector products; Hessian-vector products not implemented),
+  `GaussianLogLikelihood`, and `PosteriorBuilder`
+  (everything built in `build()`, stateless; a `LogPosterior` is tied to one dataset;
+  `build_components()` returns the likelihood, forward map and prior uncomposed).
   The prior is `LogPosterior.prior`, so optimizer models and the MCMC builder take only the posterior.
   - `_DerivativeCache` reuses the adjoint only for exactly the same parameter vector
     (`np.array_equal` on a copy): a tolerance would let nearby MCMC proposals reuse another state's
     adjoint. `FiberTensor` and eikonax run in single precision, the posterior in double.
+- `laplace/`: `LaplaceBuilder(settings, components).build(map_estimate)` returns a `LaplaceApproximation`
+  (`ls_bayesian.lowrank` `LowRankGaussian` at the MAP, plus its eigenpairs). `GaussNewtonMisfitHessian`
+  (JVP, likelihood HVP, vjp: the `hessian_action`) and `PriorReferenceCovariance` (adapter of the prior
+  to `ls_bayesian.lowrank.ReferenceCovariance`, which beartype requires as a real instance).
+- `mcmc/`: `MCMCBuilder` for pCN, MALA and, with a Gaussian `approximation` (`LowRankGaussianMeasure` of the Laplace
+  approximation), `PCN_PRECONDITIONED` and `PMALA` (needs a centred prior). The posterior is far from Gaussian: step
+  widths of the preconditioned samplers must be small (0.05 in the reference), the rank must reach the number of observations.
 - `optimization/`: `InitialGuessStrategy` (where MAP starts: prior mean, prior draw, `.npy`).
   `OptimizerStrategy.build(log_posterior, logger)` returns an optimizer together with its matching
   model as one pair, never mix them: `CameronMartinPosteriorModel` (the gradient
@@ -103,7 +112,9 @@ parameters; `reference.py` holds them as constants and `reference_*_config` fact
   (embedded as `problem` in the MAP and MCMC configs) and `assemble_posterior`.
 - `map.py` only optimizes (from its `initial_guess` strategy; the MAP studies sweep
   `initial_guess.seed` for multi-start); `mcmc.py` only samples (from its `initial_state` strategy, the same
-  ones as the MAP initial guess: prior mean, prior draw or a `.npy` such as a MAP estimate). Both read the preprocessed data and nothing else of the data side, so many inference runs share one preprocessing run. `prior.py` samples the prior.
+  ones as the MAP initial guess: prior mean, prior draw or a `.npy` such as a MAP estimate). Both read the preprocessed data and nothing else of the data side, so many inference runs share one preprocessing run. `prior.py` samples the prior. `mcmc_laplace.py` is `mcmc.py` with the Laplace approximation as proposal/preconditioner (computed inside the run from a MAP `.npy`; studies `mcmc_laplace` and `mcmc_baseline`, summary `scripts/postprocess_mcmc_study.py`). `laplace.py` builds the low-rank Laplace approximation at a stored MAP estimate
+  (Gauss-Newton Hessian, `ls_bayesian.lowrank`); its pointwise variance is the sample variance, not the
+  probing estimate of the prior diagonal (too noisy here).
   After sampling, `mcmc.py` streams the chain diagnostics (`ChainDiagnostics` record: ESS and
   autocorrelation time per vertex; trace and autocorrelation of `diagnostics.plotted_components`,
   none/one/several vertices) and its `report` only plots them.

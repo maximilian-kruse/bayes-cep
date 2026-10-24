@@ -53,5 +53,7 @@ STUDY = StudySetup(
         Axis("fit.distance_metric", tuple(DistanceMetric)),
     ),
     root=module_relative_path(__file__, "../working_data/prior_moment_fit"),
-    executor=ExecutorSettings(cluster="slurm", time_min=45, cpus_per_task=1, max_parallel=500),
+    executor=ExecutorSettings(
+        cluster="slurm", time_min=45, cpus_per_task=1, mem_gb=4, max_parallel=500
+    ),
 )

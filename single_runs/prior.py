@@ -32,6 +32,7 @@ from bayes_cep.run.progress import StepReporter, describe_array
 from bayes_cep.run.template import Metrics, Run
 from bayes_cep.statistics.axial_statistics import (
     compute_axial_mean_and_variance,
+    compute_standard_deviation_degrees,
     shift_angles_to_minimize_axial_variance,
 )
 from bayes_cep.statistics.correlation_length import (
@@ -45,7 +46,7 @@ POINTWISE_VARIANCE_FILE_NAME = "pointwise_variance.npy"
 CORRELATION_CURVE_FILE_NAME = "correlation_curve.npz"
 SAMPLES_FILE_NAME = "samples.npy"
 SAMPLE_PLOT_FILE_NAME = "sample.pdf"
-POINTWISE_VARIANCE_PLOT_FILE_NAME = "pointwise_variance.pdf"
+POINTWISE_STD_PLOT_FILE_NAME = "pointwise_std.pdf"
 CORRELATION_CURVE_PLOT_FILE_NAME = "correlation_curve.pdf"
 CORRELATION_HISTOGRAM_PLOT_FILE_NAME = "correlation_histogram.pdf"
 
@@ -94,12 +95,13 @@ class PriorRun(Run[PriorRunConfig]):
         "histogram_counts, histogram_edges, noise_floor.",
         f"results/{SAMPLES_FILE_NAME}": "All samples, shape (num_samples, num_vertices); only if "
         "keep_samples.",
-        METRICS_RECORD: "variance_mean/min/max: statistics of the pointwise variance field; "
+        METRICS_RECORD: "std_mean/min/max_deg: statistics of the pointwise axial standard "
+        "deviation field in degrees; "
         "correlation_distance_threshold: distance where the binned correlation first drops below "
         "the threshold (model-free); correlation_length: fitted Matern length (nan if the fit "
         "failed); correlation_fit_succeeded and correlation_fit_failure_reason (empty if it "
         "succeeded): a failed fit does not fail the run; seconds.",
-        "plots/": f"{SAMPLE_PLOT_FILE_NAME}, {POINTWISE_VARIANCE_PLOT_FILE_NAME}, "
+        "plots/": f"{SAMPLE_PLOT_FILE_NAME}, {POINTWISE_STD_PLOT_FILE_NAME}, "
         f"{CORRELATION_CURVE_PLOT_FILE_NAME}, {CORRELATION_HISTOGRAM_PLOT_FILE_NAME} "
         "(study report).",
     }
@@ -128,10 +130,10 @@ class PriorRun(Run[PriorRunConfig]):
         )
         render_point_field(
             mesh,
-            np.load(results_dir / POINTWISE_VARIANCE_FILE_NAME),
-            plots_dir / POINTWISE_VARIANCE_PLOT_FILE_NAME,
-            f"pointwise axial variance ({label}), mean {metrics['variance_mean']:.3g}",
-            "axial variance",
+            compute_standard_deviation_degrees(np.load(results_dir / POINTWISE_VARIANCE_FILE_NAME)),
+            plots_dir / POINTWISE_STD_PLOT_FILE_NAME,
+            f"pointwise axial standard deviation ({label}), mean {metrics['std_mean_deg']:.3g} deg",
+            "axial standard deviation [deg]",
             "viridis",
         )
         curve = np.load(results_dir / CORRELATION_CURVE_FILE_NAME)
@@ -186,7 +188,8 @@ class PriorRun(Run[PriorRunConfig]):
         with steps.step(f"Drawing {config.num_samples} samples"):
             samples = np.stack([prior.generate_sample() for _ in range(config.num_samples)])
             _, pointwise_variance = compute_axial_mean_and_variance(samples)
-        logger.info(f"      {describe_array('pointwise variance', pointwise_variance)}")
+        pointwise_std_degrees = compute_standard_deviation_degrees(pointwise_variance)
+        logger.info(f"      {describe_array('pointwise std [deg]', pointwise_std_degrees)}")
 
         # Saved before the correlation length, so that they exist whatever happens to it
         np.save(results_dir / SAMPLE_FILE_NAME, sample)
@@ -221,9 +224,9 @@ class PriorRun(Run[PriorRunConfig]):
         )
 
         return {
-            "variance_mean": float(pointwise_variance.mean()),
-            "variance_min": float(pointwise_variance.min()),
-            "variance_max": float(pointwise_variance.max()),
+            "std_mean_deg": float(pointwise_std_degrees.mean()),
+            "std_min_deg": float(pointwise_std_degrees.min()),
+            "std_max_deg": float(pointwise_std_degrees.max()),
             "correlation_distance_threshold": float(correlation.correlation_distance_threshold),
             "correlation_length": float(correlation.length),
             "correlation_fit_succeeded": correlation.fit_succeeded,

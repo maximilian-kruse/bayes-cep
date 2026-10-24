@@ -11,6 +11,7 @@ from typing import override
 import numpy as np
 import pyvista as pv
 import scipy.sparse as sp
+import scipy.sparse.linalg as spla
 from eikonax import derivator, linalg, preprocessing, solver, tensorfield
 from ls_bayesian.posterior import interfaces
 
@@ -95,7 +96,9 @@ class EikonalParameterToSolutionMap(interfaces.ParameterToSolutionMap):
     Wraps `eikonax`'s differentiable eikonal solver as an `ls_bayesian` `ParameterToSolutionMap`:
     the parameter $m$ is a fiber-orientation angle per mesh vertex, interpolated to a per-simplex
     anisotropic conductivity tensor via `FiberTensor` before each forward solve. Gradients are
-    computed via eikonax's discrete adjoint.
+    computed via eikonax's discrete adjoint, Jacobian-vector products via the matching forward
+    triangular solve. Hessian-vector products of the map are not implemented (a Gauss-Newton
+    Hessian only needs the two first-order products).
     """
 
     # ----------------------------------------------------------------------------------------------
@@ -191,16 +194,37 @@ class EikonalParameterToSolutionMap(interfaces.ParameterToSolutionMap):
         parameter_vector: np.ndarray[tuple[int], np.dtype[np.float64]],
         direction_vector: np.ndarray[tuple[int], np.dtype[np.float64]],
     ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
-        """Not implemented.
+        r"""Apply the Jacobian $\nabla_m F(m)\,\hat m = (I - G_u)^{-1} G_m S \hat m$.
 
-        eikonax's `DerivativeSolver` only exposes the adjoint (transposed) triangular solve needed
-        for `evaluate_gradient`, not the forward triangular solve a Jacobian-vector product would
-        need. Not required for MAP estimation, which only uses `evaluate_forward` and
-        `evaluate_gradient`.
+        Here $S$ is the vertex-to-simplex matrix, $G_m$ the partial derivative of the eikonal
+        update with respect to the vertex parameter and $G_u$ the one with respect to the solution.
+        `DerivativeSolver` stores $\bar A = P (I - G_u)^T P^T$ (upper triangular, unit diagonal,
+        $P$ the causal ordering permutation) for the adjoint solve. The forward solve uses
+        $(I - G_u)^{-1} = P^T \bar A^{-T} P$, a lower triangular solve with the same matrix.
+        Shares the cached derivative structures with `evaluate_gradient`.
+
+        Args:
+            solution_vector (np.ndarray): Solution $u = F(m)$, shape `(num_vertices,)`.
+            parameter_vector (np.ndarray): Parameter $m$, shape `(num_vertices,)`.
+            direction_vector (np.ndarray): Direction $\hat m$, shape `(num_vertices,)`.
+
+        Returns:
+            np.ndarray: Jacobian-vector product, shape `(num_vertices,)`, float64.
         """
-        raise NotImplementedError(
-            "EikonalParameterToSolutionMap does not support Jacobian-vector products."
+        derivative_solver, sparse_partial_parameter = self._get_derivative_structures(
+            solution_vector, parameter_vector
         )
+        right_hand_side = sparse_partial_parameter @ (
+            self._vertex_to_simplex_matrix @ direction_vector
+        )
+        permutation_matrix = derivative_solver.sparse_permutation_matrix
+        permuted_solution = spla.spsolve_triangular(
+            derivative_solver.sparse_system_matrix.T,
+            permutation_matrix @ right_hand_side,
+            lower=True,
+            unit_diagonal=True,
+        )
+        return np.asarray(permutation_matrix.T @ permuted_solution, dtype=np.float64)
 
     # ----------------------------------------------------------------------------------------------
     @override
@@ -212,7 +236,7 @@ class EikonalParameterToSolutionMap(interfaces.ParameterToSolutionMap):
         adjoint_vector: np.ndarray[tuple[int], np.dtype[np.float64]],
         gradient_vector: np.ndarray[tuple[int], np.dtype[np.float64]],
     ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
-        """Not implemented: second-order forward-map contributions are not required for MAP."""
+        """Not implemented: second-order terms are not needed for MAP or a Gauss-Newton Hessian."""
         raise NotImplementedError(
             "EikonalParameterToSolutionMap does not support Hessian-vector products."
         )

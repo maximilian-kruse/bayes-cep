@@ -2,6 +2,7 @@ r"""Builds an `ls_bayesian` posterior for the fiber-orientation forward model.
 
 Classes:
     PosteriorSettings: Settings for `PosteriorBuilder`.
+    PosteriorComponents: Likelihood, forward map and prior of one dataset.
     PosteriorBuilder: Builds the prior, forward map, and likelihood from a given mesh and dataset,
         then composes an `ls_bayesian` `LogPosterior`.
 """
@@ -11,13 +12,14 @@ from dataclasses import dataclass
 import numpy as np
 import pyvista as pv
 from ls_bayesian.common.logging import BaseLogger
+from ls_bayesian.posterior import likelihood as ls_likelihood
 from ls_bayesian.posterior import posterior
 
 from bayes_cep.mesh.interpolation import InterpolationStrategy
 from bayes_cep.mesh.io import create_dolfinx_mesh
 from bayes_cep.posterior.eikonal_map import EikonalParameterToSolutionMap, EikonalSolverSettings
 from bayes_cep.posterior.likelihood import LikelihoodSettings, build_activation_time_likelihood
-from bayes_cep.posterior.prior import PriorParameters, build_fiber_angle_prior
+from bayes_cep.posterior.prior import FiberAnglePrior, PriorParameters, build_fiber_angle_prior
 
 
 # ==================================================================================================
@@ -45,6 +47,35 @@ class PosteriorSettings:
 
 
 # ==================================================================================================
+@dataclass(frozen=True)
+class PosteriorComponents:
+    """The three components of a posterior for one dataset.
+
+    Attributes:
+        likelihood (GaussianLogLikelihood): Gaussian likelihood of the observed activation times.
+        forward_map (EikonalParameterToSolutionMap): Eikonal forward map.
+        prior (FiberAnglePrior): Fiber-angle prior.
+    """
+
+    likelihood: ls_likelihood.GaussianLogLikelihood
+    forward_map: EikonalParameterToSolutionMap
+    prior: FiberAnglePrior
+
+    # ----------------------------------------------------------------------------------------------
+    def to_log_posterior(self, logger: BaseLogger | None = None) -> posterior.LogPosterior:
+        """Compose the components into a `LogPosterior`; they are shared, not copied.
+
+        Args:
+            logger (BaseLogger | None, optional): Logger for the evaluation diagnostics of the
+                `LogPosterior`. Nothing is logged if `None`. Defaults to `None`.
+
+        Returns:
+            posterior.LogPosterior: The negative log-posterior of the components.
+        """
+        return posterior.LogPosterior(self.likelihood, self.forward_map, self.prior, logger=logger)
+
+
+# ==================================================================================================
 class PosteriorBuilder:
     """Builds the prior, forward map, and likelihood from a given mesh and dataset, then composes
     an `ls_bayesian` `LogPosterior`.
@@ -57,6 +88,7 @@ class PosteriorBuilder:
 
     Methods:
         build: Build the prior, forward map, and likelihood, then compose a `LogPosterior`.
+        build_components: Build the same three components without composing them.
     """
 
     # ----------------------------------------------------------------------------------------------
@@ -92,6 +124,18 @@ class PosteriorBuilder:
         Returns:
             posterior.LogPosterior: The assembled negative log-posterior.
         """
+        return self.build_components().to_log_posterior(self._posterior_logger)
+
+    # ----------------------------------------------------------------------------------------------
+    def build_components(self) -> PosteriorComponents:
+        """Build the prior, forward map, and likelihood without composing them.
+
+        For consumers that need the parts a `LogPosterior` keeps private, e.g. the Gauss-Newton
+        Hessian of the data misfit, which composes the forward map and the likelihood itself.
+
+        Returns:
+            PosteriorComponents: The three components of one dataset.
+        """
         settings = self._settings
         prior = build_fiber_angle_prior(
             create_dolfinx_mesh(settings.mesh),
@@ -106,4 +150,4 @@ class PosteriorBuilder:
             self._interpolation_strategy,
         )
         likelihood = build_activation_time_likelihood(settings.likelihood_settings)
-        return posterior.LogPosterior(likelihood, forward_map, prior, logger=self._posterior_logger)
+        return PosteriorComponents(likelihood=likelihood, forward_map=forward_map, prior=prior)

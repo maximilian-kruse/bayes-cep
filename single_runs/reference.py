@@ -25,11 +25,14 @@ Functions:
     reference_prior_recovery_config: The recovery test of the prior parameter estimation.
     reference_inference_problem: The posterior of the example data.
     reference_prior_config: The prior investigation run.
-    reference_preprocessing_config: The preprocessing run, for a given ground truth.
-    reference_synthetic_preprocessing_config: The preprocessing run with a synthetic ground truth.
-    reference_patient_preprocessing_config: The preprocessing run with the real patient fibers.
+    reference_best_fit_prior_mean: The prior mean of a real patient (best-fit constant angle).
+    reference_preprocessing_config: The preprocessing run, for a given ground truth and prior mean.
+    reference_synthetic_preprocessing_config: The preprocessing run with a synthetic ground truth
+        (zero prior mean).
+    reference_patient_preprocessing_config: The preprocessing run with the real patient fibers
+        (best-fit constant prior mean).
     reference_smoothed_patient_preprocessing_config: The preprocessing run with a stored smoothed
-        patient field.
+        patient field (best-fit constant prior mean).
     reference_map_config: The MAP run.
     reference_heldout_map_config: The held-out MAP run (one fold of a cross-validation).
     reference_mcmc_config: The MCMC run, for a given initial state.
@@ -55,6 +58,11 @@ from bayes_cep.preprocessing.ground_truth import (
     SmoothedFieldGroundTruthStrategy,
     SyntheticGroundTruthStrategy,
 )
+from bayes_cep.preprocessing.prior_mean import (
+    BestFitConstantPriorMeanStrategy,
+    PriorMeanStrategy,
+    ZeroPriorMeanStrategy,
+)
 from bayes_cep.preprocessing.synthetic_observations import ObservationSamplingSettings
 from bayes_cep.statistics.correlation_length import CorrelationLengthSettings
 from bayes_cep.statistics.cross_validation import HeldOutSplitSettings
@@ -74,6 +82,9 @@ from single_runs.prior_recovery import PriorRecoveryRunConfig
 NUM_OBSERVATIONS = 1000
 NOISE_VARIANCE = 1e-3
 OBSERVATION_SEED = 0
+
+# Prior mean from the observations: the constant angle that fits them best, out of this many
+PRIOR_MEAN_NUM_CANDIDATES = 25
 
 # Eikonal forward model of the patient mesh
 EIKONAL_INITIAL_SITE_INDEX = 12650
@@ -329,15 +340,26 @@ def reference_prior_config(raw_dir: Path) -> PriorRunConfig:
 
 
 # ==================================================================================================
+def reference_best_fit_prior_mean() -> BestFitConstantPriorMeanStrategy:
+    """The prior mean of a real patient: the constant angle that fits the observations best."""
+    return BestFitConstantPriorMeanStrategy(num_candidates=PRIOR_MEAN_NUM_CANDIDATES)
+
+
+# ==================================================================================================
 def reference_preprocessing_config(
     raw_dir: Path,
-    ground_truth: RealDataGroundTruthStrategy | SyntheticGroundTruthStrategy,
+    ground_truth: RealDataGroundTruthStrategy
+    | SmoothedFieldGroundTruthStrategy
+    | SyntheticGroundTruthStrategy,
+    prior_mean: PriorMeanStrategy,
 ) -> PreprocessingRunConfig:
     """The preprocessing run of the example data.
 
     Args:
-        ground_truth (RealDataGroundTruthStrategy | SyntheticGroundTruthStrategy): Ground-truth
-            source; there is deliberately no default.
+        ground_truth (RealDataGroundTruthStrategy | SmoothedFieldGroundTruthStrategy |
+            SyntheticGroundTruthStrategy): Ground-truth source; there is deliberately no default.
+        prior_mean (PriorMeanStrategy): How the prior mean is chosen from the observations; there
+            is deliberately no default.
         raw_dir (Path): Directory containing the raw data; there is deliberately no default.
 
     Returns:
@@ -346,6 +368,7 @@ def reference_preprocessing_config(
     return PreprocessingRunConfig(
         raw_dir=raw_dir,
         ground_truth=ground_truth,
+        prior_mean=prior_mean,
         observations=ObservationSamplingSettings(
             num_observations=NUM_OBSERVATIONS,
             noise_variance=NOISE_VARIANCE,
@@ -363,7 +386,10 @@ def reference_synthetic_preprocessing_config(raw_dir: Path) -> PreprocessingRunC
     Args:
         raw_dir (Path): Directory containing the raw data; there is deliberately no default.
     """
-    return reference_preprocessing_config(raw_dir, reference_synthetic_ground_truth())
+    # The truth is a zero-mean prior sample, so the matching prior mean is zero
+    return reference_preprocessing_config(
+        raw_dir, reference_synthetic_ground_truth(), ZeroPriorMeanStrategy()
+    )
 
 
 # ==================================================================================================
@@ -373,7 +399,9 @@ def reference_patient_preprocessing_config(raw_dir: Path) -> PreprocessingRunCon
     Args:
         raw_dir (Path): Directory containing the raw data; there is deliberately no default.
     """
-    return reference_preprocessing_config(raw_dir, RealDataGroundTruthStrategy())
+    return reference_preprocessing_config(
+        raw_dir, RealDataGroundTruthStrategy(), reference_best_fit_prior_mean()
+    )
 
 
 # ==================================================================================================
@@ -388,7 +416,9 @@ def reference_smoothed_patient_preprocessing_config(
             `scripts/smooth_patient_fibers.py`); there is deliberately no default.
     """
     return reference_preprocessing_config(
-        raw_dir, SmoothedFieldGroundTruthStrategy(path=angle_field_path)
+        raw_dir,
+        SmoothedFieldGroundTruthStrategy(path=angle_field_path),
+        reference_best_fit_prior_mean(),
     )
 
 

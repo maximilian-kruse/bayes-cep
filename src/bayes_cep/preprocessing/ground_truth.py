@@ -3,8 +3,8 @@ between it and the real-data source in `angle_field.py`.
 
 A simulation study picks exactly one `GroundTruthStrategy` per run — never both — via
 `PreprocessingRunConfig.ground_truth` (in `single_runs/preprocessing.py`). The prior mean is not
-part of this strategy: it is zero for any ground truth, as the mean of the ground truth is not
-known in a realistic scenario.
+part of this strategy: it is chosen from the observations alone (see `prior_mean.py`), as the mean
+of the ground truth is not known in a realistic scenario.
 
 Classes:
     GroundTruthStrategy: ABC interface for producing a ground-truth angle field.

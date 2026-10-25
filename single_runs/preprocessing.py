@@ -13,7 +13,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import override
 
-import numpy as np
 from ls_bayesian.common.logging import BaseLogger
 
 from bayes_cep.mesh.interpolation import (
@@ -26,6 +25,10 @@ from bayes_cep.preprocessing.ground_truth import (
     RealDataGroundTruthStrategy,
     SmoothedFieldGroundTruthStrategy,
     SyntheticGroundTruthStrategy,
+)
+from bayes_cep.preprocessing.prior_mean import (
+    BestFitConstantPriorMeanStrategy,
+    ZeroPriorMeanStrategy,
 )
 from bayes_cep.preprocessing.synthetic_observations import (
     ObservationSamplingSettings,
@@ -53,6 +56,8 @@ class PreprocessingRunConfig(RunConfig):
         raw_dir (Path): Directory containing `mesh.vtu`, `basis_vecs.npy` and `fiber_field.npy`.
         ground_truth (RealDataGroundTruthStrategy | SmoothedFieldGroundTruthStrategy |
             SyntheticGroundTruthStrategy): Source of the ground-truth angle field.
+        prior_mean (ZeroPriorMeanStrategy | BestFitConstantPriorMeanStrategy): How the prior mean
+            of the inference is chosen; it may use the observations, never the ground truth.
         observations (ObservationSamplingSettings): Number of observations, noise variance and
             seed of the synthetic data.
         eikonal (EikonalSolverSettings): Forward-solver settings that generate the data.
@@ -66,6 +71,7 @@ class PreprocessingRunConfig(RunConfig):
         | SmoothedFieldGroundTruthStrategy
         | SyntheticGroundTruthStrategy
     )
+    prior_mean: ZeroPriorMeanStrategy | BestFitConstantPriorMeanStrategy
     observations: ObservationSamplingSettings
     eikonal: EikonalSolverSettings
     interpolation: LinearInterpolationStrategy | NearestNeighborInterpolationStrategy
@@ -79,7 +85,8 @@ class PreprocessingRun(Run[PreprocessingRunConfig]):
     name = "preprocessing"
     outputs = {
         f"results/{_FILES['ground_truth']}": "Ground-truth fiber angle [rad] per vertex.",
-        f"results/{_FILES['prior_mean']}": "Prior mean [rad] per vertex: zero.",
+        f"results/{_FILES['prior_mean']}": "Prior mean [rad] per vertex, from the prior mean "
+        "strategy.",
         f"results/{_FILES['observed_vertex_indices']}": "Indices of the observed vertices.",
         f"results/{_FILES['observed_activation_times']}": "Noisy synthetic activation times at "
         "those vertices.",
@@ -121,13 +128,10 @@ class PreprocessingRun(Run[PreprocessingRunConfig]):
         logger.info(f"      mesh: {mesh.n_points} vertices, {mesh.n_cells} triangles")
 
         strategy_name = type(config.ground_truth).__name__
-        with steps.step(f"Building ground truth and prior mean ({strategy_name})"):
+        with steps.step(f"Building the ground truth ({strategy_name})"):
             fiber_field = raw_data.load_fiber_field()
             ground_truth = config.ground_truth.build(mesh, fiber_field, basis_vectors)
-            # Always zero: in a realistic scenario the mean of the ground truth is not known.
-            prior_mean = np.zeros_like(ground_truth)
         logger.info(f"      {describe_array('ground truth [rad]', ground_truth)}")
-        logger.info(f"      prior mean angle: {prior_mean[0]:.4f} rad")
 
         with steps.step("Generating synthetic observations"):
             forward_map = EikonalParameterToSolutionMap(
@@ -139,6 +143,15 @@ class PreprocessingRun(Run[PreprocessingRunConfig]):
         logger.info(
             f"      observed {observed_vertex_indices.shape[0]} of {mesh.n_points} vertices"
         )
+
+        # From the observations only: the mean of the ground truth is not known in a realistic
+        # scenario.
+        prior_mean_name = type(config.prior_mean).__name__
+        with steps.step(f"Building the prior mean ({prior_mean_name})"):
+            prior_mean = config.prior_mean.build(
+                forward_map, observed_vertex_indices, observed_activation_times, mesh.n_points
+            )
+        logger.info(f"      {describe_array('prior mean [rad]', prior_mean)}")
 
         PreprocessedData(
             ground_truth=ground_truth,

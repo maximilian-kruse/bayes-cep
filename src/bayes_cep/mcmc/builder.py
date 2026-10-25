@@ -18,7 +18,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
-import numpy as np
 from ls_bayesian.common.logging import BaseLogger
 from ls_bayesian.mcmc import output
 from ls_bayesian.mcmc.algorithm import MCMCAlgorithm
@@ -32,7 +31,12 @@ from ls_bayesian.mcmc.sampler import Sampler
 from ls_bayesian.mcmc.storage import ZarrStorage
 from ls_bayesian.posterior.posterior import LogPosterior
 
-from bayes_cep.mcmc.measures import LikelihoodTargetMeasure, PriorGaussianMeasure
+from bayes_cep.mcmc.measures import (
+    CenteredGaussianMeasure,
+    LikelihoodTargetMeasure,
+    MeanTiltedTargetMeasure,
+    PriorGaussianMeasure,
+)
 
 # Directory name of the Zarr store within the output directory; fixed, so that the files of a run
 # do not depend on its settings.
@@ -52,8 +56,9 @@ class MCMCAlgorithmName(Enum):
             (Pinski et al., 2015). Derivative-free, like `PCN`.
         PMALA: MALA preconditioned by the covariance of a Gaussian approximation of the posterior,
             the state-independent case of the infinite-dimensional manifold MALA (Beskos et al.,
-            2017, Algorithm 3.7). It collapses to `MALA` for the prior as approximation. It
-            assumes a centred prior.
+            2017, Algorithm 3.7). It collapses to `MALA` for the prior as approximation. It states
+            the potential relative to a centred reference measure; a prior mean is moved into the
+            potential (see `MeanTiltedTargetMeasure`), so any prior mean works.
     """
 
     PCN = "pcn"
@@ -167,19 +172,13 @@ class MCMCBuilder:
 
         Raises:
             ValueError: If the approximation is missing for a preconditioned algorithm or given for
-                another one, or if `PMALA` is used with a prior that is not centred.
+                another one.
         """
         algorithm = settings.algorithm
         if algorithm.requires_approximation and approximation is None:
             raise ValueError(f"The algorithm {algorithm.name} needs an approximation.")
         if not algorithm.requires_approximation and approximation is not None:
             raise ValueError(f"The algorithm {algorithm.name} does not use an approximation.")
-        prior_mean_norm = float(np.linalg.norm(log_posterior.prior.mean_vector))
-        if algorithm is MCMCAlgorithmName.PMALA and prior_mean_norm != 0.0:
-            raise ValueError(
-                "PMALA assumes a centred prior (its score is the gradient plus the prior "
-                f"precision applied to the state), but the prior mean has norm {prior_mean_norm}."
-            )
         self._settings = settings
         self._log_posterior = log_posterior
         self._output_dir = output_dir
@@ -206,11 +205,9 @@ class MCMCBuilder:
                     f"Tracked component {index} is out of range for a parameter of dimension "
                     f"{parameter_dimension}."
                 )
-        model = MCMCModel(
-            target=LikelihoodTargetMeasure(self._log_posterior),
-            reference=PriorGaussianMeasure(self._log_posterior.prior),
-            approximation=self._approximation,
-        )
+        target = LikelihoodTargetMeasure(self._log_posterior)
+        reference = PriorGaussianMeasure(self._log_posterior.prior)
+        model = MCMCModel(target=target, reference=reference, approximation=self._approximation)
         algorithm: MCMCAlgorithm
         match self._settings.algorithm:
             case MCMCAlgorithmName.PCN:
@@ -220,7 +217,7 @@ class MCMCBuilder:
             case MCMCAlgorithmName.PCN_PRECONDITIONED:
                 algorithm = PCNAlgorithm(model, self._settings.step_width, logger=logger)
             case MCMCAlgorithmName.PMALA:
-                algorithm = PMALAAlgorithm(model, self._settings.step_width)
+                algorithm = self._build_pmala(model, target, reference)
         storage_settings = self._settings.storage
         storage = ZarrStorage(
             save_directory=self._output_dir / SAMPLE_STORE_NAME,
@@ -230,6 +227,20 @@ class MCMCBuilder:
         )
         self.outputs = self._build_outputs()
         return Sampler(algorithm, storage=storage, outputs=self.outputs, logger=logger)
+
+    # ----------------------------------------------------------------------------------------------
+    def _build_pmala(
+        self, model: MCMCModel, target: LikelihoodTargetMeasure, reference: PriorGaussianMeasure
+    ) -> MCMCAlgorithm:
+        """Build PMALA, which states the potential relative to a centred reference measure: the
+        prior mean is moved into the potential, and the state stays the angle. For a zero mean
+        this is the plain algorithm. The preconditioner's mean is never read by PMALA."""
+        centered_model = MCMCModel(
+            target=MeanTiltedTargetMeasure(target, self._log_posterior.prior),
+            reference=CenteredGaussianMeasure(reference),
+            approximation=model.approximation,
+        )
+        return PMALAAlgorithm(centered_model, self._settings.step_width)
 
     # ----------------------------------------------------------------------------------------------
     def _build_outputs(self) -> tuple[MCMCOutput, ...]:

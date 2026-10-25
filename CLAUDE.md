@@ -57,14 +57,14 @@ fiber-orientation angle per mesh vertex.
   (JVP, likelihood HVP, vjp: the `hessian_action`) and `PriorReferenceCovariance` (adapter of the prior
   to `ls_bayesian.lowrank.ReferenceCovariance`, which beartype requires as a real instance).
 - `mcmc/`: `MCMCBuilder` for pCN, MALA and, with a Gaussian `approximation` (`LowRankGaussianMeasure` of the Laplace
-  approximation), `PCN_PRECONDITIONED` and `PMALA` (needs a centred prior). The posterior is far from Gaussian: step
+  approximation), `PCN_PRECONDITIONED` and `PMALA` (states the potential relative to a centred reference measure; a prior mean goes into the potential, `MeanTiltedTargetMeasure`). The posterior is far from Gaussian: step
   widths of the preconditioned samplers must be small (0.05 in the reference), the rank must reach the number of observations.
 - `optimization/`: `InitialGuessStrategy` (where MAP starts: prior mean, prior draw, `.npy`).
   `OptimizerStrategy.build(log_posterior, logger)` returns an optimizer together with its matching
   model as one pair, never mix them: `CameronMartinPosteriorModel` (the gradient
   is a dual vector; the prior covariance maps it to the Cameron-Martin representer) for
   `CustomLBFGSStrategy`, `EuclideanPosteriorModel` (raw gradient) for `ScipyLBFGSBStrategy`.
-- `preprocessing/` (ground-truth strategies: synthetic, raw patient, or a stored smoothed patient field from `scripts/smooth_patient_fibers.py`; synthetic observations; the prior mean is always zero), `mcmc/`
+- `preprocessing/` (ground-truth strategies: synthetic, raw patient, or a stored smoothed patient field from `scripts/smooth_patient_fibers.py`; synthetic observations; prior-mean strategies from the observations alone: zero, or the best-fit constant angle, the reference choice for patient data), `mcmc/`
   (sampler builder) and `statistics/` serve the runs. `statistics/` reads (zarr) chains block by
   block through `SampleStore`; angles are axial (mod $\pi$): means via the doubled-angle resultant,
   diagnostics and correlations on `sin(2(theta - mean))`. The in-memory and the streamed axial mean

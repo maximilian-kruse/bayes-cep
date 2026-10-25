@@ -135,6 +135,13 @@ loss surface; `studies/prior_moment_fit.py` sweeps patients x smoothing scales x
 
 `scripts/postprocess_map_study.py STUDY_DIR` writes the study-level plots of a MAP study (heatmaps over
 the prior parameters, error distributions and histories of the seeds) into its `summary/`.
+`scripts/postprocess_prior_selection_study.py MAP_STUDY_DIR [--laplace-study-dir DIR] [--cv-study-dir DIR]` picks
+(kappa, tau) from a MAP study over a prior grid (best skill, per ground truth) and, without the truth, by the
+Laplace evidence `-loss_final + 1/2 log_determinant_ratio` of the Laplace study of its estimates
+(`statistics/prior_selection.py`) and by the held-out score of a cross-validation study, each checked against the
+skill; all need `bcep-study collect` first. `heldout.py` is the cross-validation run: the MAP of one fold's
+training observations (`statistics/cross_validation.py` makes the folds), scored on the held-out ones, without
+the ground truth.
 
 `studies/*.py` define `STUDY`, set their own `root` and `RAW_DIR`, and are not archived with a study
 (the recorded commit and patch cover them). A bare relative path in a config is relative to the

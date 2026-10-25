@@ -31,6 +31,7 @@ Functions:
     reference_smoothed_patient_preprocessing_config: The preprocessing run with a stored smoothed
         patient field.
     reference_map_config: The MAP run.
+    reference_heldout_map_config: The held-out MAP run (one fold of a cross-validation).
     reference_mcmc_config: The MCMC run, for a given initial state.
     reference_laplace_config: The Laplace run, for a given MAP estimate.
     reference_preconditioned_mcmc_config: The Laplace-preconditioned MCMC run.
@@ -56,7 +57,9 @@ from bayes_cep.preprocessing.ground_truth import (
 )
 from bayes_cep.preprocessing.synthetic_observations import ObservationSamplingSettings
 from bayes_cep.statistics.correlation_length import CorrelationLengthSettings
+from bayes_cep.statistics.cross_validation import HeldOutSplitSettings
 from bayes_cep.statistics.prior_moment_fit import DistanceMetric, MomentFitSettings
+from single_runs.heldout import HeldOutMapRunConfig
 from single_runs.inference import InferenceProblemConfig
 from single_runs.laplace import LaplaceRunConfig
 from single_runs.map import MapRunConfig
@@ -115,6 +118,11 @@ MOMENT_FIT_TAUS = (0.3, 0.45, 0.6, 0.8, 1.0, 1.4, 2.0, 3.0)
 # MAP optimizer
 MAP_MAX_NUM_ITERATIONS = 1000
 MAP_GRADIENT_NORM_TOLERANCE = 1
+
+# Cross-validation of the prior parameters: the observations are split into folds, one is held out
+HELDOUT_NUM_FOLDS = 5
+HELDOUT_FIRST_FOLD_INDEX = 0
+HELDOUT_SPLIT_SEED = 0
 
 # MCMC sampler. The data (many observations, tiny noise variance) make the likelihood potential
 # very sharp relative to the broad prior, so large proposal steps are practically never accepted;
@@ -439,6 +447,32 @@ def reference_mcmc_config(
         num_samples=MCMC_NUM_SAMPLES,
         seed=MCMC_SEED,
         log_interval=MCMC_LOG_INTERVAL,
+    )
+
+
+# ==================================================================================================
+def reference_heldout_map_config(raw_dir: Path, data_dir: Path) -> HeldOutMapRunConfig:
+    """The held-out MAP run of the example data: the first of the folds of a cross-validation.
+
+    Args:
+        data_dir (Path): Directory with the data and the ground truth (the files of
+            `PreprocessedData`, e.g. the `results` directory of a preprocessing run); there is
+            deliberately no default.
+        raw_dir (Path): Directory containing the raw data; there is deliberately no default.
+
+    Returns:
+        HeldOutMapRunConfig: The reference configuration for the given data; studies sweep
+            `split.fold_index` over all folds.
+    """
+    return HeldOutMapRunConfig(
+        problem=reference_inference_problem(raw_dir, data_dir),
+        optimizer=reference_optimizer_strategy(),
+        initial_guess=PriorMeanInitialGuess(),
+        split=HeldOutSplitSettings(
+            num_folds=HELDOUT_NUM_FOLDS,
+            fold_index=HELDOUT_FIRST_FOLD_INDEX,
+            seed=HELDOUT_SPLIT_SEED,
+        ),
     )
 
 

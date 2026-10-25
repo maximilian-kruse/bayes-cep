@@ -120,7 +120,7 @@ MAP_MAX_NUM_ITERATIONS = 1000
 MAP_GRADIENT_NORM_TOLERANCE = 1
 
 # Cross-validation of the prior parameters: the observations are split into folds, one is held out
-HELDOUT_NUM_FOLDS = 5
+HELDOUT_NUM_FOLDS = 4
 HELDOUT_FIRST_FOLD_INDEX = 0
 HELDOUT_SPLIT_SEED = 0
 

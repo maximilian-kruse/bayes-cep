@@ -173,19 +173,19 @@ def execute_command(command: Command) -> None:
                 sys.exit(1)
         case StatusCommand():
             # Print the state (pending/submitted/running/done/failed) of every run.
-            study = Study.load(command.module)
+            study = Study.load(command.module, strict=False)
             states = study.read_states()
             for run in study.runs:
                 print(f"{run.index:>4}  {run.run_id}  {states[run.index].value}")
             print(_describe_counts(state.value for state in states.values()))
         case CollectCommand():
             # Write the cross-run table.
-            study = Study.load(command.module)
+            study = Study.load(command.module, strict=False)
             print(f"Wrote {study.write_run_table()}")
             print(study.build_run_table().to_string(index=False))
         case ReportCommand():
             # Plot the finished runs; unfinished ones are skipped.
-            Study.load(command.module).plot_finished_runs(command.index)
+            Study.load(command.module, strict=False).plot_finished_runs(command.index)
 
 
 if __name__ == "__main__":

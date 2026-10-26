@@ -31,8 +31,7 @@ import shutil
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from dataclasses import asdict, dataclass, field, is_dataclass
-from functools import cached_property
+from dataclasses import asdict, dataclass, field, is_dataclass, replace
 from pathlib import Path
 from typing import Any, Self, override
 
@@ -40,6 +39,7 @@ import pandas as pd
 
 from bayes_cep.run.config import TYPE_KEY, ConfigCodec, RunConfig, format_config_tree
 from bayes_cep.run.directories import (
+    CONFIG_RECORD,
     REPOSITORY_ROOT,
     RESULTS_DIR_NAME,
     RunState,
@@ -377,10 +377,27 @@ class Study:
         definition (StudySetup): The study as defined by its module.
     """
 
-    def __init__(self, directory: StudyDirectory, definition: StudySetup) -> None:
-        """Bind a study definition to the directory created for it."""
+    def __init__(
+        self,
+        directory: StudyDirectory,
+        definition: StudySetup,
+        runs: list[ResolvedRun] | None = None,
+        runs_verified: bool = True,
+    ) -> None:
+        """Bind a study definition to the directory created for it.
+
+        Args:
+            directory (StudyDirectory): The study directory.
+            definition (StudySetup): The study definition.
+            runs (list[ResolvedRun] | None): The runs of the study; resolved from `definition` if
+                `None`.
+            runs_verified (bool): Whether the run ids are those the current code resolves to. If
+                not, the study only supports reading (see `load`).
+        """
         self.directory = directory
         self.definition = definition
+        self.runs = definition.resolve_runs() if runs is None else runs
+        self.runs_verified = runs_verified
 
     # ----------------------------------------------------------------------------------------------
     @classmethod
@@ -425,34 +442,65 @@ class Study:
             temporary_directory.record_dir.rename(directory.record_dir)
         finally:
             shutil.rmtree(temporary_directory.path, ignore_errors=True)
-        return cls(directory, study)
+        return cls(directory, study, runs)
 
     # ----------------------------------------------------------------------------------------------
     @classmethod
-    def load(cls, module_path: Path) -> Self:
+    def load(cls, module_path: Path, strict: bool = True) -> Self:
         """Load a study from its module.
+
+        A study outlives the code version it was created with. Executing runs needs the run ids
+        the current code resolves to (`strict`), since it writes into the run directories. Reading
+        (status, collect, report) only needs the runs of the study: with `strict=False`, a module
+        that resolves to other run ids, because the configuration classes changed, is paired with
+        the recorded ids by position, provided it still has the same number of runs. Such a study
+        has `runs_verified == False` and cannot execute runs; the configuration of a run is the one
+        recorded in its run directory, not the one of `ResolvedRun.config`.
+
+        Args:
+            module_path (Path): Python file defining `STUDY`.
+            strict (bool): Whether the module must resolve to the recorded run ids. Defaults to
+                `True`.
 
         Raises:
             FileNotFoundError: If the study has not been created in the root of its module.
-            ValueError: If the module no longer resolves to the runs recorded at creation.
+            ValueError: If `strict` and the module no longer resolves to the runs recorded at
+                creation, or if the number of runs differs from the recorded one.
         """
         study = StudySetup.load_from_module_file(module_path)
         directory = StudyDirectory(resolve_repository_path(study.root))
+        module_directory = StudyDirectory(module_path.resolve().parent)
+        if not directory.study_record_path.exists() and module_directory.study_record_path.exists():
+            # Another checkout of the code puts the root elsewhere than where the study is.
+            directory = module_directory
         if not directory.study_record_path.exists():
             raise FileNotFoundError(f"Study {study.name!r} has not been created in {study.root}.")
-        recorded_ids = json.loads(directory.study_record_path.read_text())["run_ids"]
-        if [run.run_id for run in study.resolve_runs()] != recorded_ids:
+        record = json.loads(directory.study_record_path.read_text())
+        recorded_ids: list[str] = record["run_ids"]
+        runs = study.resolve_runs()
+        if [run.run_id for run in runs] == recorded_ids:
+            return cls(directory, study, runs)
+        if strict:
             raise ValueError(
                 f"{module_path} no longer resolves to the runs recorded in {directory.path}: the "
-                "study module or the configuration classes changed since it was created."
+                "study module or the configuration classes changed since it was created. "
+                "Commands that only read the study (status, collect, report) accept this."
             )
-        return cls(directory, study)
-
-    # ----------------------------------------------------------------------------------------------
-    @cached_property
-    def runs(self) -> list[ResolvedRun]:
-        """The runs of the study, in order."""
-        return self.definition.resolve_runs()
+        if len(runs) != len(recorded_ids):
+            raise ValueError(
+                f"{module_path} resolves to {len(runs)} runs, but {len(recorded_ids)} are recorded "
+                f"in {directory.path}: the sweep changed since the study was created."
+            )
+        if study.sweep.to_json_dict() != record["sweep"]:
+            warnings.warn(
+                "The sweep differs from the one recorded when the study was created; the swept "
+                "parameters of the runs may not match the recorded runs.",
+                stacklevel=2,
+            )
+        recorded_runs = [
+            replace(run, run_id=run_id) for run, run_id in zip(runs, recorded_ids, strict=True)
+        ]
+        return cls(directory, study, recorded_runs, runs_verified=False)
 
     # ----------------------------------------------------------------------------------------------
     def read_states(self) -> dict[int, RunState]:
@@ -493,8 +541,11 @@ class Study:
             dict[int, RunOutcome]: Outcome by run index.
 
         Raises:
-            ValueError: If an index is out of range.
+            ValueError: If an index is out of range, or if the study was loaded with run ids
+                other than the current code resolves to (see `load`).
         """
+        if not self.runs_verified:
+            raise ValueError("Runs can only be executed with the code the study was created with.")
         selected = list(range(len(self.runs))) if indices is None else list(dict.fromkeys(indices))
         for index in selected:
             if not 0 <= index < len(self.runs):
@@ -550,12 +601,23 @@ class Study:
                 continue
             print(f"Plotting run {run.index} ({run.run_id})")
             try:
-                self.definition.run_type(run.config).report(run_directory.path)
+                self.definition.run_type(self._config_of(run, run_directory.path)).report(
+                    run_directory.path
+                )
             except Exception as error:
                 print(f"Plotting run {run.index} failed: {error!r}")
                 continue
             plotted.append(run.index)
         return plotted
+
+    # ----------------------------------------------------------------------------------------------
+    def _config_of(self, run: ResolvedRun, run_path: Path) -> RunConfig:
+        """The configuration of a run: the resolved one, or, if the code changed since the study
+        was created, the one recorded in the run directory."""
+        if self.runs_verified:
+            return run.config
+        data = json.loads((run_path / CONFIG_RECORD).read_text())
+        return self.definition.run_type.config_type.from_json_dict(data)
 
     # ----------------------------------------------------------------------------------------------
     def build_run_table(self) -> pd.DataFrame:

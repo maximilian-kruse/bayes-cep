@@ -31,7 +31,7 @@ import shutil
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from dataclasses import asdict, dataclass, field, is_dataclass, replace
+from dataclasses import asdict, dataclass, field, is_dataclass
 from pathlib import Path
 from typing import Any, Self, override
 
@@ -452,9 +452,10 @@ class Study:
         A study outlives the code version it was created with. Executing runs needs the run ids
         the current code resolves to (`strict`), since it writes into the run directories. Reading
         (status, collect, report) only needs the runs of the study: with `strict=False`, a module
-        that resolves to other run ids, because the configuration classes changed, is paired with
-        the recorded ids by position, provided it still has the same number of runs. Such a study
-        has `runs_verified == False` and cannot execute runs; the configuration of a run is the one
+        that resolves to other run ids, whatever the reason (the configuration classes, the module,
+        or a study it reads from changed), is ignored for the runs; they are read from the study
+        record and the run directories (`_read_recorded_runs`). Such a study has
+        `runs_verified == False` and cannot execute runs; the configuration of a run is the one
         recorded in its run directory, not the one of `ResolvedRun.config`.
 
         Args:
@@ -465,7 +466,7 @@ class Study:
         Raises:
             FileNotFoundError: If the study has not been created in the root of its module.
             ValueError: If `strict` and the module no longer resolves to the runs recorded at
-                creation, or if the number of runs differs from the recorded one.
+                creation.
         """
         study = StudySetup.load_from_module_file(module_path)
         directory = StudyDirectory(resolve_repository_path(study.root))
@@ -477,7 +478,12 @@ class Study:
             raise FileNotFoundError(f"Study {study.name!r} has not been created in {study.root}.")
         record = json.loads(directory.study_record_path.read_text())
         recorded_ids: list[str] = record["run_ids"]
-        runs = study.resolve_runs()
+        try:
+            runs = study.resolve_runs()
+        except (ValueError, TypeError):
+            if strict:
+                raise
+            runs = []  # the module does not resolve under this code; read the record instead
         if [run.run_id for run in runs] == recorded_ids:
             return cls(directory, study, runs)
         if strict:
@@ -486,21 +492,42 @@ class Study:
                 "study module or the configuration classes changed since it was created. "
                 "Commands that only read the study (status, collect, report) accept this."
             )
-        if len(runs) != len(recorded_ids):
-            raise ValueError(
-                f"{module_path} resolves to {len(runs)} runs, but {len(recorded_ids)} are recorded "
-                f"in {directory.path}: the sweep changed since the study was created."
-            )
-        if study.sweep.to_json_dict() != record["sweep"]:
-            warnings.warn(
-                "The sweep differs from the one recorded when the study was created; the swept "
-                "parameters of the runs may not match the recorded runs.",
-                stacklevel=2,
-            )
-        recorded_runs = [
-            replace(run, run_id=run_id) for run, run_id in zip(runs, recorded_ids, strict=True)
-        ]
-        return cls(directory, study, recorded_runs, runs_verified=False)
+        return cls(directory, study, cls._read_recorded_runs(directory, study, record), False)
+
+    # ----------------------------------------------------------------------------------------------
+    @staticmethod
+    def _read_recorded_runs(
+        directory: StudyDirectory, study: StudySetup, record: dict[str, Any]
+    ) -> list[ResolvedRun]:
+        """The runs of the study as recorded: their ids, and their swept parameters read from the
+        `config.json` of each run directory.
+
+        The module is not consulted, so this works however the module or the code changed. The
+        `config` of the returned runs is the base configuration of the module, a placeholder; the
+        configuration of a run is the one in its directory. A run that never started has no
+        `config.json`, and `None` for its swept parameters.
+        """
+        paths: list[str] = []
+
+        def collect_paths(node: dict[str, Any]) -> None:
+            if node["kind"] == "axis":
+                paths.append(node["path"])
+            for child in node.get("axes", []) + node.get("groups", []):
+                collect_paths(child)
+
+        collect_paths(record["sweep"])
+        runs = []
+        for index, run_id in enumerate(record["run_ids"]):
+            config_path = directory.run_directory(run_id).path / CONFIG_RECORD
+            config = json.loads(config_path.read_text()) if config_path.exists() else None
+            overrides: dict[str, Any] = {}
+            for path in dict.fromkeys(paths):
+                value = config
+                for part in path.split("."):
+                    value = value.get(part) if isinstance(value, dict) else None
+                overrides[path] = value
+            runs.append(ResolvedRun(index, run_id, study.base, overrides))
+        return runs
 
     # ----------------------------------------------------------------------------------------------
     def read_states(self) -> dict[int, RunState]:

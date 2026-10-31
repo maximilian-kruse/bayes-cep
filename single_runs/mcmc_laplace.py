@@ -28,6 +28,7 @@ from ls_bayesian.common.logging import BaseLogger
 from bayes_cep.laplace.builder import LaplaceBuilder, LaplaceSettings
 from bayes_cep.mcmc.measures import LowRankGaussianMeasure
 from bayes_cep.optimization.initial_guess import (
+    ChainStateInitialGuess,
     FileInitialGuess,
     PriorMeanInitialGuess,
     PriorSampleInitialGuess,
@@ -74,7 +75,8 @@ class PreconditionedMcmcRunConfig(McmcRunConfig):
 
     Attributes:
         initial_state (PriorMeanInitialGuess | PriorSampleInitialGuess | FileInitialGuess |
-            LaplaceSampleInitialState): As in the plain run, or a draw from the approximation.
+            ChainStateInitialGuess | LaplaceSampleInitialState): As in the plain run, or a draw from
+            the approximation.
         laplace (LaplaceSettings): Eigensolver and rank of the Laplace approximation.
         map_estimate_path (Path): `.npy` file with the MAP estimate, one angle [rad] per vertex,
             e.g. the `map_estimate.npy` of a MAP run of the same problem; a relative path is
@@ -86,6 +88,7 @@ class PreconditionedMcmcRunConfig(McmcRunConfig):
         PriorMeanInitialGuess
         | PriorSampleInitialGuess
         | FileInitialGuess
+        | ChainStateInitialGuess
         | LaplaceSampleInitialState
     )
     laplace: LaplaceSettings

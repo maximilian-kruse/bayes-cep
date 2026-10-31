@@ -56,10 +56,17 @@ fiber-orientation angle per mesh vertex.
   (`ls_bayesian.lowrank` `LowRankGaussian` at the MAP, plus its eigenpairs). `GaussNewtonMisfitHessian`
   (JVP, likelihood HVP, vjp: the `hessian_action`) and `PriorReferenceCovariance` (adapter of the prior
   to `ls_bayesian.lowrank.ReferenceCovariance`, which beartype requires as a real instance).
+  `calibration.py`: a frozen, sample-informed preconditioner (DILI-style). `estimate_subspace_moments`
+  streams over pilot chains for the mean and covariance of the coefficients $c = V_k^T\Gamma_0^{-1}(u - m)$ of the
+  leading $k$ eigenvectors; `calibrate_approximation` replaces the covariance of the approximation in their span by the
+  regularized empirical one (the prior covariance stays in the complement) and returns it as a `LowRankGaussian` with
+  rotated eigenvectors. PMALA never reads the mean of its preconditioner (the prior mean is in the potential), so only
+  the covariance matters there; `recenter` is for `PCN_PRECONDITIONED`. Variances above the prior one are cut off
+  (eigenvalues of a `LowRankGaussian` must be non-negative).
 - `mcmc/`: `MCMCBuilder` for pCN, MALA and, with a Gaussian `approximation` (`LowRankGaussianMeasure` of the Laplace
   approximation), `PCN_PRECONDITIONED` and `PMALA` (states the potential relative to a centred reference measure; a prior mean goes into the potential, `MeanTiltedTargetMeasure`). The posterior is far from Gaussian: step
   widths of the preconditioned samplers must be small (0.05 in the reference), the rank must reach the number of observations.
-- `optimization/`: `InitialGuessStrategy` (where MAP starts: prior mean, prior draw, `.npy`).
+- `optimization/`: `InitialGuessStrategy` (where MAP starts: prior mean, prior draw, `.npy`; `ChainStateInitialGuess`: a state of a stored chain, e.g. the last one, for MCMC: a state of the same posterior is in the typical set, the MAP estimate and the chain mean are not).
   `OptimizerStrategy.build(log_posterior, logger)` returns an optimizer together with its matching
   model as one pair, never mix them: `CameronMartinPosteriorModel` (the gradient
   is a dual vector; the prior covariance maps it to the Cameron-Martin representer) for
@@ -112,7 +119,7 @@ parameters; `reference.py` holds them as constants and `reference_*_config` fact
   (embedded as `problem` in the MAP and MCMC configs) and `assemble_posterior`.
 - `map.py` only optimizes (from its `initial_guess` strategy; the MAP studies sweep
   `initial_guess.seed` for multi-start); `mcmc.py` only samples (from its `initial_state` strategy, the same
-  ones as the MAP initial guess: prior mean, prior draw or a `.npy` such as a MAP estimate). Both read the preprocessed data and nothing else of the data side, so many inference runs share one preprocessing run. `prior.py` samples the prior. `mcmc_laplace.py` is `mcmc.py` with the Laplace approximation as proposal/preconditioner (computed inside the run from a MAP `.npy`; studies `mcmc_laplace` and `mcmc_baseline`, summary `scripts/postprocess_mcmc_study.py`). `laplace.py` builds the low-rank Laplace approximation at a stored MAP estimate
+  ones as the MAP initial guess: prior mean, prior draw or a `.npy` such as a MAP estimate). Both read the preprocessed data and nothing else of the data side, so many inference runs share one preprocessing run. `prior.py` samples the prior. `mcmc_laplace.py` is `mcmc.py` with the Laplace approximation as proposal/preconditioner (computed inside the run from a MAP `.npy`; studies `mcmc_laplace` and `mcmc_baseline`, summary `scripts/postprocess_mcmc_study.py`). `mcmc_calibrated.py` is `mcmc_laplace.py` with that approximation calibrated by pilot chains (`pilot_chain_paths`, the `samples.zarr` of finished chains of the same posterior; `CalibrationSettings` in the config): a subclass with its own config class, so the run ids of the other runs do not change. Its chain can be the pilot of the next round; `notebooks/mcmc_calibrated.ipynb` walks through it. `calibrate.py` is the calibration alone (`CalibrationRun`: calibrated Gaussian with its eigenvectors, covariances and a few pilot states, about 100 MB, to be read elsewhere), and `mcmc_stored_calibration.py` the MCMC run that reads such a result instead of recomputing it (so a sweep of step widths or starts shares one calibration; the eigenvectors are stored because the randomized eigensolver does not reproduce them across machines). `laplace.py` builds the low-rank Laplace approximation at a stored MAP estimate
   (Gauss-Newton Hessian, `ls_bayesian.lowrank`); its pointwise variance is the sample variance, not the
   probing estimate of the prior diagonal (too noisy here).
   After sampling, `mcmc.py` streams the chain diagnostics (`ChainDiagnostics` record: ESS and

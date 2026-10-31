@@ -36,6 +36,7 @@ from ls_bayesian.posterior.posterior import LogPosterior
 
 from bayes_cep.mcmc.builder import SAMPLE_STORE_NAME, MCMCBuilder, MCMCSettings
 from bayes_cep.optimization.initial_guess import (
+    ChainStateInitialGuess,
     FileInitialGuess,
     PriorMeanInitialGuess,
     PriorSampleInitialGuess,
@@ -118,11 +119,12 @@ class McmcRunConfig(RunConfig):
 
     Attributes:
         problem (InferenceProblemConfig): The data and the model of the posterior.
-        initial_state (PriorMeanInitialGuess | PriorSampleInitialGuess | FileInitialGuess): Where
-            the chain starts: the prior mean, a draw from the prior (its own seed, which must
-            differ from that of a synthetic ground truth of the same prior), or the `.npy` file of
-            a state, one angle [rad] per vertex (e.g. `map_estimate.npy` of a MAP run of the same
-            problem).
+        initial_state (PriorMeanInitialGuess | PriorSampleInitialGuess | FileInitialGuess |
+            ChainStateInitialGuess): Where the chain starts: the prior mean, a draw from the prior
+            (its own seed, which must differ from that of a synthetic ground truth of the same
+            prior), the `.npy` file of a state, one angle [rad] per vertex (e.g.
+            `map_estimate.npy` of a MAP run of the same problem), or a state of a stored chain of
+            the same posterior (e.g. the last one).
         sampler (MCMCSettings): Sampling algorithm, step width and sample storage.
         diagnostics (ChainDiagnosticsSettings): Burn-in, lags and plotted vertices of the chain
             diagnostics.
@@ -132,7 +134,9 @@ class McmcRunConfig(RunConfig):
     """
 
     problem: InferenceProblemConfig
-    initial_state: PriorMeanInitialGuess | PriorSampleInitialGuess | FileInitialGuess
+    initial_state: (
+        PriorMeanInitialGuess | PriorSampleInitialGuess | FileInitialGuess | ChainStateInitialGuess
+    )
     sampler: MCMCSettings
     diagnostics: ChainDiagnosticsSettings
     num_samples: int

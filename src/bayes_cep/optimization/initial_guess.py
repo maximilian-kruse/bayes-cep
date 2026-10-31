@@ -5,6 +5,7 @@ Classes:
     PriorMeanInitialGuess: Start at the prior mean.
     PriorSampleInitialGuess: Start at a draw from the prior, with the strategy's own seed.
     FileInitialGuess: Start at a state stored in a `.npy` file, e.g. another run's estimate.
+    ChainStateInitialGuess: Start at a state of a stored MCMC chain, e.g. the last one.
 """
 
 from abc import ABC, abstractmethod
@@ -13,6 +14,7 @@ from pathlib import Path
 from typing import override
 
 import numpy as np
+from ls_bayesian.mcmc.storage import open_zarr_samples
 from ls_bayesian.posterior.interfaces import GaussianPrior
 
 from bayes_cep.run.directories import resolve_repository_path
@@ -98,3 +100,42 @@ class FileInitialGuess(InitialGuessStrategy):
                 f"prior mean has shape {prior.mean_vector.shape}."
             )
         return initial_guess
+
+
+# ==================================================================================================
+@dataclass(frozen=True)
+class ChainStateInitialGuess(InitialGuessStrategy):
+    """Start at a state of a stored MCMC chain, e.g. the last state of a finished run.
+
+    A state of a chain of the same posterior is in its typical set, unlike the MAP estimate or the
+    mean of the chain (in the many dimensions of the posterior the potential of a typical state is
+    far above those of both), so a chain started there needs little burn-in.
+
+    Attributes:
+        chain_path (Path): The Zarr store (`samples.zarr`) of a finished MCMC run; a relative path
+            is relative to the repository. It is a directory and not hashed into the metadata of
+            a run.
+        index (int): Index of the sample; a negative index counts from the end of the chain, so
+            `-1` is the last state.
+    """
+
+    chain_path: Path
+    index: int
+
+    # ----------------------------------------------------------------------------------------------
+    @override
+    def build(self, prior: GaussianPrior) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
+        resolved_path = resolve_repository_path(self.chain_path)
+        chain = open_zarr_samples(resolved_path)
+        num_samples = chain.shape[0]
+        if not -num_samples <= self.index < num_samples:
+            raise ValueError(
+                f"The chain in {resolved_path} has {num_samples} samples, no sample {self.index}."
+            )
+        state = np.asarray(chain[self.index % num_samples], dtype=np.float64)
+        if state.shape != prior.mean_vector.shape:
+            raise ValueError(
+                f"The state in {resolved_path} has shape {state.shape}, but the prior mean has "
+                f"shape {prior.mean_vector.shape}."
+            )
+        return state

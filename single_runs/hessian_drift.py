@@ -32,6 +32,21 @@ leading eigenvectors $v_i$ ($\delta = c\,v_i$, Laplace standard deviation $(1+\l
   means the omitted term of the Hessian makes the true Gaussian approximation wider; a profile that
   departs from the model far from the MAP estimate means the potential is not quadratic there.
 
+Does the true Hessian explain the width of the chain?
+
+- The full Hessian $\nabla^2 J$ of the potential is restricted to a block of Gauss-Newton
+  eigenvectors (the leading ones and evenly spaced weaker ones), $K_{ij} = v_i^T\nabla^2J\,v_j$,
+  from finite differences of the gradient at the MAP estimate and at the chain mean, together with
+  the Gauss-Newton block $v_i^T(\Gamma_0^{-1} + H(\bar u))v_j$ at the chain mean. The diagonal of
+  $K$ is the curvature above; its off-diagonal part is the coupling, and $(K^{-1})_{ii}$ the
+  variance of the Gaussian with the true Hessian, to be compared with the variance of the chain.
+- The potential at the sampled states, against the potential at the MAP estimate and at the chain
+  mean.
+
+The metric eigenvalues of a state also give what a low-rank correction of the MAP preconditioner
+can achieve: correcting the `r` directions with the largest $|\log\rho_i|$ sets those ratios to
+1 and leaves the others, so no separate computation is needed.
+
 Classes:
     HessianDriftRunConfig: The chain, the posterior it samples and the eigenproblems.
     HessianDriftResults: The arrays the run writes.
@@ -97,6 +112,11 @@ class HessianDriftRunConfig(RunConfig):
             deviations of the direction; several to tell the quadratic from the noise of the
             single-precision forward solve.
         mean_block_size (int): Number of samples read at a time when averaging the chain.
+        block_leading (int): Number of leading eigenvectors in the block of the Hessian.
+        block_trailing (int): Number of further eigenvectors, evenly spaced over the rest of the
+            spectrum, in the block.
+        block_step (float): Finite-difference step of the Hessian block, in Laplace standard
+            deviations of each direction.
     """
 
     problem: InferenceProblemConfig
@@ -114,6 +134,9 @@ class HessianDriftRunConfig(RunConfig):
     line_range: tuple[float, float]
     curvature_steps: tuple[float, ...]
     mean_block_size: int
+    block_leading: int
+    block_trailing: int
+    block_step: float
 
     def __post_init__(self) -> None:
         if self.burn_in < 0 or self.num_states < 1 or self.num_products < 1:
@@ -126,6 +149,11 @@ class HessianDriftRunConfig(RunConfig):
                 "profile_points must be at least 2, profile_extent and mean_block_size "
                 f"positive, got {self.profile_points}, {self.profile_extent} and "
                 f"{self.mean_block_size}."
+            )
+        if self.block_leading < 1 or self.block_trailing < 0 or self.block_step <= 0:
+            raise ValueError(
+                "block_leading must be positive, block_trailing non-negative and block_step "
+                "positive."
             )
         if any(step <= 0 for step in self.curvature_steps) or any(
             index < 0 for index in self.directions
@@ -184,6 +212,17 @@ class HessianDriftResults(ArrayRecord):
         gauss_newton_curvature (np.ndarray): $1 + \lambda_i$ at the MAP estimate and
             $v_i^T(\Gamma_0^{-1} + H(\bar u))v_i$ at the chain mean, shape `(2, D)`.
         potential_values (np.ndarray): $J$ at the MAP estimate and at the chain mean, shape `(2,)`.
+        newton_decrement (np.ndarray): $\\frac12 g^T(\\Gamma_0^{-1} + H_r)^{-1}g$ at the MAP
+            estimate, the decrease of the potential a Newton step with the low-rank Gauss-Newton
+            Hessian would still bring, and the norm of $g$, shape `(2,)`.
+        state_potentials (np.ndarray): $J$ at the sampled states, shape `(S,)`.
+        block_indices (np.ndarray): Indices of the eigenvectors of the Hessian block, shape `(B,)`.
+        block_hessian_map (np.ndarray): $K_{ij} = v_i^T\nabla^2J(m_\mathrm{MAP})v_j$ from finite
+            differences (column $j$ from the gradient difference along $v_j$; not symmetrized),
+            shape `(B, B)`.
+        block_hessian_mean (np.ndarray): The same at the chain mean, shape `(B, B)`.
+        block_gauss_newton_mean (np.ndarray): $v_i^T(\Gamma_0^{-1} + H(\bar u))v_j$, shape
+            `(B, B)`; at the MAP estimate the Gauss-Newton block is $\mathrm{diag}(1+\lambda_i)$.
     """
 
     FILE_NAMES: ClassVar[Mapping[str, str]] = {
@@ -214,6 +253,12 @@ class HessianDriftResults(ArrayRecord):
         "curvature_mean": "curvature_mean.npy",
         "gauss_newton_curvature": "gauss_newton_curvature.npy",
         "potential_values": "potential_values.npy",
+        "newton_decrement": "newton_decrement.npy",
+        "state_potentials": "state_potentials.npy",
+        "block_indices": "block_indices.npy",
+        "block_hessian_map": "block_hessian_map.npy",
+        "block_hessian_mean": "block_hessian_mean.npy",
+        "block_gauss_newton_mean": "block_gauss_newton_mean.npy",
     }
 
     map_eigenvalues: np.ndarray
@@ -243,6 +288,12 @@ class HessianDriftResults(ArrayRecord):
     curvature_mean: np.ndarray
     gauss_newton_curvature: np.ndarray
     potential_values: np.ndarray
+    newton_decrement: np.ndarray
+    state_potentials: np.ndarray
+    block_indices: np.ndarray
+    block_hessian_map: np.ndarray
+    block_hessian_mean: np.ndarray
+    block_gauss_newton_mean: np.ndarray
 
 
 _FILES = HessianDriftResults.FILE_NAMES  # the names of the result files, defined once there
@@ -327,6 +378,16 @@ def compare_gauss_newton_eigenpairs(
         metric_eigenvalues=np.sort(metric)[::-1],
         subspace_cosines=cosines,
     )
+
+
+# ==================================================================================================
+def _select_block(config: HessianDriftRunConfig, rank: int) -> np.ndarray:
+    """The leading eigenvector indices and evenly spaced further ones, below `rank`."""
+    leading = np.arange(min(config.block_leading, rank))
+    if config.block_trailing == 0 or rank <= leading.size:
+        return leading
+    trailing = np.linspace(leading.size, rank - 1, config.block_trailing).astype(int)
+    return np.unique(np.concatenate([leading, trailing]))
 
 
 # ==================================================================================================
@@ -431,6 +492,40 @@ def _measure_non_quadratic_structure(
         curvature_map = finite_difference_curvature(map_estimate)
     with steps.step("Finite-difference curvature at the chain mean"):
         curvature_mean = finite_difference_curvature(chain_mean)
+    # The inverse of Gamma_0^{-1} + Gamma_0^{-1} V Lambda V^T Gamma_0^{-1} for the Gamma_0^{-1}-
+    # orthonormal eigenvectors is Gamma_0 - V diag(lambda / (1 + lambda)) V^T.
+    projections = eigenvectors.T @ gradient_map
+    decrement = 0.5 * (
+        gradient_map @ prior.apply_covariance_operator(gradient_map)
+        - np.sum(eigenvalues / (1.0 + eigenvalues) * projections**2)
+    )
+    logger.info(
+        f"      Newton decrement at the MAP estimate {decrement:.3g} (potential decrease a Newton "
+        "step would still bring)"
+    )
+    block = _select_block(config, eigenvalues.size)
+    deviations_block = 1.0 / np.sqrt(1.0 + eigenvalues[block])
+    block_vectors = eigenvectors[:, block]
+
+    def finite_difference_block(base: np.ndarray) -> np.ndarray:
+        """Hessian block $V_B^T\\nabla^2J\\,V_B$ from central differences of the gradient."""
+        matrix = np.empty((block.size, block.size))
+        for column, deviation in enumerate(deviations_block):
+            width = config.block_step * deviation
+            difference = log_posterior.evaluate_gradient(
+                base + width * block_vectors[:, column]
+            ) - log_posterior.evaluate_gradient(base - width * block_vectors[:, column])
+            matrix[:, column] = block_vectors.T @ difference / (2.0 * width)
+        return matrix
+
+    with steps.step(f"Hessian block of {block.size} eigenvectors at the MAP estimate"):
+        block_hessian_map = finite_difference_block(map_estimate)
+    with steps.step(f"Hessian block of {block.size} eigenvectors at the chain mean"):
+        block_hessian_mean = finite_difference_block(chain_mean)
+    with steps.step("Gauss-Newton block at the chain mean"):
+        block_gauss_newton_mean = np.eye(block.size) + block_vectors.T @ np.stack(
+            [hessian_mean.apply(block_vectors[:, column]) for column in range(block.size)], axis=1
+        )
     # The eigenvectors are Gamma_0^{-1}-orthonormal: v^T Gamma_0^{-1} v = 1.
     gauss_newton_curvature = np.stack(
         [
@@ -456,6 +551,11 @@ def _measure_non_quadratic_structure(
         "curvature_mean": curvature_mean,
         "gauss_newton_curvature": gauss_newton_curvature,
         "potential_values": np.array([potential_map, potential_mean]),
+        "newton_decrement": np.array([decrement, np.linalg.norm(gradient_map)]),
+        "block_indices": block,
+        "block_hessian_map": block_hessian_map,
+        "block_hessian_mean": block_hessian_mean,
+        "block_gauss_newton_mean": block_gauss_newton_mean,
     }
 
 
@@ -510,6 +610,15 @@ class HessianDriftRun(Run[HessianDriftRunConfig]):
         "eigenvectors at the MAP estimate and at the chain mean.",
         f"results/{_FILES['potential_values']}": "Negative log posterior at the MAP estimate and "
         "at the chain mean.",
+        f"results/{_FILES['newton_decrement']}": "Newton decrement at the MAP estimate and the "
+        "norm of the gradient there.",
+        f"results/{_FILES['state_potentials']}": "Negative log posterior at the sampled states.",
+        f"results/{_FILES['block_indices']}": "Eigenvector indices of the Hessian block.",
+        f"results/{_FILES['block_hessian_map']}": "Finite-difference Hessian block at the MAP "
+        "estimate.",
+        f"results/{_FILES['block_hessian_mean']}": "The same at the chain mean.",
+        f"results/{_FILES['block_gauss_newton_mean']}": "Gauss-Newton Hessian block at the "
+        "chain mean.",
     }
 
     # ----------------------------------------------------------------------------------------------
@@ -585,6 +694,8 @@ class HessianDriftRun(Run[HessianDriftRunConfig]):
         drift_eigenvalues = np.zeros((num_states, 2 * rank_bound))
         metric_eigenvalues = np.ones((num_states, 2 * rank_bound))
         cosines = np.empty((num_states, len(config.subspace_sizes)))
+        state_potentials = np.empty(num_states)
+        log_posterior = components.to_log_posterior()
         for position, index in enumerate(indices):
             state = np.asarray(chain[int(index)])
             offset = state - map_estimate
@@ -599,6 +710,7 @@ class HessianDriftRun(Run[HessianDriftRunConfig]):
                     vectors_1,
                     config.subspace_sizes,
                 )
+                state_potentials[position] = log_posterior.evaluate_cost(state)
             relative_drift[position] = comparison.relative_drift
             state_eigenvalues[position] = _pad(values_1, rank_bound, np.nan)
             drift_eigenvalues[position] = _pad(comparison.drift_eigenvalues, 2 * rank_bound, 0.0)
@@ -625,6 +737,7 @@ class HessianDriftRun(Run[HessianDriftRunConfig]):
             product_seconds=product_seconds,
             timing_ranks=np.array(config.timing_ranks),
             timing_seconds=timing_seconds,
+            state_potentials=state_potentials,
             **non_quadratic,
         ).save(self.results_dir(run_dir))
         return {

@@ -22,6 +22,11 @@ width and noise draw (the same noise for all blocks and step widths) the run com
   $\|P_b(v-u)\|^2_{\overline K^{-1}}$ it makes in the block. The step width at which a block alone
   reaches an acceptance of about 0.57 is the one it would take if it were the only limit.
 
+A proposal with a step width of its own for every block (the DILI-like proposal: the leading bands
+take larger steps than the weak ones) is evaluated as well, for the vectors of `mixed_step_widths`.
+It is the same expression with $\\rho_b$, the noise scale and the drift weight taken per block, and
+a single accept/reject step, so the acceptance it reports is that of the sampler.
+
 States are rows of the `pilot_states.npy` of a calibration run. Each proposal costs one potential
 and gradient evaluation, a few seconds at most.
 
@@ -80,6 +85,9 @@ class RejectionDiagnosticsRunConfig(RunConfig):
             is the rest.
         num_proposals (int): Number of noise draws per state.
         seed (int): Seed of the noise; the draws of a state also depend on its row.
+        mixed_step_widths (tuple[tuple[float, ...], ...]): Step widths per block, one vector for
+            each proposal with block-wise step widths to test, each as long as the number of
+            blocks (`band_edges`, the bands and the rest). May be empty.
     """
 
     problem: InferenceProblemConfig
@@ -89,12 +97,21 @@ class RejectionDiagnosticsRunConfig(RunConfig):
     band_edges: tuple[int, ...]
     num_proposals: int
     seed: int
+    mixed_step_widths: tuple[tuple[float, ...], ...] = ()
 
     def __post_init__(self) -> None:
         if len(self.state_rows) == 0 or any(row < 0 for row in self.state_rows):
             raise ValueError("state_rows must be a non-empty tuple of non-negative rows.")
-        if len(self.step_widths) == 0 or any(width <= 0 for width in self.step_widths):
-            raise ValueError("step_widths must be a non-empty tuple of positive widths.")
+        if any(width <= 0 for width in self.step_widths):
+            raise ValueError("step_widths must be positive.")
+        if len(self.step_widths) == 0 and len(self.mixed_step_widths) == 0:
+            raise ValueError("Give step_widths or mixed_step_widths.")
+        for widths in self.mixed_step_widths:
+            if len(widths) != len(self.band_edges) or any(width <= 0 for width in widths):
+                raise ValueError(
+                    f"Each mixed step width vector needs {len(self.band_edges)} positive widths, "
+                    f"got {widths}."
+                )
         edges = self.band_edges
         if (
             len(edges) < 2
@@ -129,6 +146,15 @@ class RejectionDiagnosticsResults(ArrayRecord):
         block_delta_potential (np.ndarray): $\\Phi(v_b) - \\Phi(u)$ of these, same shape.
         block_displacement (np.ndarray): The squared jump $\\|v_b-u\\|^2_{\\overline K^{-1}}$ of
             these, same shape.
+        mixed_step_widths (np.ndarray): The step width vectors of the block-wise proposal, shape
+            `(M, B)`.
+        mixed_log_ratio (np.ndarray): Log acceptance ratio of the proposal with block-wise step
+            widths, shape `(S, M, R)`.
+        mixed_delta_potential (np.ndarray): Its $\\Phi(v) - \\Phi(u)$, same shape.
+        mixed_block_terms (np.ndarray): Contribution of each block to its quadratic terms, shape
+            `(S, M, R, B)`.
+        mixed_displacement (np.ndarray): Its squared jump per block in the $\\overline K^{-1}$
+            norm, shape `(S, M, R, B)`.
     """
 
     FILE_NAMES: ClassVar[Mapping[str, str]] = {
@@ -142,6 +168,11 @@ class RejectionDiagnosticsResults(ArrayRecord):
         "block_log_ratio": "block_log_ratio.npy",
         "block_delta_potential": "block_delta_potential.npy",
         "block_displacement": "block_displacement.npy",
+        "mixed_step_widths": "mixed_step_widths.npy",
+        "mixed_log_ratio": "mixed_log_ratio.npy",
+        "mixed_delta_potential": "mixed_delta_potential.npy",
+        "mixed_block_terms": "mixed_block_terms.npy",
+        "mixed_displacement": "mixed_displacement.npy",
     }
 
     step_widths: np.ndarray
@@ -154,6 +185,11 @@ class RejectionDiagnosticsResults(ArrayRecord):
     block_log_ratio: np.ndarray
     block_delta_potential: np.ndarray
     block_displacement: np.ndarray
+    mixed_step_widths: np.ndarray
+    mixed_log_ratio: np.ndarray
+    mixed_delta_potential: np.ndarray
+    mixed_block_terms: np.ndarray
+    mixed_displacement: np.ndarray
 
 
 # ==================================================================================================
@@ -219,6 +255,17 @@ class _BlockSplit:
         return approximation_forms, reference_forms
 
     # ----------------------------------------------------------------------------------------------
+    def parts(self, vector: _VectorType) -> list[_VectorType]:
+        r"""The parts $P_ba$ of the vector in all blocks; they add up to the vector."""
+        coefficients = self._vectors.T @ self._reference.apply_precision_operator(vector)
+        parts = [
+            self._vectors[:, start:stop] @ coefficients[start:stop]
+            for start, stop in zip(self._edges, self._edges[1:], strict=False)
+        ]
+        parts.append(vector - sum(parts))
+        return parts
+
+    # ----------------------------------------------------------------------------------------------
     def project(self, vector: _VectorType, block: int) -> _VectorType:
         r"""The part $P_ba$ of the vector in the block."""
         coefficients = self._vectors.T @ self._reference.apply_precision_operator(vector)
@@ -258,6 +305,29 @@ def _quadratic_terms(
     g = state - cache.preconditioned_score
     innovation = (other - rho * state) / scale
     correction = np.sqrt(step_width / 2) * g - innovation
+    correction_forms, _ = split.forms(correction)
+    _, innovation_forms = split.forms(innovation)
+    return 0.5 * correction_forms - 0.5 * innovation_forms
+
+
+# ==================================================================================================
+def _mixed_terms(
+    split: _BlockSplit,
+    step_widths: np.ndarray,
+    state_parts: list[_VectorType],
+    score_parts: list[_VectorType],
+    other_parts: list[_VectorType],
+) -> np.ndarray:
+    r"""The quadratic part of $\varrho(u, v)$ per block for the step width $\delta_b$ of each
+    block: the expression of `_quadratic_terms` with $\rho_b$, the noise scale and the drift weight
+    taken per block. `score_parts` are the parts of $g(u) = u - \overline Ks(u)$."""
+    rho = (2 - step_widths) / (2 + step_widths)
+    scale = np.sqrt(8 * step_widths) / (2 + step_widths)
+    drift = np.sqrt(step_widths / 2)
+    innovation = sum(
+        (other_parts[b] - rho[b] * state_parts[b]) / scale[b] for b in range(len(step_widths))
+    )
+    correction = sum(drift[b] * score_parts[b] for b in range(len(step_widths))) - innovation
     correction_forms, _ = split.forms(correction)
     _, innovation_forms = split.forms(innovation)
     return 0.5 * correction_forms - 0.5 * innovation_forms
@@ -314,12 +384,10 @@ class RejectionDiagnosticsRun(Run[RejectionDiagnosticsRunConfig]):
         )
         reference = CenteredGaussianMeasure(PriorGaussianMeasure(prior))
         approximation = LowRankGaussianMeasure(gaussian)
-        algorithm_for = {
-            width: _InstrumentedPMALA(
-                MCMCModel(target=target, reference=reference, approximation=approximation), width
-            )
-            for width in config.step_widths
-        }
+        model = MCMCModel(target=target, reference=reference, approximation=approximation)
+        algorithm_for = {width: _InstrumentedPMALA(model, width) for width in config.step_widths}
+        check_width = 0.01
+        base_algorithm = algorithm_for.get(check_width, _InstrumentedPMALA(model, check_width))
         with steps.step("Setting up the blocks of directions"):
             split = _BlockSplit(record.eigenvectors, config.band_edges, reference, approximation)
         logger.info(
@@ -341,18 +409,69 @@ class RejectionDiagnosticsRun(Run[RejectionDiagnosticsRunConfig]):
                 ("block_displacement", (blocks,)),
             )
         }
+        num_mixed = len(config.mixed_step_widths)
+        mixed_widths = np.array(config.mixed_step_widths, dtype=float).reshape(num_mixed, blocks)
+        mixed_shape = (len(config.state_rows), num_mixed, config.num_proposals)
+        mixed = {
+            name: np.full(mixed_shape + extra, np.nan)
+            for name, extra in (
+                ("mixed_log_ratio", ()),
+                ("mixed_delta_potential", ()),
+                ("mixed_block_terms", (blocks,)),
+                ("mixed_displacement", (blocks,)),
+            )
+        }
         decomposition_error = 0.0
+        mixed_consistency_error = 0.0
         evaluations = 0
         start = time.perf_counter()
         with steps.step("Evaluating the proposals"):
             for position, row in enumerate(config.state_rows):
                 state = pilot.states[row]
-                cache = next(iter(algorithm_for.values())).evaluate(state)
+                cache = base_algorithm.evaluate(state)
+                state_parts = split.parts(state)
+                score_parts = split.parts(state - cache.preconditioned_score)
                 rng = np.random.default_rng([config.seed, int(row)])
                 for proposal_index in range(config.num_proposals):
                     noise = approximation.apply_covariance_factorization(
                         rng.normal(size=approximation.random_vector_size)
                     )
+                    noise_parts = split.parts(noise)
+                    for m in range(num_mixed):
+                        widths = mixed_widths[m]
+                        rho = (2 - widths) / (2 + widths)
+                        scale = np.sqrt(8 * widths) / (2 + widths)
+                        drift = np.sqrt(widths / 2)
+                        proposal = sum(
+                            rho[b] * state_parts[b]
+                            + scale[b] * (drift[b] * score_parts[b] + noise_parts[b])
+                            for b in range(blocks)
+                        )
+                        proposal_cache = base_algorithm.evaluate(proposal)
+                        evaluations += 1
+                        proposal_parts = split.parts(proposal)
+                        proposal_score_parts = split.parts(
+                            proposal - proposal_cache.preconditioned_score
+                        )
+                        terms = _mixed_terms(
+                            split, widths, state_parts, score_parts, proposal_parts
+                        ) - _mixed_terms(
+                            split, widths, proposal_parts, proposal_score_parts, state_parts
+                        )
+                        delta_potential = proposal_cache.potential - cache.potential
+                        index = (position, m, proposal_index)
+                        mixed["mixed_log_ratio"][index] = -delta_potential + terms.sum()
+                        mixed["mixed_delta_potential"][index] = delta_potential
+                        mixed["mixed_block_terms"][index] = terms
+                        mixed["mixed_displacement"][index] = split.forms(proposal - state)[0]
+                        if np.all(widths == widths[0]) and widths[0] == check_width:
+                            exponent = base_algorithm.transition_potential(
+                                state, proposal, cache
+                            ) - base_algorithm.transition_potential(proposal, state, proposal_cache)
+                            mixed_consistency_error = max(
+                                mixed_consistency_error,
+                                abs(exponent - mixed["mixed_log_ratio"][index]),
+                            )
                     for d, width in enumerate(config.step_widths):
                         algorithm = algorithm_for[width]
                         rho = (2 - width) / (2 + width)
@@ -406,7 +525,9 @@ class RejectionDiagnosticsRun(Run[RejectionDiagnosticsRunConfig]):
             step_widths=np.array(config.step_widths),
             band_edges=np.array(config.band_edges),
             state_rows=np.array(config.state_rows),
+            mixed_step_widths=mixed_widths,
             **arrays,
+            **mixed,
         ).save(results_dir)
 
         metrics: Metrics = {
@@ -415,7 +536,11 @@ class RejectionDiagnosticsRun(Run[RejectionDiagnosticsRunConfig]):
             "seconds_per_evaluation": seconds_per_evaluation,
             "decomposition_error_max": decomposition_error,
             "diagonality_error": split.diagonality_error,
+            "mixed_consistency_error": mixed_consistency_error,
         }
+        for m in range(num_mixed):
+            ratios = np.minimum(1.0, np.exp(mixed["mixed_log_ratio"][:, m]))
+            metrics[f"acceptance_mixed{m}"] = float(np.mean(ratios))
         for d, width in enumerate(config.step_widths):
             full = np.minimum(1.0, np.exp(arrays["full_log_ratio"][:, d]))
             metrics[f"acceptance_full_{width:g}"] = float(np.mean(full))

@@ -34,7 +34,7 @@ from ls_bayesian.mcmc.sampler import SamplerSettings
 from ls_bayesian.mcmc.storage import open_zarr_samples
 from ls_bayesian.posterior.posterior import LogPosterior
 
-from bayes_cep.mcmc.builder import SAMPLE_STORE_NAME, MCMCBuilder, MCMCSettings
+from bayes_cep.mcmc.builder import SAMPLE_STORE_NAME, HmcSettings, MCMCBuilder, MCMCSettings
 from bayes_cep.optimization.initial_guess import (
     ChainStateInitialGuess,
     FileInitialGuess,
@@ -125,7 +125,8 @@ class McmcRunConfig(RunConfig):
             prior), the `.npy` file of a state, one angle [rad] per vertex (e.g.
             `map_estimate.npy` of a MAP run of the same problem), or a state of a stored chain of
             the same posterior (e.g. the last one).
-        sampler (MCMCSettings): Sampling algorithm, step width and sample storage.
+        sampler (MCMCSettings | HmcSettings): Sampling algorithm, step width and sample storage;
+            `HmcSettings` for PHMC, with its trajectory.
         diagnostics (ChainDiagnosticsSettings): Burn-in, lags and plotted vertices of the chain
             diagnostics.
         num_samples (int): Number of samples of the chain.
@@ -137,7 +138,7 @@ class McmcRunConfig(RunConfig):
     initial_state: (
         PriorMeanInitialGuess | PriorSampleInitialGuess | FileInitialGuess | ChainStateInitialGuess
     )
-    sampler: MCMCSettings
+    sampler: MCMCSettings | HmcSettings
     diagnostics: ChainDiagnosticsSettings
     num_samples: int
     seed: int

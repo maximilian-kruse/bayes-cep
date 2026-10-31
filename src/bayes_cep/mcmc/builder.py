@@ -11,6 +11,7 @@ Classes:
     MCMCAlgorithmName: Selectable MCMC algorithms.
     ZarrStorageSettings: Settings for the Zarr sample storage.
     MCMCSettings: Settings for `MCMCBuilder`.
+    HmcSettings: `MCMCSettings` of the Hamiltonian algorithm, with its trajectory.
     MCMCBuilder: Builds a `Sampler` from a posterior and `MCMCSettings`.
 """
 
@@ -23,6 +24,7 @@ from ls_bayesian.mcmc import output
 from ls_bayesian.mcmc.algorithm import MCMCAlgorithm
 from ls_bayesian.mcmc.algorithms.mala import MALAAlgorithm
 from ls_bayesian.mcmc.algorithms.pcn import PCNAlgorithm
+from ls_bayesian.mcmc.algorithms.phmc import PHMCAlgorithm
 from ls_bayesian.mcmc.algorithms.pmala import PMALAAlgorithm
 from ls_bayesian.mcmc.measures import GaussianMeasure
 from ls_bayesian.mcmc.model import MCMCModel
@@ -59,17 +61,28 @@ class MCMCAlgorithmName(Enum):
             2017, Algorithm 3.7). It collapses to `MALA` for the prior as approximation. It states
             the potential relative to a centred reference measure; a prior mean is moved into the
             potential (see `MeanTiltedTargetMeasure`), so any prior mean works.
+        PHMC: Hamiltonian Monte Carlo on function space with the Gaussian approximation as the
+            mass matrix (the state-independent case of the infinite-dimensional manifold HMC of
+            Beskos et al., 2017, Sec. 3.3). The step width is the angle of one leapfrog step; the
+            number of steps and the jitter of the angle are in `HmcSettings`. It states the
+            potential relative to a centred reference measure like `PMALA`. One trajectory costs
+            as many evaluations of the gradient as it has steps.
     """
 
     PCN = "pcn"
     MALA = "mala"
     PCN_PRECONDITIONED = "pcn-preconditioned"
     PMALA = "pmala"
+    PHMC = "phmc"
 
     @property
     def requires_approximation(self) -> bool:
         """Whether the algorithm needs a Gaussian approximation of the posterior."""
-        return self in (MCMCAlgorithmName.PCN_PRECONDITIONED, MCMCAlgorithmName.PMALA)
+        return self in (
+            MCMCAlgorithmName.PCN_PRECONDITIONED,
+            MCMCAlgorithmName.PMALA,
+            MCMCAlgorithmName.PHMC,
+        )
 
 
 # ==================================================================================================
@@ -129,11 +142,44 @@ class MCMCSettings:
                         f"{self.algorithm.name} step_width must be in (0, 1), "
                         f"got {self.step_width}."
                     )
-            case MCMCAlgorithmName.MALA | MCMCAlgorithmName.PMALA:
+            case MCMCAlgorithmName.MALA | MCMCAlgorithmName.PMALA | MCMCAlgorithmName.PHMC:
                 if self.step_width <= 0:
                     raise ValueError(
                         f"{self.algorithm.name} step_width must be positive, got {self.step_width}."
                     )
+
+
+# ==================================================================================================
+@dataclass(frozen=True, kw_only=True)
+class HmcSettings(MCMCSettings):
+    r"""`MCMCSettings` of the Hamiltonian algorithm.
+
+    A subclass of its own, so that the recorded configuration of every other run, and with it its
+    run id, does not change. `step_width` is the angle $\varepsilon$ of one leapfrog step; in the
+    coordinates of the preconditioner every direction rotates with the period $2\pi$, so a
+    trajectory of the total angle $\varepsilon I \approx \pi/2$ to $\pi$ moves a Gaussian target
+    to an almost independent state.
+
+    Attributes:
+        num_steps (int): Number of leapfrog steps $I$ of a trajectory, one evaluation of the
+            gradient each.
+        jitter (float): Relative half width of the uniform distribution of the step angle per
+            proposal, in $[0, 1)$, against resonances of the trajectory length with the rotation.
+    """
+
+    num_steps: int
+    jitter: float
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        if self.algorithm is not MCMCAlgorithmName.PHMC:
+            raise ValueError(f"HmcSettings are for the algorithm PHMC, got {self.algorithm.name}.")
+        if self.num_steps < 1:
+            raise ValueError(f"num_steps must be positive, got {self.num_steps}.")
+        if not 0 <= self.jitter < 1:
+            raise ValueError(f"jitter must be in [0, 1), got {self.jitter}.")
+        if (1 + self.jitter) * self.step_width >= 3.141592653589793:
+            raise ValueError("The largest step angle (1 + jitter) * step_width must be below pi.")
 
 
 # ==================================================================================================
@@ -218,6 +264,8 @@ class MCMCBuilder:
                 algorithm = PCNAlgorithm(model, self._settings.step_width, logger=logger)
             case MCMCAlgorithmName.PMALA:
                 algorithm = self._build_pmala(model, target, reference)
+            case MCMCAlgorithmName.PHMC:
+                algorithm = self._build_phmc(model, target, reference)
         storage_settings = self._settings.storage
         storage = ZarrStorage(
             save_directory=self._output_dir / SAMPLE_STORE_NAME,
@@ -241,6 +289,25 @@ class MCMCBuilder:
             approximation=model.approximation,
         )
         return PMALAAlgorithm(centered_model, self._settings.step_width)
+
+    # ----------------------------------------------------------------------------------------------
+    def _build_phmc(
+        self, model: MCMCModel, target: LikelihoodTargetMeasure, reference: PriorGaussianMeasure
+    ) -> MCMCAlgorithm:
+        """Build PHMC, with the potential relative to the centred reference measure as for PMALA."""
+        if not isinstance(self._settings, HmcSettings):
+            raise ValueError("The algorithm PHMC needs HmcSettings (num_steps and jitter).")
+        centered_model = MCMCModel(
+            target=MeanTiltedTargetMeasure(target, self._log_posterior.prior),
+            reference=CenteredGaussianMeasure(reference),
+            approximation=model.approximation,
+        )
+        return PHMCAlgorithm(
+            centered_model,
+            self._settings.step_width,
+            self._settings.num_steps,
+            self._settings.jitter,
+        )
 
     # ----------------------------------------------------------------------------------------------
     def _build_outputs(self) -> tuple[MCMCOutput, ...]:

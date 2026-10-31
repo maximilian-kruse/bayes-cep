@@ -255,6 +255,8 @@ class HmcTrajectoryRun(Run[HmcTrajectoryRunConfig]):
         metrics["max_abs_energy_change"] = float(np.abs(finite).max()) if finite.size else 0.0
         for d, width in enumerate(config.step_widths):
             for label, angle in (("half_pi", np.pi / 2), ("pi", np.pi)):
+                if angle > config.total_angle + 1e-9:
+                    continue
                 step = min(int(num_steps[d]), math.ceil(angle / width)) - 1
                 change = energy_changes[:, d, :, step]
                 acceptance = np.where(np.isfinite(change), np.exp(np.minimum(0.0, -change)), 0.0)

@@ -74,6 +74,7 @@ from single_runs.laplace import LaplaceRunConfig
 from single_runs.map import MapRunConfig
 from single_runs.mcmc import ChainDiagnosticsSettings, McmcRunConfig
 from single_runs.mcmc_laplace import PreconditionedMcmcRunConfig
+from single_runs.mcmc_stored_laplace import StoredLaplaceMcmcRunConfig
 from single_runs.preprocessing import PreprocessingRunConfig
 from single_runs.prior import PriorRunConfig
 from single_runs.prior_fit import PriorMomentFitRunConfig
@@ -543,6 +544,50 @@ def reference_heldout_map_config(raw_dir: Path, data_dir: Path) -> HeldOutMapRun
             fold_index=HELDOUT_FIRST_FOLD_INDEX,
             seed=HELDOUT_SPLIT_SEED,
         ),
+    )
+
+
+# ==================================================================================================
+def reference_stored_laplace_mcmc_config(
+    raw_dir: Path,
+    data_dir: Path,
+    map_estimate_path: Path,
+    laplace_path: Path,
+    algorithm: MCMCAlgorithmName,
+) -> StoredLaplaceMcmcRunConfig:
+    """The Laplace-preconditioned MCMC run of the example data, with a stored approximation.
+
+    As `reference_preconditioned_mcmc_config`, but the approximation is read from the results of a
+    Laplace run instead of computed.
+
+    Args:
+        raw_dir (Path): Directory containing the raw data; there is deliberately no default.
+        data_dir (Path): Directory with the data and the ground truth; there is deliberately no
+            default.
+        map_estimate_path (Path): `.npy` file with the MAP estimate the Laplace run was centered
+            at and the chain starts at; there is deliberately no default.
+        laplace_path (Path): The `results` directory of the finished Laplace run; there is
+            deliberately no default.
+        algorithm (MCMCAlgorithmName): `PCN_PRECONDITIONED` or `PMALA`; there is deliberately no
+            default.
+
+    Returns:
+        StoredLaplaceMcmcRunConfig: The reference configuration for the given data.
+    """
+    precomputed = reference_preconditioned_mcmc_config(
+        raw_dir, data_dir, map_estimate_path, algorithm
+    )
+    return StoredLaplaceMcmcRunConfig(
+        problem=precomputed.problem,
+        initial_state=precomputed.initial_state,
+        sampler=precomputed.sampler,
+        diagnostics=precomputed.diagnostics,
+        num_samples=precomputed.num_samples,
+        seed=precomputed.seed,
+        log_interval=precomputed.log_interval,
+        laplace_path=laplace_path,
+        map_estimate_path=map_estimate_path,
+        sample_seed=precomputed.laplace.sample_seed,
     )
 
 

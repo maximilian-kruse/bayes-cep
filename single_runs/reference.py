@@ -127,7 +127,7 @@ MOMENT_FIT_KAPPAS = (0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.6, 0.8)
 MOMENT_FIT_TAUS = (0.3, 0.45, 0.6, 0.8, 1.0, 1.4, 2.0, 3.0)
 
 # MAP optimizer
-MAP_MAX_NUM_ITERATIONS = 1000
+MAP_MAX_NUM_ITERATIONS = 2000
 MAP_GRADIENT_NORM_TOLERANCE = 1
 
 # Cross-validation of the prior parameters: the observations are split into folds, one is held out

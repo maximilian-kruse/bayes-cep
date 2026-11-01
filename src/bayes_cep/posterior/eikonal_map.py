@@ -11,7 +11,6 @@ from typing import override
 import numpy as np
 import pyvista as pv
 import scipy.sparse as sp
-import scipy.sparse.linalg as spla
 from eikonax import derivator, linalg, preprocessing, solver, tensorfield
 from ls_bayesian.posterior import interfaces
 
@@ -198,9 +197,9 @@ class EikonalParameterToSolutionMap(interfaces.ParameterToSolutionMap):
 
         Here $S$ is the vertex-to-simplex matrix, $G_m$ the partial derivative of the eikonal
         update with respect to the vertex parameter and $G_u$ the one with respect to the solution.
-        `DerivativeSolver` stores $\bar A = P (I - G_u)^T P^T$ (upper triangular, unit diagonal,
-        $P$ the causal ordering permutation) for the adjoint solve. The forward solve uses
-        $(I - G_u)^{-1} = P^T \bar A^{-T} P$, a lower triangular solve with the same matrix.
+        `DerivativeSolver` factorizes $\bar A = P (I - G_u)^T P^T$ (block triangular, $P$ the
+        causal ordering permutation) for the adjoint solve. The forward solve uses
+        $(I - G_u)^{-1} = P^T \bar A^{-T} P$ with the same factorization.
         Shares the cached derivative structures with `evaluate_gradient`.
 
         Args:
@@ -217,14 +216,7 @@ class EikonalParameterToSolutionMap(interfaces.ParameterToSolutionMap):
         right_hand_side = sparse_partial_parameter @ (
             self._vertex_to_simplex_matrix @ direction_vector
         )
-        permutation_matrix = derivative_solver.sparse_permutation_matrix
-        permuted_solution = spla.spsolve_triangular(
-            derivative_solver.sparse_system_matrix.T,
-            permutation_matrix @ right_hand_side,
-            lower=True,
-            unit_diagonal=True,
-        )
-        return np.asarray(permutation_matrix.T @ permuted_solution, dtype=np.float64)
+        return np.asarray(derivative_solver.solve_forward(right_hand_side), dtype=np.float64)
 
     # ----------------------------------------------------------------------------------------------
     @override

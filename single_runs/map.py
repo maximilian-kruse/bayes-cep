@@ -111,8 +111,7 @@ class MapResults(ArrayRecord):
         loss_history (np.ndarray): Loss at every accepted optimizer iterate.
         gradient_norm_history (np.ndarray): Gradient norm at every accepted iterate.
         stage_end_indices (np.ndarray): Index in the histories of the last iterate of every stage
-            but the last (empty for one stage). The histories of the stages are joined, the
-            starting iterate of a stage being the last iterate of the stage before.
+            but the last (empty for one stage). The histories of the stages are concatenated.
     """
 
     FILE_NAMES: ClassVar[Mapping[str, str]] = {
@@ -283,10 +282,13 @@ class MapRun(Run[MapRunConfig]):
                 outcome = "converged" if stage_result.success else "did not converge"
                 logger.info(f"      {outcome} after {stage_result.num_iterations} iterations")
                 logger.info(f"      status: {stage_result.status_message}")
-                logger.info(
-                    f"      loss: {stage_result.loss_history[0]:.6e} -> "
-                    f"{stage_result.loss_history[-1]:.6e}"
-                )
+                if stage_result.loss_history.size:
+                    logger.info(
+                        f"      loss: {stage_result.loss_history[0]:.6e} -> "
+                        f"{stage_result.loss_history[-1]:.6e}"
+                    )
+                else:
+                    logger.info("      no iteration was performed, the estimate is unchanged")
                 stage_metrics.update(
                     self._stage_metrics(number, strategy, stage_result, stage_seconds[-1])
                 )
@@ -320,10 +322,10 @@ class MapRun(Run[MapRunConfig]):
             "success": bool(final.success),
             "num_iterations": int(sum(result.num_iterations for result in stage_results)),
             "status_message": str(final.status_message),
-            "loss_initial": float(loss_history[0]),
-            "loss_final": float(loss_history[-1]),
-            "gradient_norm_initial": float(gradient_norm_history[0]),
-            "gradient_norm_final": float(gradient_norm_history[-1]),
+            "loss_initial": self._first_or_nan(loss_history),
+            "loss_final": self._last_or_nan(loss_history),
+            "gradient_norm_initial": self._first_or_nan(gradient_norm_history),
+            "gradient_norm_final": self._last_or_nan(gradient_norm_history),
             "seconds_optimization": float(sum(stage_seconds)),
             **stage_metrics,
             **error_metrics,
@@ -340,33 +342,47 @@ class MapRun(Run[MapRunConfig]):
             f"{prefix}name": type(strategy).__name__,
             f"{prefix}success": bool(result.success),
             f"{prefix}num_iterations": int(result.num_iterations),
-            f"{prefix}loss_final": float(result.loss_history[-1]),
-            f"{prefix}gradient_norm_final": float(result.gradient_norm_history[-1]),
+            f"{prefix}loss_final": MapRun._last_or_nan(result.loss_history),
+            f"{prefix}gradient_norm_final": MapRun._last_or_nan(result.gradient_norm_history),
             f"{prefix}seconds": seconds,
         }
+
+    # ----------------------------------------------------------------------------------------------
+    @staticmethod
+    def _first_or_nan(history: np.ndarray) -> float:
+        """The first entry of a history, `nan` if no iteration was performed."""
+        return float(history[0]) if history.size else float("nan")
+
+    # ----------------------------------------------------------------------------------------------
+    @staticmethod
+    def _last_or_nan(history: np.ndarray) -> float:
+        """The last entry of a history, `nan` if no iteration was performed."""
+        return float(history[-1]) if history.size else float("nan")
 
     # ----------------------------------------------------------------------------------------------
     @staticmethod
     def _join_histories(
         results: list[OptimizationResult],
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Join the histories of the stages; a stage starts at the last iterate of the one before,
-        which is therefore not repeated.
+        """Join the histories of the stages.
+
+        The history of a stage holds its accepted iterates only, not the point it starts at, so the
+        histories are simply concatenated. A stage that performed no iteration adds nothing.
 
         Returns:
             tuple[np.ndarray, np.ndarray, np.ndarray]: The loss history, the gradient norm history
-                and the index of the last iterate of every stage but the last.
+                and the index of the last iterate of every stage but the last; a stage that ended
+                before the first iterate of the whole run has none, so it is left out.
         """
-        losses = [results[0].loss_history]
-        gradient_norms = [results[0].gradient_norm_history]
         end_indices = []
-        for result in results[1:]:
-            end_indices.append(sum(part.size for part in losses) - 1)
-            losses.append(result.loss_history[1:])
-            gradient_norms.append(result.gradient_norm_history[1:])
+        num_iterates = 0
+        for result in results[:-1]:
+            num_iterates += result.loss_history.size
+            if num_iterates > 0:
+                end_indices.append(num_iterates - 1)
         return (
-            np.concatenate(losses),
-            np.concatenate(gradient_norms),
+            np.concatenate([result.loss_history for result in results]),
+            np.concatenate([result.gradient_norm_history for result in results]),
             np.asarray(end_indices, dtype=np.int64),
         )
 

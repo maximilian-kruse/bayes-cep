@@ -16,6 +16,9 @@ Functions:
     jit_cache_setup: Job script lines for a dolfinx JIT cache of one's own per SLURM task.
 """
 
+import os
+import shlex
+import subprocess
 import sys
 import traceback
 from collections.abc import Sequence
@@ -27,7 +30,7 @@ from typing import Literal
 
 import submitit
 
-from bayes_cep.run.directories import RunState
+from bayes_cep.run.directories import REPOSITORY_ROOT, RunState
 from bayes_cep.run.provenance import Environment
 from bayes_cep.run.template import Run
 
@@ -93,6 +96,14 @@ class ExecutorSettings:
             jax (SLURM only).
         mem_gb (int | None): Memory per run in GB; the cluster default if `None` (SLURM only).
         partition (str | None): SLURM partition; the cluster default if `None`.
+        gpus_per_task (int): GPUs per run (SLURM only); `0` requests none. With GPUs the job also
+            sets `XLA_PYTHON_CLIENT_PREALLOCATE=false`, so that jax allocates device memory as it
+            needs it and does not claim most of it up front. The GPU is only used if the jax
+            installed in the environment is a CUDA build.
+        pixi_environment (str | None): Name of the pixi environment the tasks run in (SLURM only),
+            e.g. `"gpu"` for the CUDA build of jax. The executor installs it from the lock file
+            before submitting (`pixi install --locked`), and the tasks start through `pixi run`
+            in it. `None` runs them with the interpreter of the submitting process.
         max_parallel (int | None): Maximum number of runs executing at once; unlimited if `None`
             (SLURM only).
     """
@@ -102,11 +113,15 @@ class ExecutorSettings:
     cpus_per_task: int = 4
     mem_gb: int | None = None
     partition: str | None = None
+    gpus_per_task: int = 0
+    pixi_environment: str | None = None
     max_parallel: int | None = None
 
     def __post_init__(self) -> None:
         if self.cluster not in ("local", "slurm"):
             raise ValueError(f"cluster must be 'local' or 'slurm', got {self.cluster!r}.")
+        if self.gpus_per_task < 0:
+            raise ValueError(f"gpus_per_task must not be negative, got {self.gpus_per_task}.")
 
 
 # ==================================================================================================
@@ -131,6 +146,42 @@ class Executor:
         self.settings = settings
         self._job_dir = job_dir
         self._job_name = job_name
+
+    # ----------------------------------------------------------------------------------------------
+    def _python_command(self) -> str | None:
+        """The command that starts Python in the tasks: installs the pixi environment, if any.
+
+        The environment is installed here, where the network is, and not in the tasks, which would
+        install it concurrently and, on most clusters, without internet access. A machine without
+        a GPU (the login node) cannot see the CUDA driver that the `cuda` system requirement of
+        the environment asks for, so `CONDA_OVERRIDE_CUDA` stands in for it if it is not set;
+        this only lets the installation proceed.
+
+        Returns:
+            str | None: The command, or `None` to use the interpreter of this process.
+        """
+        name = self.settings.pixi_environment
+        if name is None:
+            return None
+        manifest = str(REPOSITORY_ROOT / "pyproject.toml")
+        install_environment = {"CONDA_OVERRIDE_CUDA": "12.9", **os.environ}
+        subprocess.run(
+            ["pixi", "install", "--locked", "--manifest-path", manifest, "--environment", name],
+            check=True,
+            env=install_environment,
+        )
+        return shlex.join(
+            [
+                "pixi",
+                "run",
+                "--frozen",
+                "--manifest-path",
+                manifest,
+                "--environment",
+                name,
+                "python",
+            ]
+        )
 
     # ----------------------------------------------------------------------------------------------
     def run(
@@ -222,10 +273,13 @@ class Executor:
             "cpus_per_task": settings.cpus_per_task,
             "mem_gb": settings.mem_gb,
             "slurm_partition": settings.partition,
+            "slurm_gres": f"gpu:{settings.gpus_per_task}" if settings.gpus_per_task else None,
+            "slurm_python": self._python_command(),
             "slurm_array_parallelism": settings.max_parallel,
             "slurm_setup": [
                 f"export OMP_NUM_THREADS={settings.cpus_per_task}",
                 f"export OPENBLAS_NUM_THREADS={settings.cpus_per_task}",
+                *(["export XLA_PYTHON_CLIENT_PREALLOCATE=false"] if settings.gpus_per_task else []),
                 *jit_cache_setup(),
             ],
         }

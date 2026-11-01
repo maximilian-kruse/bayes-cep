@@ -131,12 +131,18 @@ MOMENT_FIT_TAUS = (0.3, 0.45, 0.6, 0.8, 1.0, 1.4, 2.0, 3.0)
 MAP_MAX_NUM_ITERATIONS = 2000
 MAP_GRADIENT_NORM_TOLERANCE = 1
 
+# The reference MAP has two stages: L-BFGS gets close to the MAP estimate, Newton-CG polishes it
+MAP_LBFGS_STAGE_MAX_NUM_ITERATIONS = 1000
+
 # Newton-CG polishing of a MAP estimate (Gauss-Newton Hessian products). The data curvature spans
 # six orders of magnitude (Laplace eigenvalues 2e6 .. 0.2 in the prior's Cameron-Martin metric), so
 # each outer iteration needs an inner solve of tens to hundreds of CG iterations at about a
-# millisecond each; a few tens of outer iterations are expected to suffice.
-NEWTON_CG_MAX_NUM_ITERATIONS = 100
+# millisecond each; a few tens of outer iterations are expected to suffice. The run stops early
+# when the decrease the quadratic model predicts for an iteration is below the noise of the cost
+# (the variance 1e-3 of the observation noise), as it cannot be told from float32 noise then.
+NEWTON_CG_MAX_NUM_ITERATIONS = 50
 NEWTON_CG_GRADIENT_NORM_TOLERANCE = 1
+NEWTON_CG_MINIMUM_PREDICTED_REDUCTION = 1e-3
 
 # Cross-validation of the prior parameters: the observations are split into folds, one is held out
 HELDOUT_NUM_FOLDS = 4
@@ -217,7 +223,22 @@ def reference_newton_cg_strategy() -> NewtonCGStrategy:
         newton_cg_settings=NewtonCGSettings(
             maximum_num_iterations=NEWTON_CG_MAX_NUM_ITERATIONS,
             gradient_norm_tolerance=NEWTON_CG_GRADIENT_NORM_TOLERANCE,
+            minimum_predicted_reduction=NEWTON_CG_MINIMUM_PREDICTED_REDUCTION,
         )
+    )
+
+
+# ==================================================================================================
+def reference_map_stages() -> tuple[CustomLBFGSStrategy, NewtonCGStrategy]:
+    """The two optimizer stages of the reference MAP run: L-BFGS, then Newton-CG."""
+    return (
+        CustomLBFGSStrategy(
+            lbfgs_settings=CustomLBFGSSettings(
+                maximum_num_iterations=MAP_LBFGS_STAGE_MAX_NUM_ITERATIONS,
+                gradient_norm_tolerance=MAP_GRADIENT_NORM_TOLERANCE,
+            )
+        ),
+        reference_newton_cg_strategy(),
     )
 
 
@@ -443,7 +464,7 @@ def reference_smoothed_patient_preprocessing_config(
 
 # ==================================================================================================
 def reference_map_config(raw_dir: Path, data_dir: Path) -> MapRunConfig:
-    """The MAP run of the example data.
+    """The MAP run of the example data: L-BFGS followed by Newton-CG.
 
     Args:
         data_dir (Path): Directory with the data and the ground truth (the files of
@@ -456,7 +477,7 @@ def reference_map_config(raw_dir: Path, data_dir: Path) -> MapRunConfig:
     """
     return MapRunConfig(
         problem=reference_inference_problem(raw_dir, data_dir),
-        optimizer=reference_optimizer_strategy(),
+        stages=reference_map_stages(),
         initial_guess=PriorMeanInitialGuess(),
     )
 

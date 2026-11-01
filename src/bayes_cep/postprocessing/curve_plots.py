@@ -285,6 +285,7 @@ def plot_optimization_history(
     loss_history: np.ndarray[tuple[int], np.dtype[np.float64]],
     gradient_norm_history: np.ndarray[tuple[int], np.dtype[np.float64]],
     path: Path,
+    stage_end_indices: Sequence[int] = (),
 ) -> None:
     """Plot the loss and the gradient norm, both on a log scale, over the optimizer iterations.
 
@@ -292,6 +293,9 @@ def plot_optimization_history(
         loss_history (np.ndarray): Loss per iteration, shape `(num_iterations,)`.
         gradient_norm_history (np.ndarray): Gradient norm per iteration, same shape.
         path (Path): Output file; the format follows the suffix, e.g. `.pdf`.
+        stage_end_indices (Sequence[int]): Indices of the last iterate of every stage but the
+            last, marked by vertical lines, for an optimization in several stages. Defaults to
+            none.
     """
     figure = Figure(figsize=(10, 4))
     loss_axis, gradient_axis = figure.subplots(1, 2)
@@ -301,6 +305,9 @@ def plot_optimization_history(
     gradient_axis.semilogy(gradient_norm_history)
     gradient_axis.set_xlabel("iteration")
     gradient_axis.set_ylabel("gradient norm")
+    for axis in (loss_axis, gradient_axis):
+        for index in stage_end_indices:
+            axis.axvline(index, color="gray", linestyle="--", linewidth=1.0)
     _save(figure, path)
 
 

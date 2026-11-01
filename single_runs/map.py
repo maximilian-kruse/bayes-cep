@@ -21,6 +21,7 @@ import numpy as np
 import pyvista as pv
 import scipy.sparse as sp
 from ls_bayesian.common.logging import BaseLogger, LoggerSettings
+from ls_bayesian.optimization.optimizer import OptimizationResult
 
 from bayes_cep.mesh.geodesic import assemble_edge_length_graph, compute_graph_distances
 from bayes_cep.mesh.topology import get_triangle_connectivity
@@ -82,15 +83,22 @@ class MapRunConfig(RunConfig):
 
     Attributes:
         problem (InferenceProblemConfig): The data and the model of the posterior.
-        optimizer (CustomLBFGSStrategy | ScipyLBFGSBStrategy | NewtonCGStrategy): Optimizer
-            backend with its model.
+        stages (tuple[CustomLBFGSStrategy | ScipyLBFGSBStrategy | NewtonCGStrategy, ...]): The
+            optimizer stages in order, each with its model. The first starts at the initial guess,
+            every further stage at the estimate of the one before, e.g. L-BFGS followed by
+            Newton-CG. At least one.
         initial_guess (PriorMeanInitialGuess | PriorSampleInitialGuess | FileInitialGuess): Where
             the optimization starts.
     """
 
     problem: InferenceProblemConfig
-    optimizer: CustomLBFGSStrategy | ScipyLBFGSBStrategy | NewtonCGStrategy
+    stages: tuple[CustomLBFGSStrategy | ScipyLBFGSBStrategy | NewtonCGStrategy, ...]
     initial_guess: PriorMeanInitialGuess | PriorSampleInitialGuess | FileInitialGuess
+
+    # ----------------------------------------------------------------------------------------------
+    def __post_init__(self) -> None:
+        if not self.stages:
+            raise ValueError("A MAP run needs at least one optimizer stage.")
 
 
 # ==================================================================================================
@@ -102,17 +110,22 @@ class MapResults(ArrayRecord):
         estimate (np.ndarray): MAP estimate of the fiber angle [rad] per vertex.
         loss_history (np.ndarray): Loss at every accepted optimizer iterate.
         gradient_norm_history (np.ndarray): Gradient norm at every accepted iterate.
+        stage_end_indices (np.ndarray): Index in the histories of the last iterate of every stage
+            but the last (empty for one stage). The histories of the stages are joined, the
+            starting iterate of a stage being the last iterate of the stage before.
     """
 
     FILE_NAMES: ClassVar[Mapping[str, str]] = {
         "estimate": "map_estimate.npy",
         "loss_history": "map_loss_history.npy",
         "gradient_norm_history": "map_gradient_norm_history.npy",
+        "stage_end_indices": "map_stage_end_indices.npy",
     }
 
     estimate: np.ndarray
     loss_history: np.ndarray
     gradient_norm_history: np.ndarray
+    stage_end_indices: np.ndarray
 
 
 # ==================================================================================================
@@ -128,9 +141,14 @@ class MapRun(Run[MapRunConfig]):
         "iterate.",
         f"results/{MapResults.FILE_NAMES['gradient_norm_history']}": "Gradient norm at every "
         "accepted iterate.",
-        METRICS_RECORD: "Optimization statistics (success, num_iterations, loss and gradient norm "
-        "first/last, seconds_optimization); the final loss split into likelihood and prior part "
-        "and the loss of the ground truth on the branch of the estimate (loss_truth*); the axial "
+        f"results/{MapResults.FILE_NAMES['stage_end_indices']}": "Index of the last iterate of "
+        "every optimizer stage but the last in the histories.",
+        METRICS_RECORD: "Optimization statistics over all stages (success and status_message of "
+        "the last stage, num_iterations, loss and gradient norm first/last, "
+        "seconds_optimization) and per stage k (stage<k>_name, _success, _num_iterations, "
+        "_loss_final, _gradient_norm_final, _seconds, and _error_mean/median_deg for a stage but "
+        "the last); the final loss split into likelihood and prior part and the loss of the ground "
+        "truth on the branch of the estimate (loss_truth*); the axial "
         "error per simplex in degrees "
         "(error_mean/median/p90/p95/p99/max_deg, fraction_below_<t>_deg, axial_concentration); "
         "the mean error of the prior mean and the skill_score against it; and the RMSE of the "
@@ -222,6 +240,7 @@ class MapRun(Run[MapRunConfig]):
             results.loss_history,
             results.gradient_norm_history,
             plots_dir / OPTIMIZATION_HISTORY_PLOT_FILE_NAME,
+            results.stage_end_indices.tolist(),
         )
 
     # ----------------------------------------------------------------------------------------------
@@ -236,52 +255,120 @@ class MapRun(Run[MapRunConfig]):
             logfile_path=self.records_dir(run_dir) / OPTIMIZER_LOG_FILE_NAME,
         )
         with BaseLogger(optimizer_logger_settings, prefix="map") as optimizer_logger:
-            optimizer_name = type(self.config.optimizer).__name__
-            with steps.step(f"Building the optimizer ({optimizer_name})"):
-                model, optimizer = self.config.optimizer.build(
-                    assembled.log_posterior, optimizer_logger
-                )
             with steps.step(
                 f"Building the initial guess ({type(self.config.initial_guess).__name__})"
             ):
                 initial_guess = self.config.initial_guess.build(assembled.log_posterior.prior)
             logger.info(f"      {describe_array('initial guess [rad]', initial_guess)}")
-            optimization_start = time.perf_counter()
-            with steps.step("Running MAP estimation"):
-                result = optimizer.run(initial_guess=initial_guess, model=model)
-            optimization_seconds = time.perf_counter() - optimization_start
-        outcome = "converged" if result.success else "did not converge"
-        logger.info(f"      MAP estimation {outcome} after {result.num_iterations} iterations")
-        logger.info(f"      status: {result.status_message}")
-        logger.info(f"      loss: {result.loss_history[0]:.6e} -> {result.loss_history[-1]:.6e}")
-        mesh = raw_data.load_mesh()
-        to_simplices = problem.interpolation.assemble_matrix(
-            mesh.points, get_triangle_connectivity(mesh)
-        )
+            mesh = raw_data.load_mesh()
+            basis_vectors = raw_data.load_basis_vectors()
+            to_simplices = problem.interpolation.assemble_matrix(
+                mesh.points, get_triangle_connectivity(mesh)
+            )
+            stage_results: list[OptimizationResult] = []
+            stage_metrics: dict[str, float | bool | str] = {}
+            stage_seconds: list[float] = []
+            estimate = initial_guess
+            num_stages = len(self.config.stages)
+            for number, strategy in enumerate(self.config.stages, start=1):
+                label = f"stage {number}/{num_stages}, {type(strategy).__name__}"
+                with steps.step(f"Building the optimizer ({label})"):
+                    model, optimizer = strategy.build(assembled.log_posterior, optimizer_logger)
+                start_time = time.perf_counter()
+                with steps.step(f"Running MAP estimation ({label})"):
+                    stage_result = optimizer.run(initial_guess=estimate, model=model)
+                stage_seconds.append(time.perf_counter() - start_time)
+                stage_results.append(stage_result)
+                estimate = stage_result.result
+                outcome = "converged" if stage_result.success else "did not converge"
+                logger.info(f"      {outcome} after {stage_result.num_iterations} iterations")
+                logger.info(f"      status: {stage_result.status_message}")
+                logger.info(
+                    f"      loss: {stage_result.loss_history[0]:.6e} -> "
+                    f"{stage_result.loss_history[-1]:.6e}"
+                )
+                stage_metrics.update(
+                    self._stage_metrics(number, strategy, stage_result, stage_seconds[-1])
+                )
+                if number < num_stages:
+                    with steps.step(f"Evaluating the error metrics of stage {number}"):
+                        stage_errors = self._compute_error_metrics(
+                            assembled, estimate, mesh, basis_vectors, to_simplices
+                        )
+                    stage_metrics[f"stage{number}_error_mean_deg"] = stage_errors["error_mean_deg"]
+                    stage_metrics[f"stage{number}_error_median_deg"] = stage_errors[
+                        "error_median_deg"
+                    ]
+
+        loss_history, gradient_norm_history, stage_end_indices = self._join_histories(stage_results)
+        final = stage_results[-1]
         with steps.step("Evaluating the error metrics"):
             error_metrics = self._compute_error_metrics(
-                assembled, result.result, mesh, raw_data.load_basis_vectors(), to_simplices
+                assembled, final.result, mesh, basis_vectors, to_simplices
             )
         logger.info(
             f"      axial error of the MAP: mean {error_metrics['error_mean_deg']:.3f} deg, "
             f"median {error_metrics['error_median_deg']:.3f} deg"
         )
         MapResults(
-            estimate=result.result,
-            loss_history=result.loss_history,
-            gradient_norm_history=result.gradient_norm_history,
+            estimate=final.result,
+            loss_history=loss_history,
+            gradient_norm_history=gradient_norm_history,
+            stage_end_indices=stage_end_indices,
         ).save(self.results_dir(run_dir))
         return {
-            "success": bool(result.success),
-            "num_iterations": int(result.num_iterations),
-            "status_message": str(result.status_message),
-            "loss_initial": float(result.loss_history[0]),
-            "loss_final": float(result.loss_history[-1]),
-            "gradient_norm_initial": float(result.gradient_norm_history[0]),
-            "gradient_norm_final": float(result.gradient_norm_history[-1]),
-            "seconds_optimization": optimization_seconds,
+            "success": bool(final.success),
+            "num_iterations": int(sum(result.num_iterations for result in stage_results)),
+            "status_message": str(final.status_message),
+            "loss_initial": float(loss_history[0]),
+            "loss_final": float(loss_history[-1]),
+            "gradient_norm_initial": float(gradient_norm_history[0]),
+            "gradient_norm_final": float(gradient_norm_history[-1]),
+            "seconds_optimization": float(sum(stage_seconds)),
+            **stage_metrics,
             **error_metrics,
         }
+
+    # ----------------------------------------------------------------------------------------------
+    @staticmethod
+    def _stage_metrics(
+        number: int, strategy: object, result: OptimizationResult, seconds: float
+    ) -> dict[str, float | bool | str]:
+        """The statistics of one optimizer stage, keys prefixed by `stage<number>_`."""
+        prefix = f"stage{number}_"
+        return {
+            f"{prefix}name": type(strategy).__name__,
+            f"{prefix}success": bool(result.success),
+            f"{prefix}num_iterations": int(result.num_iterations),
+            f"{prefix}loss_final": float(result.loss_history[-1]),
+            f"{prefix}gradient_norm_final": float(result.gradient_norm_history[-1]),
+            f"{prefix}seconds": seconds,
+        }
+
+    # ----------------------------------------------------------------------------------------------
+    @staticmethod
+    def _join_histories(
+        results: list[OptimizationResult],
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Join the histories of the stages; a stage starts at the last iterate of the one before,
+        which is therefore not repeated.
+
+        Returns:
+            tuple[np.ndarray, np.ndarray, np.ndarray]: The loss history, the gradient norm history
+                and the index of the last iterate of every stage but the last.
+        """
+        losses = [results[0].loss_history]
+        gradient_norms = [results[0].gradient_norm_history]
+        end_indices = []
+        for result in results[1:]:
+            end_indices.append(sum(part.size for part in losses) - 1)
+            losses.append(result.loss_history[1:])
+            gradient_norms.append(result.gradient_norm_history[1:])
+        return (
+            np.concatenate(losses),
+            np.concatenate(gradient_norms),
+            np.asarray(end_indices, dtype=np.int64),
+        )
 
     # ----------------------------------------------------------------------------------------------
     def _compute_error_metrics(

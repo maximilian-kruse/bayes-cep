@@ -2,7 +2,8 @@
 
 One fixed problem (the reference one: prior kappa 0.1, tau 5, and the preprocessing run of
 `preprocessing_synthetic` with 1000 observations and noise variance 1e-3), solved with the
-Cameron-Martin L-BFGS and with scipy's Euclidean L-BFGS-B. Create and run the
+Cameron-Martin L-BFGS, with scipy's Euclidean L-BFGS-B, with Newton-CG, and with the L-BFGS
+followed by Newton-CG of the reference run. Create and run the
 `preprocessing_synthetic` study first.
 """
 
@@ -15,6 +16,7 @@ from bayes_cep.run.study import Axis, Product, StudySetup
 from single_runs.map import MapRun
 from single_runs.reference import (
     reference_map_config,
+    reference_map_stages,
     reference_newton_cg_strategy,
     reference_optimizer_strategy,
     reference_synthetic_preprocessing_config,
@@ -32,16 +34,18 @@ STUDY = StudySetup(
     run_type=MapRun,
     name="optimizer_comparison",
     description=(
-        "MAP estimate of one problem with the custom L-BFGS, scipy's L-BFGS-B and Newton-CG."
+        "MAP estimate of one problem with the custom L-BFGS, scipy's L-BFGS-B, Newton-CG and the "
+        "L-BFGS followed by Newton-CG."
     ),
     base=reference_map_config(RAW_DIR, REFERENCE_DATA_DIR),
     sweep=Product(
         Axis(
-            "optimizer",
+            "stages",
             (
-                reference_optimizer_strategy(),
-                ScipyLBFGSBStrategy(ScipyLBFGSBSettings(maximum_num_iterations=1000)),
-                reference_newton_cg_strategy(),
+                (reference_optimizer_strategy(),),
+                (ScipyLBFGSBStrategy(ScipyLBFGSBSettings(maximum_num_iterations=1000)),),
+                (reference_newton_cg_strategy(),),
+                reference_map_stages(),
             ),
         )
     ),

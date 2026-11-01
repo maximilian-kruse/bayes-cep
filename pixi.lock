@@ -241,6 +241,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/rdma-core-65.0-h7b4f2e6_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/re2-2025.11.05-h5301d42_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/readline-8.3-hd6e31c0_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/rustworkx-0.18.1-py311h7b25dd4_9.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/s2n-1.6.2-he8a4886_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/scalapack-2.2.0-h606478a_6.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/scifem-0.22.1-py312ha5e0a49_0.conda
@@ -615,6 +616,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/readline-8.3-hd6e31c0_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/rpds-py-2026.6.3-py314h7e8cd81_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/ruff-0.16.9-hbcb56a7_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/rustworkx-0.18.1-py311h7b25dd4_9.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/s2n-1.6.2-he8a4886_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/scalapack-2.2.0-h606478a_6.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/scifem-0.22.1-py312ha5e0a49_0.conda
@@ -1096,6 +1098,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/readline-8.3-hd6e31c0_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/rpds-py-2026.6.3-py314h7e8cd81_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/ruff-0.16.9-hbcb56a7_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/rustworkx-0.18.1-py311h7b25dd4_9.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/s2n-1.6.2-he8a4886_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/scalapack-2.2.0-h606478a_6.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/scifem-0.22.1-py312ha5e0a49_0.conda
@@ -5548,6 +5551,29 @@ packages:
   run_exports: {}
   size: 8978873
   timestamp: 1790295137873
+- conda: https://conda.anaconda.org/conda-forge/linux-64/rustworkx-0.18.1-py311h7b25dd4_9.conda
+  noarch: python
+  sha256: ee82d0f1f1945110d068c3ae73f0dba6891683bc52ace90b47c8dfe01ee3fa37
+  md5: 17bc7803794805685abd89c84faaa304
+  depends:
+  - numpy >=1.16.0,<3
+  - python
+  - libgcc >=15
+  - __glibc >=2.17,<3.0.a0
+  - _python_abi3_support 1.*
+  - cpython >=3.11
+  constrains:
+  - matplotlib >=3.0
+  - matplotlib-base >=3.0
+  - pillow >=5.4
+  - __glibc >=2.17
+  license: Apache-2.0
+  license_family: APACHE
+  purls:
+  - pkg:pypi/rustworkx?source=compressed-mapping
+  run_exports: {}
+  size: 2084197
+  timestamp: 1789339462488
 - conda: https://conda.anaconda.org/conda-forge/linux-64/s2n-1.6.2-he8a4886_1.conda
   sha256: dec76e9faa3173579d34d226dbc91892417a80784911daf8e3f0eb9bad19d7a6
   md5: bade189a194e66b93c03021bd36c337b
@@ -9133,6 +9159,7 @@ packages:
   - jax>=0.7
   - jaxtyping>=0.3
   - numpy>=2.2
+  - rustworkx>=0.16
   - scipy>=1.16
   requires_python: '>=3.13'
 - pypi: ../ls-bayesian

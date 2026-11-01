@@ -38,7 +38,7 @@ bcep-study = "bayes_cep.cli.run_study:main"
 
 [tool.pixi.workspace]
 channels = ["conda-forge"]
-platforms = ["linux-64"]
+platforms = ["linux-64", { name = "linux-64-cuda", platform = "linux-64", cuda = "12" }]
 
 # --- Base dependencies ----------------------------------------------------------------------------
 
@@ -142,8 +142,8 @@ nbformat = ">=5.11.1,<6"
 # The GPU environment: the same packages with the CUDA build of jaxlib, for the nodes of the GPU
 # partitions (`pixi run -e gpu bcep-study ...`, see `studies/map_synthetic_gpu.py`). The CUDA runtime
 # libraries come with the conda packages, so only the driver is needed on the node.
-[tool.pixi.feature.gpu.system-requirements]
-cuda = "12"
+[tool.pixi.feature.gpu]
+platforms = ["linux-64-cuda"]
 
 [tool.pixi.feature.gpu.dependencies]
 jaxlib = { version = ">=0.7.2,<0.8", build = "*cuda12*" }

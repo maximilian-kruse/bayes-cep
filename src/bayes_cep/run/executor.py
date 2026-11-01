@@ -266,7 +266,12 @@ class Executor:
         for directory in directories:
             directory.record_submitted()
         settings = self.settings
-        executor = submitit.AutoExecutor(folder=self._job_dir, cluster="slurm")
+        # The command that starts Python is an argument of the constructor, not a job parameter.
+        python_command = self._python_command()
+        executor_arguments = {} if python_command is None else {"slurm_python": python_command}
+        executor = submitit.AutoExecutor(
+            folder=self._job_dir, cluster="slurm", **executor_arguments
+        )
         parameters: dict[str, object] = {
             "name": self._job_name,
             "timeout_min": settings.time_min,
@@ -274,7 +279,6 @@ class Executor:
             "mem_gb": settings.mem_gb,
             "slurm_partition": settings.partition,
             "slurm_gres": f"gpu:{settings.gpus_per_task}" if settings.gpus_per_task else None,
-            "slurm_python": self._python_command(),
             "slurm_array_parallelism": settings.max_parallel,
             "slurm_setup": [
                 f"export OMP_NUM_THREADS={settings.cpus_per_task}",

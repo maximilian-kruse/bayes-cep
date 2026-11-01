@@ -70,7 +70,12 @@ fiber-orientation angle per mesh vertex.
   `OptimizerStrategy.build(log_posterior, logger)` returns an optimizer together with its matching
   model as one pair, never mix them: `CameronMartinPosteriorModel` (the gradient
   is a dual vector; the prior covariance maps it to the Cameron-Martin representer) for
-  `CustomLBFGSStrategy`, `EuclideanPosteriorModel` (raw gradient) for `ScipyLBFGSBStrategy`.
+  `CustomLBFGSStrategy` and `NewtonCGStrategy`, `EuclideanPosteriorModel` (raw gradient) for
+  `ScipyLBFGSBStrategy`. `NewtonCGStrategy` (truncated Newton-CG with Gauss-Newton products, optional
+  trust region or early stopping, see `ls_bayesian`) is not part of the reference MAP: on the
+  example data it gains about 30 units of loss over 1000 L-BFGS iterations, below what shows in
+  the fiber angles, and it stalls at the float32 noise of the cost (about 5e-4 to 3e-3). The
+  `_DerivativeCache` of the eikonal map keeps the last three parameter vectors.
 - `preprocessing/` (ground-truth strategies: synthetic, raw patient, or a stored smoothed patient field from `scripts/smooth_patient_fibers.py`; synthetic observations; prior-mean strategies from the observations alone: zero, or the best-fit constant angle, the reference choice for patient data), `mcmc/`
   (sampler builder) and `statistics/` serve the runs. `statistics/` reads (zarr) chains block by
   block through `SampleStore`; angles are axial (mod $\pi$): means via the doubled-angle resultant,

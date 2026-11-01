@@ -68,7 +68,21 @@ class CameronMartinPosteriorModel(OptimizationModel):
         parameter_vector: np.ndarray[tuple[int], np.dtype[np.float64]],
         direction_vector: np.ndarray[tuple[int], np.dtype[np.float64]],
     ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
-        raise NotImplementedError
+        r"""Gauss-Newton Hessian-vector product as a Cameron-Martin representer.
+
+        The Gauss-Newton Hessian of the cost is $H_\text{GN} + \mathcal{C}_\text{prior}^{-1}$, with
+        $H_\text{GN} = J^T B^T\Gamma_\text{noise}^{-1} B J$ the misfit part (the same operator
+        as `bayes_cep.laplace.hessian.GaussNewtonMisfitHessian`). Its Cameron-Martin representer
+        applied to $\hat m$ is $\mathcal{C}_\text{prior}\,(H_\text{GN}\hat m +
+        \mathcal{C}_\text{prior}^{-1}\hat m) = \mathcal{C}_\text{prior}\,H_\text{GN}\hat m
+        + \hat m$: the prior term is the identity, as for the gradient. The operator is symmetric
+        positive definite in the Cameron-Martin inner product. It omits the second derivative of
+        the forward map, so it is not the exact Hessian.
+        """
+        misfit_product = self._log_posterior.evaluate_gauss_newton_hessian_vector_product(
+            parameter_vector, direction_vector
+        )
+        return self._prior.apply_covariance_operator(misfit_product) + direction_vector
 
     # ----------------------------------------------------------------------------------------------
     @override

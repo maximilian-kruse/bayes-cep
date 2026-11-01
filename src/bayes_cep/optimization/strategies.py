@@ -11,6 +11,8 @@ Classes:
     ScipyLBFGSBStrategy: Plain Euclidean L-BFGS-B via `scipy.optimize.minimize`.
     CustomLBFGSStrategy: L-BFGS in the prior's Cameron-Martin space, with backtracking and
         cautious updating.
+    NewtonCGStrategy: Truncated Newton-CG with Gauss-Newton Hessian products in the prior's
+        Cameron-Martin space.
 """
 
 from abc import ABC, abstractmethod
@@ -22,6 +24,7 @@ from ls_bayesian.optimization.algorithms.custom_lbfgs import (
     CustomLBFGSOptimizer,
     CustomLBFGSSettings,
 )
+from ls_bayesian.optimization.algorithms.newton_cg import NewtonCGOptimizer, NewtonCGSettings
 from ls_bayesian.optimization.algorithms.scipy_lbfgs_b import (
     ScipyLBFGSBOptimizer,
     ScipyLBFGSBSettings,
@@ -179,4 +182,53 @@ class CustomLBFGSStrategy(OptimizerStrategy):
             seed_scaling_strategy,
             logger=logger,
         )
+        return model, optimizer
+
+
+# ==================================================================================================
+@dataclass(frozen=True)
+class NewtonCGStrategy(OptimizerStrategy):
+    """Truncated Newton-CG in the prior's Cameron-Martin space with Gauss-Newton Hessian products.
+
+    Pairs `NewtonCGOptimizer` with `CameronMartinPosteriorModel`. In the Cameron-Martin geometry
+    the prior is the identity part of the Hessian, so the inner CG solve only has to resolve the
+    data-dominated directions. The Gauss-Newton product costs one Jacobian-vector product and one
+    adjoint solve (a few milliseconds when the derivative structures are cached), plus one
+    application of the prior covariance.
+
+    Attributes:
+        newton_cg_settings (NewtonCGSettings): Iteration cap, gradient-norm tolerance, forcing
+            term bounds and the settings of the inner CG solve.
+        line_search_settings (ArmijoBacktrackingLineSearchSettings |
+            StrongWolfeLineSearchSettings): Line-search settings; Armijo backtracking (default) or
+            strong-Wolfe. Selected on the command line via `--line-search-settings:<strategy-name>`.
+            Ignored if `newton_cg_settings.trust_region` is set: the trust region then globalizes
+            the iteration instead of a line search.
+    """
+
+    newton_cg_settings: NewtonCGSettings = field(default_factory=NewtonCGSettings)
+    line_search_settings: ArmijoBacktrackingLineSearchSettings | StrongWolfeLineSearchSettings = (
+        field(default_factory=ArmijoBacktrackingLineSearchSettings)
+    )
+
+    # ----------------------------------------------------------------------------------------------
+    @override
+    def build(
+        self,
+        log_posterior: LogPosterior,
+        logger: BaseLogger | None = None,
+    ) -> tuple[CameronMartinPosteriorModel, NewtonCGOptimizer]:
+        """Build the Cameron-Martin model and the Newton-CG optimizer, with a line search unless a
+        trust region is configured."""
+        model = CameronMartinPosteriorModel(log_posterior)
+        line_search: ArmijoBacktrackingLineSearch | StrongWolfeLineSearch | None = None
+        if self.newton_cg_settings.trust_region is None:
+            match self.line_search_settings:
+                case StrongWolfeLineSearchSettings():
+                    line_search = StrongWolfeLineSearch(self.line_search_settings, logger=logger)
+                case ArmijoBacktrackingLineSearchSettings():
+                    line_search = ArmijoBacktrackingLineSearch(
+                        self.line_search_settings, logger=logger
+                    )
+        optimizer = NewtonCGOptimizer(self.newton_cg_settings, line_search, logger=logger)
         return model, optimizer

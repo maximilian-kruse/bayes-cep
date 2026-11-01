@@ -45,12 +45,13 @@ from pathlib import Path
 import numpy as np
 from ls_bayesian.lowrank.eigensolvers import RandomizedDoublePassSolver
 from ls_bayesian.optimization.algorithms.custom_lbfgs import CustomLBFGSSettings
+from ls_bayesian.optimization.algorithms.newton_cg import NewtonCGSettings
 
 from bayes_cep.laplace.builder import LaplaceSettings
 from bayes_cep.mcmc.builder import MCMCAlgorithmName, MCMCSettings, ZarrStorageSettings
 from bayes_cep.mesh.interpolation import NearestNeighborInterpolationStrategy
 from bayes_cep.optimization.initial_guess import FileInitialGuess, PriorMeanInitialGuess
-from bayes_cep.optimization.strategies import CustomLBFGSStrategy
+from bayes_cep.optimization.strategies import CustomLBFGSStrategy, NewtonCGStrategy
 from bayes_cep.posterior.eikonal_map import EikonalSolverSettings
 from bayes_cep.posterior.prior import PriorParameters
 from bayes_cep.preprocessing.ground_truth import (
@@ -130,6 +131,13 @@ MOMENT_FIT_TAUS = (0.3, 0.45, 0.6, 0.8, 1.0, 1.4, 2.0, 3.0)
 MAP_MAX_NUM_ITERATIONS = 2000
 MAP_GRADIENT_NORM_TOLERANCE = 1
 
+# Newton-CG polishing of a MAP estimate (Gauss-Newton Hessian products). The data curvature spans
+# six orders of magnitude (Laplace eigenvalues 2e6 .. 0.2 in the prior's Cameron-Martin metric), so
+# each outer iteration needs an inner solve of tens to hundreds of CG iterations at about a
+# millisecond each; a few tens of outer iterations are expected to suffice.
+NEWTON_CG_MAX_NUM_ITERATIONS = 100
+NEWTON_CG_GRADIENT_NORM_TOLERANCE = 1
+
 # Cross-validation of the prior parameters: the observations are split into folds, one is held out
 HELDOUT_NUM_FOLDS = 4
 HELDOUT_FIRST_FOLD_INDEX = 0
@@ -198,6 +206,17 @@ def reference_optimizer_strategy() -> CustomLBFGSStrategy:
         lbfgs_settings=CustomLBFGSSettings(
             maximum_num_iterations=MAP_MAX_NUM_ITERATIONS,
             gradient_norm_tolerance=MAP_GRADIENT_NORM_TOLERANCE,
+        )
+    )
+
+
+# ==================================================================================================
+def reference_newton_cg_strategy() -> NewtonCGStrategy:
+    """Cameron-Martin Newton-CG with the loose reference gradient-norm tolerance."""
+    return NewtonCGStrategy(
+        newton_cg_settings=NewtonCGSettings(
+            maximum_num_iterations=NEWTON_CG_MAX_NUM_ITERATIONS,
+            gradient_norm_tolerance=NEWTON_CG_GRADIENT_NORM_TOLERANCE,
         )
     )
 

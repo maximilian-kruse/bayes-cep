@@ -26,7 +26,11 @@ from bayes_cep.optimization.initial_guess import (
     PriorMeanInitialGuess,
     PriorSampleInitialGuess,
 )
-from bayes_cep.optimization.strategies import CustomLBFGSStrategy, ScipyLBFGSBStrategy
+from bayes_cep.optimization.strategies import (
+    CustomLBFGSStrategy,
+    NewtonCGStrategy,
+    ScipyLBFGSBStrategy,
+)
 from bayes_cep.posterior.eikonal_map import EikonalParameterToSolutionMap
 from bayes_cep.postprocessing.curve_plots import plot_histogram
 from bayes_cep.run.config import RunConfig
@@ -57,14 +61,15 @@ class HeldOutMapRunConfig(RunConfig):
     Attributes:
         problem (InferenceProblemConfig): The data and the model of the posterior; the likelihood
             uses only the training observations.
-        optimizer (CustomLBFGSStrategy | ScipyLBFGSBStrategy): Optimizer backend with its model.
+        optimizer (CustomLBFGSStrategy | ScipyLBFGSBStrategy | NewtonCGStrategy): Optimizer
+            backend with its model.
         initial_guess (PriorMeanInitialGuess | PriorSampleInitialGuess | FileInitialGuess): Where
             the optimization starts.
         split (HeldOutSplitSettings): The fold held out.
     """
 
     problem: InferenceProblemConfig
-    optimizer: CustomLBFGSStrategy | ScipyLBFGSBStrategy
+    optimizer: CustomLBFGSStrategy | ScipyLBFGSBStrategy | NewtonCGStrategy
     initial_guess: PriorMeanInitialGuess | PriorSampleInitialGuess | FileInitialGuess
     split: HeldOutSplitSettings
 

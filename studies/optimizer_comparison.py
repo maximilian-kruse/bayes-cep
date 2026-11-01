@@ -15,6 +15,7 @@ from bayes_cep.run.study import Axis, Product, StudySetup
 from single_runs.map import MapRun
 from single_runs.reference import (
     reference_map_config,
+    reference_newton_cg_strategy,
     reference_optimizer_strategy,
     reference_synthetic_preprocessing_config,
 )
@@ -30,7 +31,9 @@ REFERENCE_DATA_DIR = PREPROCESSING_STUDY.results_directory(
 STUDY = StudySetup(
     run_type=MapRun,
     name="optimizer_comparison",
-    description="MAP estimate of one problem with the custom L-BFGS and with scipy's L-BFGS-B.",
+    description=(
+        "MAP estimate of one problem with the custom L-BFGS, scipy's L-BFGS-B and Newton-CG."
+    ),
     base=reference_map_config(RAW_DIR, REFERENCE_DATA_DIR),
     sweep=Product(
         Axis(
@@ -38,6 +41,7 @@ STUDY = StudySetup(
             (
                 reference_optimizer_strategy(),
                 ScipyLBFGSBStrategy(ScipyLBFGSBSettings(maximum_num_iterations=1000)),
+                reference_newton_cg_strategy(),
             ),
         )
     ),

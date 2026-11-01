@@ -52,29 +52,36 @@ class EikonalSolverSettings:
 
 # ==================================================================================================
 class _DerivativeCache:
-    """Caches the eikonax adjoint solver for the most recently used parameter vector.
+    """Caches the eikonax derivative structures for the most recently used parameter vectors.
 
     Repeated gradient evaluations at exactly the same parameter vector (e.g. a gradient requested
-    twice by the caller) reuse the adjoint system instead of assembling it again. The match is
-    exact (`np.array_equal` on a private copy): a tolerance would let a nearby parameter vector,
-    such as an MCMC proposal with a small step width, reuse the adjoint of another state, and
-    storing the caller's array itself would let an in-place update of that array look like a hit.
+    twice by the caller, or many Jacobian products of a Newton-CG solve) reuse the adjoint system
+    instead of assembling it again. A few entries are kept, least recently used first out, so a
+    line search that evaluates gradients at trial points does not evict the structures of the
+    iterate. The match is exact (`np.array_equal` on a private copy): a tolerance would let a nearby
+    parameter vector, such as an MCMC proposal with a small step width, reuse the adjoint of
+    another state, and storing the caller's array itself would let an in-place update of that
+    array look like a hit.
     """
 
+    CAPACITY = 3
+
     def __init__(self) -> None:
-        self._parameter_vector: np.ndarray | None = None
-        self._derivative_solver: derivator.DerivativeSolver | None = None
-        self._sparse_partial_parameter: sp.coo_array | None = None
+        self._entries: list[
+            tuple[np.ndarray, derivator.DerivativeSolver, sp.coo_array]
+        ] = []  # most recently used last
 
     def get(
         self, parameter_vector: np.ndarray
     ) -> tuple[derivator.DerivativeSolver, sp.coo_array] | None:
         """Return the cached derivative structures if they belong to exactly `parameter_vector`."""
-        if self._parameter_vector is None or not np.array_equal(
-            parameter_vector, self._parameter_vector
+        for index, (cached_vector, derivative_solver, sparse_partial_parameter) in enumerate(
+            self._entries
         ):
-            return None
-        return self._derivative_solver, self._sparse_partial_parameter
+            if np.array_equal(parameter_vector, cached_vector):
+                self._entries.append(self._entries.pop(index))
+                return derivative_solver, sparse_partial_parameter
+        return None
 
     def set(
         self,
@@ -83,9 +90,10 @@ class _DerivativeCache:
         sparse_partial_parameter: sp.coo_array,
     ) -> None:
         """Cache the derivative structures for (a copy of) `parameter_vector`."""
-        self._parameter_vector = np.array(parameter_vector, copy=True)
-        self._derivative_solver = derivative_solver
-        self._sparse_partial_parameter = sparse_partial_parameter
+        self._entries.append(
+            (np.array(parameter_vector, copy=True), derivative_solver, sparse_partial_parameter)
+        )
+        del self._entries[: -self.CAPACITY]
 
 
 # ==================================================================================================

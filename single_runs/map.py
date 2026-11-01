@@ -29,7 +29,11 @@ from bayes_cep.optimization.initial_guess import (
     PriorMeanInitialGuess,
     PriorSampleInitialGuess,
 )
-from bayes_cep.optimization.strategies import CustomLBFGSStrategy, ScipyLBFGSBStrategy
+from bayes_cep.optimization.strategies import (
+    CustomLBFGSStrategy,
+    NewtonCGStrategy,
+    ScipyLBFGSBStrategy,
+)
 from bayes_cep.posterior.eikonal_map import EikonalParameterToSolutionMap
 from bayes_cep.postprocessing.curve_plots import (
     plot_error_by_distance,
@@ -79,13 +83,14 @@ class MapRunConfig(RunConfig):
 
     Attributes:
         problem (InferenceProblemConfig): The data and the model of the posterior.
-        optimizer (CustomLBFGSStrategy | ScipyLBFGSBStrategy): Optimizer backend with its model.
+        optimizer (CustomLBFGSStrategy | ScipyLBFGSBStrategy | NewtonCGStrategy): Optimizer
+            backend with its model.
         initial_guess (PriorMeanInitialGuess | PriorSampleInitialGuess | FileInitialGuess): Where
             the optimization starts.
     """
 
     problem: InferenceProblemConfig
-    optimizer: CustomLBFGSStrategy | ScipyLBFGSBStrategy
+    optimizer: CustomLBFGSStrategy | ScipyLBFGSBStrategy | NewtonCGStrategy
     initial_guess: PriorMeanInitialGuess | PriorSampleInitialGuess | FileInitialGuess
 
 

@@ -11,11 +11,12 @@ are changed by `--config.overrides dotted.path=value ...` (value as JSON, severa
 spaces), e.g. `--config.overrides problem.prior.kappa=0.1 num_samples=500`; the run then gets a
 new run id.
 Everything is written to `--run-dir`: `config.json`, `metadata.json`, `status.json`, `run.log`,
-`metrics.json` and the outputs of the run.
+`metrics.json` and the outputs of the run (with `--example-layout`, the records and logs in
+`metadata/`).
 
 The example data is the output of three runs, each in its own run directory, with the directories
-given in the pixi tasks (flat, with `--flat-results`); they are made in sequence by
-`pixi run example`, or one by one:
+given in the pixi tasks (with `--example-layout`: records in `metadata/`, results in `results/`);
+they are made in sequence by `pixi run example`, or one by one:
 
     pixi run example-preprocessing
     pixi run example-map
@@ -56,7 +57,7 @@ import tyro
 
 import single_runs
 from bayes_cep.run.config import TYPE_KEY, RunConfig
-from bayes_cep.run.directories import STATUS_RECORD
+from bayes_cep.run.directories import METADATA_DIR_NAME, STATUS_RECORD
 from bayes_cep.run.executor import Executor, ExecutorSettings, RunOutcome
 from bayes_cep.run.provenance import Environment
 from bayes_cep.run.registry import RunRegistry
@@ -244,8 +245,8 @@ def build_settings_type(registry: RunRegistry) -> type:
             overwrite (bool): Whether to replace an existing run directory. Only a directory that
                 is a run directory (has a status record) is replaced; the executor removes its
                 files.
-            flat_results (bool): Whether to write the result files directly into the run directory
-                instead of its `results/` subdirectory, as the example data does.
+            example_layout (bool): Whether to write the records and logs to the `metadata/`
+                subdirectory of the run directory, next to `results/`, as the example data does.
             wait (bool): Whether to wait for the run to finish. `--no-wait` queues the run on
                 SLURM and returns.
             executor (ExecutorSettings): Where and with which resources to run; `--executor.cluster
@@ -255,7 +256,7 @@ def build_settings_type(registry: RunRegistry) -> type:
         run_dir: Path
         config: config_type  # type: ignore[valid-type]
         overwrite: bool = False
-        flat_results: bool = False
+        example_layout: bool = False
         wait: bool = True
         executor: ExecutorSettings = ExecutorSettings()
 
@@ -288,7 +289,10 @@ def _check_run_directory_is_replaceable(run_dir: Path, overwrite: bool) -> None:
         SystemExit: If there is a previous run and `overwrite` is not set, or if the run directory
             is not empty and not one made by a run.
     """
-    if (run_dir / STATUS_RECORD).exists():
+    if any(
+        (record_dir / STATUS_RECORD).exists()
+        for record_dir in (run_dir, run_dir / METADATA_DIR_NAME)
+    ):
         if not overwrite:
             raise SystemExit(f"{run_dir} exists; pass --overwrite to replace it.")
     elif run_dir.exists() and any(run_dir.iterdir()):
@@ -311,14 +315,14 @@ def main(arguments: list[str] | None = None) -> None:
     run_dir = settings.run_dir
     _check_run_directory_is_replaceable(run_dir, settings.overwrite)
     run_type = registry.run_type_of(settings.config)
-    run = run_type(settings.config, flat_results=settings.flat_results)
+    run = run_type(settings.config, example_layout=settings.example_layout)
     executor = Executor(
         settings.executor, run_dir.parent / f"{run_dir.name}-jobs", job_name=run_dir.name
     )
     environment = Environment.collect_from_current_process()
     (outcome,) = executor.run([run], [run_dir], environment, settings.wait)
     if outcome == RunOutcome.FAILED:
-        print(f"Run failed, see {run_dir / STATUS_RECORD}", file=sys.stderr)
+        print(f"Run failed, see the status record in {run_dir}", file=sys.stderr)
         sys.exit(1)
 
 

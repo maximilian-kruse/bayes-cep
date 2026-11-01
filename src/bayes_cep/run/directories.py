@@ -6,6 +6,7 @@
                environment/ (pixi.lock, pyproject.toml, conda spec, source.patch)
   runs/<id>/                  RunDirectory: config.json, metadata.json, status.json,
                               run.log, metrics.json and the result files of the run
+                              (the example data: records in metadata/, results in results/)
   summary/     written by `write_run_table`
   jobs/        submitit job folders and logs (SLURM only)
 ```
@@ -56,6 +57,7 @@ METRICS_RECORD = "metrics.json"
 STATUS_RECORD = "status.json"
 LOG_FILE_NAME = "run.log"
 RESULTS_DIR_NAME = "results"
+METADATA_DIR_NAME = "metadata"
 PLOTS_DIR_NAME = "plots"
 RUN_RECORD_NAMES = frozenset(
     {CONFIG_RECORD, METADATA_RECORD, METRICS_RECORD, STATUS_RECORD, LOG_FILE_NAME}
@@ -196,21 +198,33 @@ class ArrayRecord:
 
 # ==================================================================================================
 class RunDirectory:
-    """The directory of one run; its records are directly in it.
+    """The directory of one run.
+
+    The records (`config.json`, `metadata.json`, `metrics.json`, `status.json`, `run.log`) are
+    directly in it, or, with `metadata_subdir`, in its `metadata/` subdirectory (the layout of the
+    example data, whose `results/` then holds the result files).
 
     Attributes:
         path (Path): The directory; it need not exist yet.
+        records_dir (Path): The directory the records are in.
     """
 
-    def __init__(self, path: Path) -> None:
-        """Wrap the directory `path`."""
+    def __init__(self, path: Path, metadata_subdir: bool = False) -> None:
+        """Wrap the directory `path`.
+
+        Args:
+            path (Path): The run directory.
+            metadata_subdir (bool): Whether the records are in `path / "metadata"` instead of
+                `path`. Defaults to `False`.
+        """
         self.path = path
+        self.records_dir = path / METADATA_DIR_NAME if metadata_subdir else path
 
     # ----------------------------------------------------------------------------------------------
     @property
     def log_path(self) -> Path:
         """The log file of the run."""
-        return self.path / LOG_FILE_NAME
+        return self.records_dir / LOG_FILE_NAME
 
     # ----------------------------------------------------------------------------------------------
     def clear_for_new_attempt(self) -> None:
@@ -222,12 +236,21 @@ class RunDirectory:
         if not self.path.exists():
             return
         for entry in self.path.iterdir():
-            if entry.name == STATUS_RECORD:
-                continue
-            if entry.is_dir() and not entry.is_symlink():
-                shutil.rmtree(entry)
-            else:
-                entry.unlink()
+            if entry == self.records_dir and entry != self.path:
+                for record in entry.iterdir():
+                    if record.name != STATUS_RECORD:
+                        self._remove(record)
+            elif not (self.records_dir == self.path and entry.name == STATUS_RECORD):
+                self._remove(entry)
+
+    # ----------------------------------------------------------------------------------------------
+    @staticmethod
+    def _remove(entry: Path) -> None:
+        """Remove a file, a link or a directory tree."""
+        if entry.is_dir() and not entry.is_symlink():
+            shutil.rmtree(entry)
+        else:
+            entry.unlink()
 
     # ----------------------------------------------------------------------------------------------
     def record_submitted(self) -> None:
@@ -241,15 +264,15 @@ class RunDirectory:
         The status starts afresh, and the metrics of any earlier attempt are removed, so that
         nothing of an earlier attempt can be mistaken for the result of this one.
         """
-        (self.path / METRICS_RECORD).unlink(missing_ok=True)
-        write_json_record(self.path / CONFIG_RECORD, config.to_json_dict())
-        write_json_record(self.path / METADATA_RECORD, metadata)
+        (self.records_dir / METRICS_RECORD).unlink(missing_ok=True)
+        write_json_record(self.records_dir / CONFIG_RECORD, config.to_json_dict())
+        write_json_record(self.records_dir / METADATA_RECORD, metadata)
         self._write_state(RunState.RUNNING, started=format_current_time())
 
     # ----------------------------------------------------------------------------------------------
     def record_success(self, metrics: dict[str, Any]) -> None:
         """Record the metrics and the end of a run that finished, as `DONE`."""
-        write_json_record(self.path / METRICS_RECORD, metrics)
+        write_json_record(self.records_dir / METRICS_RECORD, metrics)
         self._write_state(
             RunState.DONE,
             started=self._read_state().get("started"),
@@ -272,7 +295,7 @@ class RunDirectory:
         """The recorded metrics; empty unless the run is `DONE`."""
         if self.read_state() != RunState.DONE:
             return {}
-        return json.loads((self.path / METRICS_RECORD).read_text())
+        return json.loads((self.records_dir / METRICS_RECORD).read_text())
 
     # ----------------------------------------------------------------------------------------------
     def read_state(self) -> RunState:
@@ -283,7 +306,7 @@ class RunDirectory:
     # ----------------------------------------------------------------------------------------------
     def _read_state(self) -> dict[str, Any]:
         """The content of `status.json`; empty if there is none."""
-        path = self.path / STATUS_RECORD
+        path = self.records_dir / STATUS_RECORD
         return json.loads(path.read_text()) if path.exists() else {}
 
     # ----------------------------------------------------------------------------------------------
@@ -291,7 +314,7 @@ class RunDirectory:
         """Replace `status.json` by `state` and the entries that are set."""
         status = {"state": state.value}
         status.update({name: value for name, value in entries.items() if value is not None})
-        write_json_record(self.path / STATUS_RECORD, status)
+        write_json_record(self.records_dir / STATUS_RECORD, status)
 
 
 # ==================================================================================================

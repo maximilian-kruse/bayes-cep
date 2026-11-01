@@ -27,7 +27,7 @@ from typing import Literal
 
 import submitit
 
-from bayes_cep.run.directories import RunDirectory, RunState
+from bayes_cep.run.directories import RunState
 from bayes_cep.run.provenance import Environment
 from bayes_cep.run.template import Run
 
@@ -180,7 +180,7 @@ class Executor:
         This is the function of every task, in process and on SLURM. A failure is recorded in the
         status record of the run and reported, not raised.
         """
-        RunDirectory(run_dir).clear_for_new_attempt()
+        run.run_directory(run_dir).clear_for_new_attempt()
         if run.execute(run_dir, environment) == RunState.DONE:
             return RunOutcome.DONE
         print(
@@ -209,7 +209,9 @@ class Executor:
         wait: bool,
     ) -> list[RunOutcome]:
         """Submit the runs as one SLURM job array; wait for the jobs if `wait`."""
-        directories = [RunDirectory(run_dir) for run_dir in run_dirs]
+        directories = [
+            run.run_directory(run_dir) for run, run_dir in zip(runs, run_dirs, strict=True)
+        ]
         for directory in directories:
             directory.record_submitted()
         settings = self.settings

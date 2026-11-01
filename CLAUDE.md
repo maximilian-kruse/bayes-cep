@@ -27,8 +27,10 @@ change → run checks → review diff.
   `example` and `example-preprocessing`/`-map`/`-mcmc`/`-laplace` (regenerate the example data; map depends on preprocessing, mcmc and laplace on map). The
   example directories are arguments of these tasks in `pyproject.toml`, not defaults in Python code.
 - `example_data/` (git-tracked): `raw/` (mesh, fiber field, basis vectors) and the output of the
-  reference runs (`preprocessing/`, `map/`, `mcmc/` with the chain gitignored, `laplace/`), written flat
-  (`--flat-results`); other runs keep results in `results/`. `working_data/` (gitignored) holds
+  reference runs (`preprocessing/`, `map/`, `mcmc/` with the chain gitignored, `laplace/`), each with
+  `metadata/` (config, metadata, status, metrics, run and optimizer/sampler logs) and `results/` (the
+  result data), written with `--example-layout`; other runs keep their records in the run directory
+  and the results in `results/`. `working_data/` (gitignored) holds
   study directories.
 
 ## Architecture

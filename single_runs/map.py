@@ -50,7 +50,6 @@ from bayes_cep.run.directories import (
     METRICS_RECORD,
     PLOTS_DIR_NAME,
     ArrayRecord,
-    RunDirectory,
     resolve_repository_path,
 )
 from bayes_cep.run.progress import StepReporter, describe_array
@@ -157,7 +156,7 @@ class MapRun(Run[MapRunConfig]):
         problem = self.config.problem
         plots_dir = run_dir / PLOTS_DIR_NAME
         plots_dir.mkdir(exist_ok=True)
-        metrics = RunDirectory(run_dir).read_metrics()
+        metrics = self.run_directory(run_dir).read_metrics()
         data = PreprocessedData.load(resolve_repository_path(problem.data_dir))
         results = MapResults.load(self.results_dir(run_dir))
         mesh = RawDataDirectory.from_configured_path(problem.raw_dir).load_mesh()
@@ -233,7 +232,8 @@ class MapRun(Run[MapRunConfig]):
         assembled = assemble_posterior(problem, steps, logger)
         raw_data = RawDataDirectory.from_configured_path(problem.raw_dir)
         optimizer_logger_settings = LoggerSettings(
-            print_to_console=self.write_to_console, logfile_path=run_dir / OPTIMIZER_LOG_FILE_NAME
+            print_to_console=self.write_to_console,
+            logfile_path=self.records_dir(run_dir) / OPTIMIZER_LOG_FILE_NAME,
         )
         with BaseLogger(optimizer_logger_settings, prefix="map") as optimizer_logger:
             optimizer_name = type(self.config.optimizer).__name__

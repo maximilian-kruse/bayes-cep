@@ -50,7 +50,8 @@ class Run[ConfigT: RunConfig](ABC):
             subclass, next to the generic argument that types `config`.
         outputs (dict[str, str]): Description of the files a run writes, by path relative to the
             run directory; documented in the study description. Result files are listed with
-            their `results/` prefix, which is dropped with `flat_results`. A key ending in `/` (or
+            their `results/` prefix. Other files are records or logs of the run: they are in the run
+            directory, or in `metadata/` with `example_layout`. A key ending in `/` (or
             naming a directory) stands for everything below it. `execute` checks the files that
             were written against it (see `_check_outputs`); the plots are written by `report`, so
             the `plots/` entry is exempt.
@@ -61,9 +62,9 @@ class Run[ConfigT: RunConfig](ABC):
             default, keeps the run type off the command line; a study needs no name.
         config (ConfigT): The configuration of this run.
         write_to_console (bool): Whether progress is also printed to the console.
-        flat_results (bool): Whether result files are written directly into the run directory
-            instead of its `results/` subdirectory. Not part of the run's identity; for runs
-            whose directory is the result itself, like the example data.
+        example_layout (bool): Whether the records and logs of the run are written to the
+            `metadata/` subdirectory of the run directory instead of the run directory itself, next
+            to `results/`, as for the example data. Not part of the run's identity.
     """
 
     config_type: ClassVar[type[RunConfig]]
@@ -72,7 +73,7 @@ class Run[ConfigT: RunConfig](ABC):
     name: ClassVar[str | None] = None
 
     def __init__(
-        self, config: ConfigT, write_to_console: bool = True, flat_results: bool = False
+        self, config: ConfigT, write_to_console: bool = True, example_layout: bool = False
     ) -> None:
         """Pair the run with its configuration.
 
@@ -80,8 +81,8 @@ class Run[ConfigT: RunConfig](ABC):
             config (ConfigT): Run configuration; must be an instance of `config_type`.
             write_to_console (bool): Whether progress is also printed to the console. Defaults to
                 `True`.
-            flat_results (bool): Whether result files go directly into the run directory instead
-                of `results/`. Defaults to `False`.
+            example_layout (bool): Whether records and logs go to `metadata/` of the run directory.
+                Defaults to `False`.
 
         Raises:
             TypeError: If the subclass does not define `config_type` and `outputs`, or if
@@ -103,12 +104,22 @@ class Run[ConfigT: RunConfig](ABC):
             )
         self.config = config
         self.write_to_console = write_to_console
-        self.flat_results = flat_results
+        self.example_layout = example_layout
 
     # ----------------------------------------------------------------------------------------------
     def results_dir(self, run_dir: Path) -> Path:
         """The directory the result files of the run are in (created by the run when writing)."""
-        return run_dir if self.flat_results else run_dir / RESULTS_DIR_NAME
+        return run_dir / RESULTS_DIR_NAME
+
+    # ----------------------------------------------------------------------------------------------
+    def run_directory(self, run_dir: Path) -> RunDirectory:
+        """The run directory `run_dir`, with the record layout of this run."""
+        return RunDirectory(run_dir, metadata_subdir=self.example_layout)
+
+    # ----------------------------------------------------------------------------------------------
+    def records_dir(self, run_dir: Path) -> Path:
+        """The directory of the records and logs of the run (`run_dir`, or its `metadata/`)."""
+        return self.run_directory(run_dir).records_dir
 
     # ----------------------------------------------------------------------------------------------
     @abstractmethod
@@ -175,8 +186,8 @@ class Run[ConfigT: RunConfig](ABC):
         """Compare the files the run wrote with `outputs`.
 
         Exempt are the run records (`RUN_RECORD_NAMES`, e.g. `metrics.json`, written by `execute`
-        after `_execute`) and the `plots/` entry (written later by `report`). With `flat_results`
-        the `results/` prefix of a key is dropped.
+        after `_execute`) and the `plots/` entry (written later by `report`). Keys that are not
+        results or plots are looked up in the records directory.
 
         Args:
             run_dir (Path): Run directory, after `_execute`.
@@ -187,18 +198,23 @@ class Run[ConfigT: RunConfig](ABC):
             FileNotFoundError: If a declared output, not in `optional_outputs`, was not written.
         """
 
+        records_prefix = self.records_dir(run_dir).relative_to(run_dir)
+
         def output_path(key: str) -> str:
             path = key.rstrip("/")
-            return path.removeprefix(f"{RESULTS_DIR_NAME}/") if self.flat_results else path
+            if path.split("/")[0] in (RESULTS_DIR_NAME, PLOTS_DIR_NAME):
+                return path
+            return (records_prefix / path).as_posix()
 
         declared = {output_path(key) for key in self.outputs}
-        declared -= {PLOTS_DIR_NAME} | RUN_RECORD_NAMES
+        records = {(records_prefix / name).as_posix() for name in RUN_RECORD_NAMES}
+        declared -= {PLOTS_DIR_NAME} | records
         optional = {output_path(key) for key in self.optional_outputs}
         missing = sorted(path for path in declared - optional if not (run_dir / path).exists())
         if missing:
             raise FileNotFoundError(f"Declared outputs were not written: {missing}")
         written = [path.relative_to(run_dir) for path in run_dir.rglob("*") if path.is_file()]
-        exempt = {Path(name) for name in RUN_RECORD_NAMES}
+        exempt = {Path(record) for record in records}
         undeclared = sorted(
             path.as_posix()
             for path in written
@@ -247,7 +263,7 @@ class Run[ConfigT: RunConfig](ABC):
             RunState: The final state, `DONE` or `FAILED`.
         """
         run_dir.mkdir(parents=True, exist_ok=True)
-        directory = RunDirectory(run_dir)
+        directory = self.run_directory(run_dir)
         try:
             if environment is None:
                 environment = Environment.collect_from_current_process()

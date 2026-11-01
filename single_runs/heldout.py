@@ -153,7 +153,8 @@ class HeldOutMapRun(Run[HeldOutMapRunConfig]):
         assembled = assemble_posterior(problem, steps, logger, training_positions)
 
         optimizer_logger_settings = LoggerSettings(
-            print_to_console=self.write_to_console, logfile_path=run_dir / OPTIMIZER_LOG_FILE_NAME
+            print_to_console=self.write_to_console,
+            logfile_path=self.records_dir(run_dir) / OPTIMIZER_LOG_FILE_NAME,
         )
         with BaseLogger(optimizer_logger_settings, prefix="map") as optimizer_logger:
             optimizer_name = type(self.config.optimizer).__name__

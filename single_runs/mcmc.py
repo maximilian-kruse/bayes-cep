@@ -52,7 +52,6 @@ from bayes_cep.run.directories import (
     METRICS_RECORD,
     PLOTS_DIR_NAME,
     ArrayRecord,
-    RunDirectory,
     resolve_repository_path,
 )
 from bayes_cep.run.progress import StepReporter, describe_array
@@ -287,7 +286,7 @@ class McmcRun(Run[McmcRunConfig]):
         config = self.config
         plots_dir = run_dir / PLOTS_DIR_NAME
         plots_dir.mkdir(exist_ok=True)
-        metrics = RunDirectory(run_dir).read_metrics()
+        metrics = self.run_directory(run_dir).read_metrics()
         diagnostics = ChainDiagnostics.load(self.results_dir(run_dir))
         summary = PosteriorSummary.load(self.results_dir(run_dir))
         data = PreprocessedData.load(resolve_repository_path(config.problem.data_dir))
@@ -391,7 +390,8 @@ class McmcRun(Run[McmcRunConfig]):
             approximation=sampling_problem.approximation,
         )
         sampler_logger_settings = LoggerSettings(
-            print_to_console=self.write_to_console, logfile_path=run_dir / SAMPLER_LOG_FILE_NAME
+            print_to_console=self.write_to_console,
+            logfile_path=self.records_dir(run_dir) / SAMPLER_LOG_FILE_NAME,
         )
         with BaseLogger(sampler_logger_settings, prefix="mcmc") as sampler_logger:
             with steps.step(f"Building the sampler ({config.sampler.algorithm.name})"):

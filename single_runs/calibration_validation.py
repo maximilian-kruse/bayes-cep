@@ -29,8 +29,10 @@ needed, the run takes seconds.
 
 Classes:
     CalibrationValidationRunConfig: The projected chains and the grid of candidates.
+    TargetCalibrationValidationRunConfig: The same with a shrinkage target.
     CalibrationValidationResults: The arrays the run writes.
     CalibrationValidationRun: The validation run.
+    TargetCalibrationValidationRun: The validation run with a shrinkage target.
 
 Functions:
     low_rank_update_covariance: The low-rank candidate.
@@ -42,7 +44,7 @@ from dataclasses import dataclass
 from enum import IntEnum
 from itertools import product
 from pathlib import Path
-from typing import ClassVar, override
+from typing import ClassVar, cast, override
 
 import numpy as np
 from ls_bayesian.common.logging import BaseLogger
@@ -56,6 +58,7 @@ from bayes_cep.run.template import Metrics, Run
 from single_runs.chain_projection import ChainProjectionResults
 
 SPECTRUM_QUANTILES = (0.0, 0.1, 0.5, 0.9, 1.0)
+_TARGET_FILE_NAME = "averaged_covariance.npy"  # in the results of a `HessianAverageRun`
 _JITTER = 1e-12  # relative to the mean variance, against a covariance that is not definite
 
 
@@ -67,6 +70,7 @@ class CandidateKind(IntEnum):
     EMPIRICAL = 1
     REGULARIZED = 2
     LOW_RANK = 3
+    TARGET = 4
 
 
 # ==================================================================================================
@@ -297,6 +301,22 @@ class CalibrationValidationRun(Run[CalibrationValidationRunConfig]):
         """No plots: the arrays are analysed in a notebook."""
 
     # ----------------------------------------------------------------------------------------------
+    def _prepare(self, eigenvalues: np.ndarray) -> None:
+        """Load what the candidates of a subclass need; `eigenvalues` are those of the chains."""
+
+    # ----------------------------------------------------------------------------------------------
+    def _candidate_list(self) -> list[tuple]:
+        """The candidates as (kind, k, shrinkage, inflation, minimum ratio, rank)."""
+        return _candidates(self.config)
+
+    # ----------------------------------------------------------------------------------------------
+    def _covariance(
+        self, candidate: tuple, empirical: np.ndarray, laplace_variances: np.ndarray
+    ) -> np.ndarray:
+        """The covariance of a candidate, estimated from the training chains."""
+        return _build_covariance(candidate, empirical, laplace_variances)
+
+    # ----------------------------------------------------------------------------------------------
     @override
     def _execute(self, run_dir: Path, logger: BaseLogger) -> Metrics:
         config = self.config
@@ -319,7 +339,8 @@ class CalibrationValidationRun(Run[CalibrationValidationRunConfig]):
                 f"num_coefficients up to {max(config.num_coefficients)} exceed the "
                 f"{eigenvalues.size} eigenpairs."
             )
-        candidates = _candidates(config)
+        self._prepare(eigenvalues)
+        candidates = self._candidate_list()
         logger.info(f"      {len(candidates)} candidates, {num_chains} folds")
 
         log_likelihood = np.empty((len(candidates), num_chains))
@@ -335,7 +356,7 @@ class CalibrationValidationRun(Run[CalibrationValidationRunConfig]):
                     for index, candidate in enumerate(candidates):
                         if candidate[1] != k:
                             continue
-                        covariance = _build_covariance(candidate, empirical, laplace_variances)
+                        covariance = self._covariance(candidate, empirical, laplace_variances)
                         (
                             log_likelihood[index, held_out],
                             mean_shift[index, held_out],
@@ -381,3 +402,85 @@ class CalibrationValidationRun(Run[CalibrationValidationRunConfig]):
             if reference:
                 metrics[f"k{k}_reference_log_likelihood"] = float(mean_score[reference[0]])
         return metrics
+
+
+# ==================================================================================================
+@dataclass(frozen=True)
+class TargetCalibrationValidationRunConfig(CalibrationValidationRunConfig):
+    r"""The validation with the empirical covariance shrunk towards a target.
+
+    Attributes:
+        target_paths (tuple[Path, ...]): The `results` directories of runs of
+            [`HessianAverageRun`][single_runs.hessian_average.HessianAverageRun]; the target $T$ is
+            the mean of their `averaged_covariance` (the average of the inverse precisions over
+            states of a chain). It covers at least the largest number of coefficients.
+        target_weights (tuple[float, ...]): Weights $w\in[0, 1]$ of the target in the candidates
+            $(1 - w)S + wT$, with $S$ the empirical covariance of the training chains; the
+            variance inflation and the lower bound of the grid are applied to the mixture.
+    """
+
+    target_paths: tuple[Path, ...]
+    target_weights: tuple[float, ...]
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        if len(self.target_paths) == 0 or len(self.target_weights) == 0:
+            raise ValueError("target_paths and target_weights must not be empty.")
+        if min(self.target_weights) < 0.0 or max(self.target_weights) > 1.0:
+            raise ValueError(f"target_weights must be in [0, 1], got {self.target_weights}.")
+
+
+# ==================================================================================================
+class TargetCalibrationValidationRun(CalibrationValidationRun):
+    """The validation of the calibrations, with the Hessian average as a shrinkage target."""
+
+    config_type = TargetCalibrationValidationRunConfig
+    name = "calibration-validation-target"
+
+    # ----------------------------------------------------------------------------------------------
+    @override
+    def input_files(self) -> list[Path]:
+        config = cast(TargetCalibrationValidationRunConfig, self.config)
+        return [
+            *super().input_files(),
+            *(resolve_repository_path(path) / _TARGET_FILE_NAME for path in config.target_paths),
+        ]
+
+    # ----------------------------------------------------------------------------------------------
+    @override
+    def _prepare(self, eigenvalues: np.ndarray) -> None:
+        config = cast(TargetCalibrationValidationRunConfig, self.config)
+        targets = [
+            np.load(resolve_repository_path(path) / _TARGET_FILE_NAME)
+            for path in config.target_paths
+        ]
+        if min(target.shape[0] for target in targets) < max(config.num_coefficients):
+            raise ValueError(
+                f"The targets cover {min(target.shape[0] for target in targets)} coefficients, "
+                f"fewer than num_coefficients = {max(config.num_coefficients)}."
+            )
+        size = min(target.shape[0] for target in targets)
+        self._target = np.mean([target[:size, :size] for target in targets], axis=0)
+
+    # ----------------------------------------------------------------------------------------------
+    @override
+    def _candidate_list(self) -> list[tuple]:
+        config = cast(TargetCalibrationValidationRunConfig, self.config)
+        candidates = super()._candidate_list()
+        for k in config.num_coefficients:
+            for weight, inflation, ratio in product(
+                config.target_weights, config.variance_inflations, config.minimum_variance_ratios
+            ):
+                candidates.append((CandidateKind.TARGET, k, weight, inflation, ratio, 0))
+        return candidates
+
+    # ----------------------------------------------------------------------------------------------
+    @override
+    def _covariance(
+        self, candidate: tuple, empirical: np.ndarray, laplace_variances: np.ndarray
+    ) -> np.ndarray:
+        kind, k, weight, inflation, ratio, _ = candidate
+        if kind is not CandidateKind.TARGET:
+            return super()._covariance(candidate, empirical, laplace_variances)
+        mixture = (1.0 - weight) * empirical + weight * self._target[:k, :k]
+        return regularize_coefficient_covariance(mixture, laplace_variances, 0.0, inflation, ratio)

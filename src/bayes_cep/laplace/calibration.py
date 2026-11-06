@@ -32,6 +32,8 @@ Classes:
 Functions:
     estimate_subspace_moments: Stream over pilot chains for the moments.
     regularize_coefficient_covariance: Shrink, inflate and bound the empirical covariance.
+    build_gaussian_from_coefficient_covariance: The Gaussian with a given covariance of the leading
+        coefficients.
     calibrate_approximation: The Laplace approximation with the empirical covariance in the
         leading subspace.
 """
@@ -331,6 +333,56 @@ def regularize_coefficient_covariance(
 
 
 # ==================================================================================================
+def build_gaussian_from_coefficient_covariance(
+    approximation: LaplaceApproximation,
+    reference: ReferenceCovariance,
+    covariance: np.ndarray[tuple[int, int], np.dtype[np.float64]],
+    mean: np.ndarray[tuple[int], np.dtype[np.float64]],
+    seed: int,
+) -> tuple[np.ndarray, LaplaceApproximation, int]:
+    r"""The Gaussian with the covariance $\Sigma$ for the leading coefficients and the prior
+    covariance elsewhere.
+
+    With $\Sigma = R\operatorname{diag}(s)R^T$ it is a `LowRankGaussian` with the eigenvectors
+    $V_kR$ and the eigenvalues $1/s_j - 1$ in the span of the leading $k$ eigenvectors, and the
+    eigenpairs of the approximation beyond $k$. The variances $s_j$ are cut off at the prior
+    variance (the eigenvalues must not be negative) and from below at a fraction of the smallest
+    Laplace variance.
+
+    Args:
+        approximation (LaplaceApproximation): The Laplace approximation whose eigenvectors the
+            coefficients refer to.
+        reference (ReferenceCovariance): The prior covariance $\Gamma_0$ of the Gaussian.
+        covariance (np.ndarray): Symmetric covariance of the first $k$ coefficients, shape
+            `(k, k)`.
+        mean (np.ndarray): Mean of the Gaussian, shape `(num_vertices,)`.
+        seed (int): Seed of the sample generator of the Gaussian.
+
+    Returns:
+        tuple[np.ndarray, LaplaceApproximation, int]: The covariance after the cut-offs, the
+            Gaussian with its eigenpairs, and the number of variances cut off at the prior
+            variance.
+    """
+    eigenvalues = approximation.eigenpairs.eigenvalues
+    eigenvectors = approximation.eigenpairs.eigenvectors
+    num_coefficients = covariance.shape[0]
+    laplace_variances = 1.0 / (1.0 + eigenvalues[:num_coefficients])
+    variances, rotation = np.linalg.eigh(0.5 * (covariance + covariance.T))
+    variances = np.maximum(variances, _MINIMUM_VARIANCE_FRACTION * laplace_variances.min())
+    num_clipped = int(np.sum(variances > _MAXIMUM_VARIANCE))
+    variances = np.minimum(variances, _MAXIMUM_VARIANCE)
+    limited = (rotation * variances) @ rotation.T
+    new_eigenvalues = np.concatenate([1.0 / variances - 1.0, eigenvalues[num_coefficients:]])
+    new_eigenvectors = np.concatenate(
+        [eigenvectors[:, :num_coefficients] @ rotation, eigenvectors[:, num_coefficients:]], axis=1
+    )
+    order = np.argsort(-new_eigenvalues)
+    eigenpairs = GeneralizedEigenpairs(new_eigenvalues[order], new_eigenvectors[:, order])
+    gaussian = LowRankGaussian(reference, eigenpairs, mean=mean, seed=seed)
+    return limited, LaplaceApproximation(gaussian=gaussian, eigenpairs=eigenpairs), num_clipped
+
+
+# ==================================================================================================
 def calibrate_approximation(
     approximation: LaplaceApproximation,
     reference: ReferenceCovariance,
@@ -363,7 +415,6 @@ def calibrate_approximation(
         ValueError: If the moments have more coefficients than the approximation has eigenpairs.
     """
     eigenvalues = approximation.eigenpairs.eigenvalues
-    eigenvectors = approximation.eigenpairs.eigenvectors
     num_coefficients = moments.coefficient_mean.size
     if num_coefficients > eigenvalues.size:
         raise ValueError(
@@ -379,22 +430,12 @@ def calibrate_approximation(
         settings.variance_inflation,
         settings.minimum_variance_ratio,
     )
-    variances, rotation = np.linalg.eigh(0.5 * (covariance + covariance.T))
-    variances = np.maximum(variances, _MINIMUM_VARIANCE_FRACTION * laplace_variances.min())
-    num_clipped = int(np.sum(variances > _MAXIMUM_VARIANCE))
-    variances = np.minimum(variances, _MAXIMUM_VARIANCE)
-    covariance = (rotation * variances) @ rotation.T
-
-    new_eigenvalues = np.concatenate([1.0 / variances - 1.0, eigenvalues[num_coefficients:]])
-    new_eigenvectors = np.concatenate(
-        [eigenvectors[:, :num_coefficients] @ rotation, eigenvectors[:, num_coefficients:]], axis=1
-    )
-    order = np.argsort(-new_eigenvalues)
-    eigenpairs = GeneralizedEigenpairs(new_eigenvalues[order], new_eigenvectors[:, order])
     mean = moments.mean if settings.recenter else approximation.gaussian.mean
-    gaussian = LowRankGaussian(reference, eigenpairs, mean=mean, seed=seed)
+    covariance, gaussian_approximation, num_clipped = build_gaussian_from_coefficient_covariance(
+        approximation, reference, covariance, mean, seed
+    )
     return CalibratedApproximation(
-        approximation=LaplaceApproximation(gaussian=gaussian, eigenpairs=eigenpairs),
+        approximation=gaussian_approximation,
         laplace_variances=laplace_variances,
         empirical_variance_ratios=np.diag(empirical) / laplace_variances,
         calibrated_covariance=covariance,

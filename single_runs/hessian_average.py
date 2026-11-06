@@ -22,6 +22,9 @@ Each is scored on every chain of the pilot set like the candidates of
 the Laplace covariance and the empirical covariance of the pooled chains (not held out: a ceiling
 for a Gaussian fitted to these chains). The Gaussian is centered at the pooled mean of the chains.
 
+Functions:
+    project_gauss_newton_hessian: The Gauss-Newton Hessian at a state in the coefficients.
+
 Classes:
     HessianAverageRunConfig: The posterior, the chain whose states are used and the scored chains.
     HessianAverageResults: The arrays the run writes.
@@ -40,6 +43,7 @@ from ls_bayesian.mcmc.storage import open_zarr_samples
 
 from bayes_cep.laplace.builder import LaplaceBuilder, LaplaceSettings
 from bayes_cep.laplace.hessian import GaussNewtonMisfitHessian
+from bayes_cep.posterior.builder import PosteriorComponents
 from bayes_cep.run.config import RunConfig
 from bayes_cep.run.directories import ArrayRecord, resolve_repository_path
 from bayes_cep.run.progress import StepReporter, describe_array
@@ -142,6 +146,32 @@ _FILES = HessianAverageResults.FILE_NAMES  # the names of the result files
 
 
 # ==================================================================================================
+def project_gauss_newton_hessian(
+    components: PosteriorComponents,
+    state: np.ndarray[tuple[int], np.dtype[np.float64]],
+    eigenvectors: np.ndarray[tuple[int, int], np.dtype[np.float64]],
+) -> np.ndarray[tuple[int, int], np.dtype[np.float64]]:
+    r"""The Gauss-Newton Hessian at a state in the coefficients of the Laplace eigenvectors.
+
+    With the $\Gamma_0^{-1}$-orthonormal eigenvectors $V$, the coefficients $c = V^T\Gamma_0^{-1}
+    (u - m)$ have the prior precision $I$, and the Gauss-Newton Hessian at $u$ is $K = V^TH(u)V$:
+    one product per eigenvector, about a millisecond each.
+
+    Args:
+        components (PosteriorComponents): Forward map and likelihood.
+        state (np.ndarray): The state $u$, shape `(num_vertices,)`.
+        eigenvectors (np.ndarray): The eigenvectors $V$, shape `(num_vertices, K)`.
+
+    Returns:
+        np.ndarray: The symmetric matrix $K$, shape `(K, K)`.
+    """
+    hessian = GaussNewtonMisfitHessian(components.forward_map, components.likelihood, state)
+    products = np.stack([hessian.apply(vector) for vector in eigenvectors.T], axis=1)
+    projected = eigenvectors.T @ products
+    return 0.5 * (projected + projected.T)
+
+
+# ==================================================================================================
 class HessianAverageRun(Run[HessianAverageRunConfig]):
     """Average the Gauss-Newton Hessian over chain states and score the resulting covariance."""
 
@@ -209,13 +239,10 @@ class HessianAverageRun(Run[HessianAverageRunConfig]):
         state_diagonal = np.empty((indices.size, rank))
         for position, index in enumerate(indices):
             start = time.perf_counter()
-            hessian = GaussNewtonMisfitHessian(
-                components.forward_map, components.likelihood, np.asarray(chain[int(index)])
-            )
             with steps.step(f"State {position + 1} of {indices.size} (sample {index})"):
-                products = np.stack([hessian.apply(vector) for vector in eigenvectors.T], axis=1)
-                projected = eigenvectors.T @ products
-                projected = 0.5 * (projected + projected.T)
+                projected = project_gauss_newton_hessian(
+                    components, np.asarray(chain[int(index)]), eigenvectors
+                )
             hessian_sum += projected
             covariance_sum += np.linalg.inv(identity + projected)
             state_diagonal[position] = np.diag(projected)

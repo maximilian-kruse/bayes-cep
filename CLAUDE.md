@@ -108,6 +108,14 @@ constants and `reference_*_config` factories:
   (calibration stored once, shared by a sweep), `rejection_diagnostics.py` and `hmc_trajectory.py`
   (where PMALA rejects; Hamiltonian trajectories of `PHMCAlgorithm`). `mcmc.py` streams chain
   diagnostics (`ChainDiagnostics`); its `report` only plots them.
+- Diagnostics of the sampling geometry (read stored chains or their projections, no config of the
+  posterior beyond the problem): `chain_projection.py` (chain onto the Laplace eigenvectors),
+  `hessian_drift.py` and `hessian_average.py` (Gauss-Newton Hessian at chain states, its average as
+  covariance), `calibration_validation.py` (leave-one-chain-out scores of calibrations, with a
+  Hessian-average shrinkage target), `averaged_gaussian.py` (Gaussian from the Hessian average,
+  read like a calibration), `mass_stability.py` (PHMC step-angle limit per mass matrix),
+  `gradient_check.py` (adjoint gradient against finite differences by local acceptance).
+  Eigenvectors are reproducible across runs on one machine (the runs check the eigenvalues).
 - `prior_fit.py` scores a kappa/tau grid against a patient field (`studies/prior_moment_fit.py`).
 - Post-processing scripts in `scripts/`, run after `bcep-study collect`:
   `postprocess_map_study.py`, `postprocess_mcmc_study.py`, `postprocess_prior_fit_study.py`,

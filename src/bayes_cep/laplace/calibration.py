@@ -31,6 +31,7 @@ Classes:
 
 Functions:
     estimate_subspace_moments: Stream over pilot chains for the moments.
+    regularize_coefficient_covariance: Shrink, inflate and bound the empirical covariance.
     calibrate_approximation: The Laplace approximation with the empirical covariance in the
         leading subspace.
 """
@@ -290,6 +291,46 @@ def estimate_subspace_moments(
 
 
 # ==================================================================================================
+def regularize_coefficient_covariance(
+    empirical: np.ndarray[tuple[int, int], np.dtype[np.float64]],
+    laplace_variances: np.ndarray[tuple[int], np.dtype[np.float64]],
+    coupling_shrinkage: float,
+    variance_inflation: float,
+    minimum_variance_ratio: float,
+) -> np.ndarray[tuple[int, int], np.dtype[np.float64]]:
+    r"""Shrink, inflate and bound the empirical covariance of the leading coefficients.
+
+    In this order: shrinkage of the coupling towards the diagonal, the inflation, and the lower
+    bound relative to the Laplace covariance (the eigenvalues of $L^{-1/2}\Sigma L^{-1/2}$ are
+    raised to the minimum ratio, $L = \operatorname{diag}(1/(1+\lambda_i))$). The upper bound at
+    the prior variance, which the low-rank Gaussian needs, is applied by
+    [`calibrate_approximation`][bayes_cep.laplace.calibration.calibrate_approximation].
+
+    Args:
+        empirical (np.ndarray): Symmetric empirical covariance $\Sigma$, shape `(k, k)`.
+        laplace_variances (np.ndarray): Laplace variances $1/(1+\lambda_i)$ of the $k$
+            coefficients, shape `(k,)`.
+        coupling_shrinkage (float): Weight of the diagonal, see `CalibrationSettings`.
+        variance_inflation (float): Factor multiplying the covariance after the shrinkage.
+        minimum_variance_ratio (float): Lower bound in units of the Laplace covariance; 0 turns it
+            off.
+
+    Returns:
+        np.ndarray: The regularized covariance, shape `(k, k)`.
+    """
+    covariance = (1.0 - coupling_shrinkage) * empirical
+    covariance = covariance + coupling_shrinkage * np.diag(np.diag(empirical))
+    covariance = variance_inflation * covariance
+    if minimum_variance_ratio > 0.0:
+        scale = np.sqrt(laplace_variances)
+        whitened = covariance / np.outer(scale, scale)
+        values, vectors = np.linalg.eigh(0.5 * (whitened + whitened.T))
+        values = np.maximum(values, minimum_variance_ratio)
+        covariance = (vectors * values) @ vectors.T * np.outer(scale, scale)
+    return covariance
+
+
+# ==================================================================================================
 def calibrate_approximation(
     approximation: LaplaceApproximation,
     reference: ReferenceCovariance,
@@ -330,17 +371,14 @@ def calibrate_approximation(
             f"{eigenvalues.size} eigenpairs."
         )
     laplace_variances = 1.0 / (1.0 + eigenvalues[:num_coefficients])
-    empirical = moments.coefficient_covariance
-    empirical = 0.5 * (empirical + empirical.T)
-    covariance = (1.0 - settings.coupling_shrinkage) * empirical
-    covariance = covariance + settings.coupling_shrinkage * np.diag(np.diag(empirical))
-    covariance = settings.variance_inflation * covariance
-    if settings.minimum_variance_ratio > 0.0:
-        scale = np.sqrt(laplace_variances)
-        whitened = covariance / np.outer(scale, scale)
-        values, vectors = np.linalg.eigh(0.5 * (whitened + whitened.T))
-        values = np.maximum(values, settings.minimum_variance_ratio)
-        covariance = (vectors * values) @ vectors.T * np.outer(scale, scale)
+    empirical = 0.5 * (moments.coefficient_covariance + moments.coefficient_covariance.T)
+    covariance = regularize_coefficient_covariance(
+        empirical,
+        laplace_variances,
+        settings.coupling_shrinkage,
+        settings.variance_inflation,
+        settings.minimum_variance_ratio,
+    )
     variances, rotation = np.linalg.eigh(0.5 * (covariance + covariance.T))
     variances = np.maximum(variances, _MINIMUM_VARIANCE_FRACTION * laplace_variances.min())
     num_clipped = int(np.sum(variances > _MAXIMUM_VARIANCE))

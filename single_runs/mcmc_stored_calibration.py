@@ -23,10 +23,17 @@ from ls_bayesian.common.logging import BaseLogger
 from bayes_cep.laplace.calibration import CalibratedGaussianRecord
 from bayes_cep.laplace.reference_covariance import PriorReferenceCovariance
 from bayes_cep.mcmc.measures import LowRankGaussianMeasure
+from bayes_cep.optimization.initial_guess import (
+    ChainStateInitialGuess,
+    FileInitialGuess,
+    PriorMeanInitialGuess,
+    PriorSampleInitialGuess,
+)
 from bayes_cep.run.directories import resolve_repository_path
 from bayes_cep.run.progress import StepReporter
 from single_runs.inference import assemble_posterior_components
 from single_runs.mcmc import McmcRun, McmcRunConfig, SamplingProblem
+from single_runs.mcmc_laplace import LaplaceSampleInitialState
 
 
 # ==================================================================================================
@@ -35,6 +42,10 @@ class StoredCalibrationMcmcRunConfig(McmcRunConfig):
     """The configuration of the plain run and of the calibration it is preconditioned by.
 
     Attributes:
+        initial_state (PriorMeanInitialGuess | PriorSampleInitialGuess | FileInitialGuess |
+            ChainStateInitialGuess | LaplaceSampleInitialState): As in the plain run, or a draw from
+            the calibrated Gaussian (`LaplaceSampleInitialState`, whatever the Gaussian it is
+            drawn from is called), e.g. an overdispersed start.
         calibration_path (Path): The `results` directory of a finished calibration run of this
             posterior; a relative path is relative to the repository. The files of the calibrated
             Gaussian in it are hashed into the metadata of the run.
@@ -42,6 +53,13 @@ class StoredCalibrationMcmcRunConfig(McmcRunConfig):
             from it would use.
     """
 
+    initial_state: (
+        PriorMeanInitialGuess
+        | PriorSampleInitialGuess
+        | FileInitialGuess
+        | ChainStateInitialGuess
+        | LaplaceSampleInitialState
+    )
     calibration_path: Path
     sample_seed: int
 
@@ -70,6 +88,16 @@ class StoredCalibrationMcmcRun(McmcRun):
             *super().input_files(),
             *(calibration_dir / name for name in CalibratedGaussianRecord.FILE_NAMES.values()),
         ]
+
+    # ----------------------------------------------------------------------------------------------
+    @override
+    def _build_initial_state(
+        self, sampling_problem: SamplingProblem
+    ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
+        initial_state = self.config.initial_state
+        if isinstance(initial_state, LaplaceSampleInitialState):
+            return initial_state.build(cast(LowRankGaussianMeasure, sampling_problem.approximation))
+        return super()._build_initial_state(sampling_problem)
 
     # ----------------------------------------------------------------------------------------------
     @override

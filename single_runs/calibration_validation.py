@@ -413,7 +413,8 @@ class TargetCalibrationValidationRunConfig(CalibrationValidationRunConfig):
         target_paths (tuple[Path, ...]): The `results` directories of runs of
             [`HessianAverageRun`][single_runs.hessian_average.HessianAverageRun]; the target $T$ is
             the mean of their `averaged_covariance` (the average of the inverse precisions over
-            states of a chain). It covers at least the largest number of coefficients.
+            states of a chain). Numbers of coefficients beyond what it covers get no target
+            candidates.
         target_weights (tuple[float, ...]): Weights $w\in[0, 1]$ of the target in the candidates
             $(1 - w)S + wT$, with $S$ the empirical covariance of the training chains; the
             variance inflation and the lower bound of the grid are applied to the mixture.
@@ -454,12 +455,12 @@ class TargetCalibrationValidationRun(CalibrationValidationRun):
             np.load(resolve_repository_path(path) / _TARGET_FILE_NAME)
             for path in config.target_paths
         ]
-        if min(target.shape[0] for target in targets) < max(config.num_coefficients):
-            raise ValueError(
-                f"The targets cover {min(target.shape[0] for target in targets)} coefficients, "
-                f"fewer than num_coefficients = {max(config.num_coefficients)}."
-            )
         size = min(target.shape[0] for target in targets)
+        if size < min(config.num_coefficients):
+            raise ValueError(
+                f"The targets cover {size} coefficients, fewer than the smallest "
+                f"num_coefficients = {min(config.num_coefficients)}."
+            )
         self._target = np.mean([target[:size, :size] for target in targets], axis=0)
 
     # ----------------------------------------------------------------------------------------------
@@ -468,6 +469,8 @@ class TargetCalibrationValidationRun(CalibrationValidationRun):
         config = cast(TargetCalibrationValidationRunConfig, self.config)
         candidates = super()._candidate_list()
         for k in config.num_coefficients:
+            if k > self._target.shape[0]:  # the target covers fewer coefficients: no candidates
+                continue
             for weight, inflation, ratio in product(
                 config.target_weights, config.variance_inflations, config.minimum_variance_ratios
             ):

@@ -2,9 +2,11 @@ r"""Eikonal activation-time forward map for fiber-orientation inference.
 
 Classes:
     EikonalSolverSettings: Settings for the eikonax forward solver, derivator, and tensor field.
+    SolverStatistics: Summary of the iteration counts of all forward solves of one map.
     EikonalParameterToSolutionMap: `ls_bayesian` `ParameterToSolutionMap` wrapping eikonax.
 """
 
+from collections import Counter
 from dataclasses import dataclass
 from typing import override
 
@@ -14,7 +16,7 @@ import scipy.sparse as sp
 from eikonax import derivator, linalg, preprocessing, solver, tensorfield
 from ls_bayesian.posterior import interfaces
 
-from bayes_cep.mesh.interpolation import InterpolationStrategy
+from bayes_cep.mesh.interpolation import InterpolationStrategy, compute_used_vertex_mask
 from bayes_cep.mesh.topology import get_triangle_connectivity
 from bayes_cep.posterior.fiber_tensor import FiberTensor, FiberTensorSettings
 
@@ -48,6 +50,135 @@ class EikonalSolverSettings:
     use_soft_update: bool
     softminmax_order: int
     softminmax_cutoff: float
+
+
+# ==================================================================================================
+@dataclass(frozen=True)
+class SolverStatistics:
+    """Summary of the forward solves a map has performed.
+
+    A solve counts as unconverged if it used all `max_num_iterations` iterations. With the
+    float32 solver the stop criterion `solver_tolerance` can lie below the spacing of the floats at
+    the largest activation time; such a solve runs until the iteration cap, so a high share of
+    unconverged solves is also a cost signal, not only a correctness one.
+
+    Attributes:
+        num_solves (int): Number of forward solves.
+        num_unconverged (int): Number of solves that used `max_num_iterations` iterations.
+        max_num_iterations (int): The iteration cap of the solver.
+        iterations_min (int): Smallest iteration count (0 if there was no solve).
+        iterations_mean (float): Mean iteration count (NaN if there was no solve).
+        iterations_max (int): Largest iteration count (0 if there was no solve).
+        iterations_quantiles (dict[str, float]): Quantiles `q50`, `q90`, `q99` of the iteration
+            counts (NaN if there was no solve).
+        final_change_max (float): Largest sup-norm change between the last two iterates over all
+            solves (NaN if there was no solve); to be compared with `solver_tolerance`.
+        solver_tolerance (float): The configured stop tolerance.
+    """
+
+    num_solves: int
+    num_unconverged: int
+    max_num_iterations: int
+    iterations_min: int
+    iterations_mean: float
+    iterations_max: int
+    iterations_quantiles: dict[str, float]
+    final_change_max: float
+    solver_tolerance: float
+
+    # ----------------------------------------------------------------------------------------------
+    def to_metrics(self, prefix: str = "solver_") -> dict[str, float | int]:
+        """Flat scalar entries for a run's `metrics.json`, keys starting with `prefix`."""
+        metrics: dict[str, float | int] = {
+            "num_solves": self.num_solves,
+            "num_unconverged": self.num_unconverged,
+            "iterations_min": self.iterations_min,
+            "iterations_mean": self.iterations_mean,
+            "iterations_max": self.iterations_max,
+            "final_change_max": self.final_change_max,
+            "tolerance": self.solver_tolerance,
+            "max_num_iterations": self.max_num_iterations,
+        }
+        metrics.update(
+            {f"iterations_{name}": value for name, value in self.iterations_quantiles.items()}
+        )
+        return {f"{prefix}{name}": value for name, value in metrics.items()}
+
+    # ----------------------------------------------------------------------------------------------
+    def describe(self) -> str:
+        """One line for a run log."""
+        if self.num_solves == 0:
+            return "eikonal solver: no solve was performed"
+        return (
+            f"eikonal solver: {self.num_solves} solves, iterations min/mean/max "
+            f"{self.iterations_min}/{self.iterations_mean:.1f}/{self.iterations_max} "
+            f"(cap {self.max_num_iterations}), {self.num_unconverged} at the cap, "
+            f"largest final change {self.final_change_max:.2e} "
+            f"(tolerance {self.solver_tolerance:.1e})"
+        )
+
+
+# ==================================================================================================
+class _SolverRecorder:
+    """Accumulates the iteration counts of the forward solves in constant memory.
+
+    The counts are kept as a histogram (at most `max_num_iterations + 1` bins), not as a list, so a
+    chain of millions of solves costs nothing.
+    """
+
+    def __init__(self, max_num_iterations: int, solver_tolerance: float) -> None:
+        self._max_num_iterations = max_num_iterations
+        self._solver_tolerance = solver_tolerance
+        self._counts: Counter[int] = Counter()
+        self._final_change_max = float("nan")
+
+    @property
+    def max_num_iterations(self) -> int:
+        """The iteration cap of the solver."""
+        return self._max_num_iterations
+
+    @property
+    def solver_tolerance(self) -> float:
+        """The configured stop tolerance."""
+        return self._solver_tolerance
+
+    def record(self, num_iterations: int, final_change: float) -> None:
+        """Record one solve."""
+        self._counts[num_iterations] += 1
+        if not final_change <= self._final_change_max:  # also true while it is still NaN
+            self._final_change_max = final_change
+
+    def statistics(self) -> SolverStatistics:
+        """Summarize all solves recorded so far."""
+        num_solves = sum(self._counts.values())
+        if num_solves == 0:
+            return SolverStatistics(
+                0, 0, self._max_num_iterations, 0, float("nan"), 0,
+                {"q50": float("nan"), "q90": float("nan"), "q99": float("nan")},
+                float("nan"), self._solver_tolerance,
+            )  # fmt: skip
+        values = np.array(sorted(self._counts), dtype=np.int64)
+        weights = np.array([self._counts[int(value)] for value in values], dtype=np.int64)
+        cumulative = np.cumsum(weights)
+
+        def quantile(level: float) -> float:
+            return float(values[np.searchsorted(cumulative, level * num_solves)])
+
+        return SolverStatistics(
+            num_solves=num_solves,
+            num_unconverged=int(self._counts[self._max_num_iterations]),
+            max_num_iterations=self._max_num_iterations,
+            iterations_min=int(values[0]),
+            iterations_mean=float(np.sum(values * weights) / num_solves),
+            iterations_max=int(values[-1]),
+            iterations_quantiles={
+                "q50": quantile(0.5),
+                "q90": quantile(0.9),
+                "q99": quantile(0.99),
+            },
+            final_change_max=self._final_change_max,
+            solver_tolerance=self._solver_tolerance,
+        )
 
 
 # ==================================================================================================
@@ -131,6 +262,7 @@ class EikonalParameterToSolutionMap(interfaces.ParameterToSolutionMap):
         vertices = pv_mesh.points
         simplices = get_triangle_connectivity(pv_mesh)
         self._vertex_to_simplex_matrix = interpolation_strategy.assemble_matrix(vertices, simplices)
+        self._used_vertex_mask = compute_used_vertex_mask(self._vertex_to_simplex_matrix)
 
         num_simplices = simplices.shape[0]
         fiber_tensor_settings = FiberTensorSettings(
@@ -165,6 +297,33 @@ class EikonalParameterToSolutionMap(interfaces.ParameterToSolutionMap):
         self._solver = solver.Solver(mesh_data, solver_data, initial_sites)
         self._derivator = derivator.PartialDerivator(mesh_data, derivator_data, initial_sites)
         self._cache = _DerivativeCache()
+        self._solver_recorder = _SolverRecorder(
+            settings.max_num_iterations, settings.solver_tolerance
+        )
+
+    # ----------------------------------------------------------------------------------------------
+    @property
+    def used_vertex_mask(self) -> np.ndarray[tuple[int], np.dtype[np.bool_]]:
+        """Vertices that enter the forward model, shape `(num_vertices,)`; a copy.
+
+        The data misfit does not depend on the others, they are determined by the prior alone.
+        Statistics of an inference (errors, variances, effective sample sizes) are computed on
+        these vertices only.
+        """
+        return self._used_vertex_mask.copy()
+
+    # ----------------------------------------------------------------------------------------------
+    @property
+    def solver_statistics(self) -> SolverStatistics:
+        """Iteration counts of all forward solves this map has performed so far."""
+        return self._solver_recorder.statistics()
+
+    # ----------------------------------------------------------------------------------------------
+    def reset_solver_statistics(self) -> None:
+        """Forget the solves so far, e.g. to count only those of the sampling phase of a run."""
+        self._solver_recorder = _SolverRecorder(
+            self._solver_recorder.max_num_iterations, self._solver_recorder.solver_tolerance
+        )
 
     # ----------------------------------------------------------------------------------------------
     @override
@@ -176,6 +335,7 @@ class EikonalParameterToSolutionMap(interfaces.ParameterToSolutionMap):
             self._vertex_to_simplex_matrix @ parameter_vector
         )
         solution = self._solver.run(tensor_field_instance)
+        self._solver_recorder.record(int(solution.num_iterations), float(solution.tolerance))
         return np.asarray(solution.values, dtype=np.float64)
 
     # ----------------------------------------------------------------------------------------------

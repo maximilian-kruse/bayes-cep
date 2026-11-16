@@ -19,7 +19,6 @@ from typing import ClassVar, override
 
 import numpy as np
 import pyvista as pv
-import scipy.sparse as sp
 from ls_bayesian.common.logging import BaseLogger, LoggerSettings
 from ls_bayesian.optimization.optimizer import OptimizationResult
 
@@ -261,9 +260,6 @@ class MapRun(Run[MapRunConfig]):
             logger.info(f"      {describe_array('initial guess [rad]', initial_guess)}")
             mesh = raw_data.load_mesh()
             basis_vectors = raw_data.load_basis_vectors()
-            to_simplices = problem.interpolation.assemble_matrix(
-                mesh.points, get_triangle_connectivity(mesh)
-            )
             stage_results: list[OptimizationResult] = []
             stage_metrics: dict[str, float | bool | str] = {}
             stage_seconds: list[float] = []
@@ -295,18 +291,21 @@ class MapRun(Run[MapRunConfig]):
                 if number < num_stages:
                     with steps.step(f"Evaluating the error metrics of stage {number}"):
                         stage_errors = self._compute_error_metrics(
-                            assembled, estimate, mesh, basis_vectors, to_simplices
+                            assembled, estimate, mesh, basis_vectors
                         )
                     stage_metrics[f"stage{number}_error_mean_deg"] = stage_errors["error_mean_deg"]
                     stage_metrics[f"stage{number}_error_median_deg"] = stage_errors[
                         "error_median_deg"
                     ]
 
+        solver_statistics = assembled.forward_map.solver_statistics
+        logger.info(f"      {solver_statistics.describe()}")
+        solver_metrics = solver_statistics.to_metrics()
         loss_history, gradient_norm_history, stage_end_indices = self._join_histories(stage_results)
         final = stage_results[-1]
         with steps.step("Evaluating the error metrics"):
             error_metrics = self._compute_error_metrics(
-                assembled, final.result, mesh, basis_vectors, to_simplices
+                assembled, final.result, mesh, basis_vectors
             )
         logger.info(
             f"      axial error of the MAP: mean {error_metrics['error_mean_deg']:.3f} deg, "
@@ -327,6 +326,7 @@ class MapRun(Run[MapRunConfig]):
             "gradient_norm_initial": self._first_or_nan(gradient_norm_history),
             "gradient_norm_final": self._last_or_nan(gradient_norm_history),
             "seconds_optimization": float(sum(stage_seconds)),
+            **solver_metrics,
             **stage_metrics,
             **error_metrics,
         }
@@ -393,21 +393,24 @@ class MapRun(Run[MapRunConfig]):
         estimate: np.ndarray[tuple[int], np.dtype[np.float64]],
         mesh: pv.UnstructuredGrid,
         basis_vectors: np.ndarray[tuple[int, int, int], np.dtype[np.float64]],
-        to_simplices: sp.coo_array,
     ) -> dict[str, float]:
         """Compare the estimate with the ground truth: axial error, losses and activation times.
 
-        The forward model only sees the per-simplex values, so the angular error is measured
-        there: vertices that no simplex takes its value from are constrained by the prior only.
+        The angular error is measured at the used vertices only, the ones that enter the forward
+        model (`EikonalParameterToSolutionMap.used_vertex_mask`); the others are constrained by
+        the prior alone. Before 2026-11-15 it was averaged over the simplices, which weights a
+        vertex by the number of simplices that take its value: error numbers of earlier runs are
+        not comparable.
         """
         data = assembled.data
         log_posterior = assembled.log_posterior
-        ground_truth_simplices = to_simplices @ data.ground_truth
-        difference = compute_axial_data_diff(to_simplices @ estimate, ground_truth_simplices)
+        used = assembled.forward_map.used_vertex_mask
+        difference = compute_axial_data_diff(estimate[used], data.ground_truth[used])
         metrics = compute_axial_error_metrics(difference)
+        metrics["num_used_vertices"] = int(used.sum())
 
         prior_mean_error = np.degrees(
-            np.abs(compute_axial_data_diff(to_simplices @ data.prior_mean, ground_truth_simplices))
+            np.abs(compute_axial_data_diff(data.prior_mean[used], data.ground_truth[used]))
         ).mean()
         metrics["prior_mean_error_mean_deg"] = float(prior_mean_error)
         metrics["skill_score"] = compute_skill_score(metrics["error_mean_deg"], prior_mean_error)

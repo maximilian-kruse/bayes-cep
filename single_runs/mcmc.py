@@ -41,6 +41,7 @@ from bayes_cep.optimization.initial_guess import (
     PriorMeanInitialGuess,
     PriorSampleInitialGuess,
 )
+from bayes_cep.posterior.eikonal_map import EikonalParameterToSolutionMap
 from bayes_cep.postprocessing.curve_plots import (
     plot_autocorrelation,
     plot_histogram,
@@ -64,6 +65,7 @@ from bayes_cep.statistics.axial_statistics import (
     compute_axial_mean_and_variance,
     compute_standard_deviation_degrees,
 )
+from bayes_cep.statistics.vertex_selection import ColumnSelectedSampleStore, scatter_to_vertices
 from single_runs.data import PreprocessedData, RawDataDirectory
 from single_runs.inference import InferenceProblemConfig, assemble_posterior
 
@@ -158,6 +160,9 @@ class McmcRunConfig(RunConfig):
 class PosteriorSummary(ArrayRecord):
     r"""The axial posterior mean and variance of the chain after the burn-in.
 
+    Computed on the used vertices only (those that enter the forward model); the other entries
+    are `nan`.
+
     Attributes:
         axial_mean (np.ndarray): Axial (mod-$\pi$) mean angle [rad] per vertex in
             $(-\pi/2, \pi/2]$, shape `(num_vertices,)`: the angle of the mean of the doubled-angle
@@ -180,6 +185,9 @@ class PosteriorSummary(ArrayRecord):
 @dataclass(frozen=True)
 class ChainDiagnostics(ArrayRecord):
     """The arrays of the chain diagnostics.
+
+    The per-vertex arrays are computed on the used vertices only (those that enter the forward
+    model); the other entries are `nan` (`False` for `truncated`).
 
     Attributes:
         effective_sample_size (np.ndarray): Split-chain effective sample size per vertex, shape
@@ -222,6 +230,9 @@ class SamplingProblem:
 
     Attributes:
         log_posterior (LogPosterior): The posterior; its prior is the reference measure.
+        forward_map (EikonalParameterToSolutionMap): The forward map of the posterior. Its used
+            vertices are the ones the chain statistics are computed on, and the run reports the
+            iteration counts of the solves of the sampling phase.
         approximation (GaussianMeasure | None): Gaussian approximation of the posterior for the
             preconditioned algorithms, `None` for the others.
         metrics (Metrics): Entries of the run's metrics that come from setting up the problem.
@@ -230,6 +241,7 @@ class SamplingProblem:
     """
 
     log_posterior: LogPosterior
+    forward_map: EikonalParameterToSolutionMap
     approximation: GaussianMeasure | None = None
     metrics: Metrics = field(default_factory=dict)
     results: ArrayRecord | None = None
@@ -361,7 +373,8 @@ class McmcRun(Run[McmcRunConfig]):
         self, steps: StepReporter, logger: BaseLogger
     ) -> SamplingProblem:
         """Build the posterior to sample; the algorithm of this run uses no approximation."""
-        return SamplingProblem(assemble_posterior(self.config.problem, steps, logger).log_posterior)
+        assembled = assemble_posterior(self.config.problem, steps, logger)
+        return SamplingProblem(assembled.log_posterior, assembled.forward_map)
 
     # ----------------------------------------------------------------------------------------------
     def _build_initial_state(
@@ -396,6 +409,7 @@ class McmcRun(Run[McmcRunConfig]):
         with BaseLogger(sampler_logger_settings, prefix="mcmc") as sampler_logger:
             with steps.step(f"Building the sampler ({config.sampler.algorithm.name})"):
                 sampler = mcmc_builder.build(logger=sampler_logger)
+            sampling_problem.forward_map.reset_solver_statistics()
             sampling_start = time.perf_counter()
             with steps.step(f"Sampling {config.num_samples} states"):
                 sampler.run(
@@ -406,26 +420,40 @@ class McmcRun(Run[McmcRunConfig]):
                     seed=config.seed,
                 )
             sampling_seconds = time.perf_counter() - sampling_start
+        solver_statistics = sampling_problem.forward_map.solver_statistics
+        logger.info(f"      {solver_statistics.describe()}")
+        solver_metrics = solver_statistics.to_metrics()
+        used_vertex_indices = np.flatnonzero(sampling_problem.forward_map.used_vertex_mask)
+        logger.info(
+            f"      statistics on the {used_vertex_indices.size} used vertices; the other "
+            "vertices are nan in the stored arrays"
+        )
         acceptance_rate = float(mcmc_builder.outputs[0].all_values[-1])
         logger.info(f"      final acceptance rate: {acceptance_rate:.3f}")
         with steps.step("Computing the posterior summary"):
-            summary = self._compute_posterior_summary(results_dir)
+            summary = self._compute_posterior_summary(results_dir, used_vertex_indices)
             summary.save(results_dir)
         logger.info(
             "      "
             + describe_array(
                 "axial posterior std [deg]",
-                compute_standard_deviation_degrees(summary.axial_variance),
+                compute_standard_deviation_degrees(summary.axial_variance)[used_vertex_indices],
             )
         )
         with steps.step("Computing the chain diagnostics"):
-            diagnostics = self._compute_chain_diagnostics(results_dir)
+            diagnostics = self._compute_chain_diagnostics(results_dir, used_vertex_indices)
             diagnostics.save(results_dir)
         effective_sample_size = diagnostics.effective_sample_size
-        posterior_std_degrees = compute_standard_deviation_degrees(summary.axial_variance)
-        logger.info(f"      {describe_array('effective sample size', effective_sample_size)}")
+        posterior_std_degrees = compute_standard_deviation_degrees(summary.axial_variance)[
+            used_vertex_indices
+        ]
+        logger.info(
+            "      "
+            + describe_array("effective sample size", effective_sample_size[used_vertex_indices])
+        )
         return {
             **sampling_problem.metrics,
+            **solver_metrics,
             "acceptance_rate": acceptance_rate,
             "seconds_sampling": sampling_seconds,
             "effective_sample_size_min": float(np.nanmin(effective_sample_size)),
@@ -441,22 +469,35 @@ class McmcRun(Run[McmcRunConfig]):
             ),
             "posterior_std_mean_deg": float(np.mean(posterior_std_degrees)),
             "posterior_std_max_deg": float(np.max(posterior_std_degrees)),
-            "fraction_truncated": float(diagnostics.truncated.mean()),
+            "fraction_truncated": float(diagnostics.truncated[used_vertex_indices].mean()),
+            "num_used_vertices": int(used_vertex_indices.size),
         }
 
     # ----------------------------------------------------------------------------------------------
-    def _compute_posterior_summary(self, results_dir: Path) -> PosteriorSummary:
-        """Stream over the stored chain for the axial mean and variance of all vertices."""
+    def _compute_posterior_summary(
+        self, results_dir: Path, used_vertex_indices: np.ndarray
+    ) -> PosteriorSummary:
+        """Stream over the stored chain for the axial mean and variance of the used vertices.
+
+        The arrays have the length of all vertices; the unused ones are `nan`.
+        """
         chain = open_zarr_samples(results_dir / SAMPLE_STORE_NAME)
         axial_mean, axial_variance = compute_axial_mean_and_variance(
-            chain, self.config.diagnostics.burn_in
+            ColumnSelectedSampleStore(chain, used_vertex_indices), self.config.diagnostics.burn_in
         )
-        return PosteriorSummary(axial_mean=axial_mean, axial_variance=axial_variance)
+        num_vertices = chain.shape[1]
+        return PosteriorSummary(
+            axial_mean=scatter_to_vertices(axial_mean, used_vertex_indices, num_vertices),
+            axial_variance=scatter_to_vertices(axial_variance, used_vertex_indices, num_vertices),
+        )
 
     # ----------------------------------------------------------------------------------------------
-    def _compute_chain_diagnostics(self, results_dir: Path) -> ChainDiagnostics:
-        """Stream over the stored chain for the effective sample size of all vertices; the
-        configured vertices are read into memory for their trace and autocorrelation."""
+    def _compute_chain_diagnostics(
+        self, results_dir: Path, used_vertex_indices: np.ndarray
+    ) -> ChainDiagnostics:
+        """Stream over the stored chain for the effective sample size of the used vertices (`nan`
+        at the others); the configured vertices are read into memory for their trace and
+        autocorrelation."""
         config = self.config
         settings = config.diagnostics
         chain = open_zarr_samples(results_dir / SAMPLE_STORE_NAME)
@@ -466,8 +507,18 @@ class McmcRun(Run[McmcRunConfig]):
                 f"plotted_components {settings.plotted_components} must be smaller than the "
                 f"number of vertices {num_vertices}."
             )
+        unused_components = sorted(set(settings.plotted_components) - set(used_vertex_indices))
+        if unused_components:
+            raise ValueError(
+                f"plotted_components {unused_components} are vertices that enter no simplex "
+                "(see `compute_used_vertex_mask`); choose used vertices."
+            )
         indices = np.array(settings.plotted_components, dtype=np.int64)
-        result = compute_axial_effective_sample_size(chain, settings.max_lag, settings.burn_in)
+        result = compute_axial_effective_sample_size(
+            ColumnSelectedSampleStore(chain, used_vertex_indices),
+            settings.max_lag,
+            settings.burn_in,
+        )
         traces = np.empty((num_samples, 0))
         autocorrelation = np.empty((settings.max_lag + 1, 0))
         if indices.size > 0:
@@ -476,9 +527,15 @@ class McmcRun(Run[McmcRunConfig]):
                 traces, settings.max_lag, settings.burn_in
             )
         return ChainDiagnostics(
-            effective_sample_size=result.effective_sample_size,
-            integrated_autocorrelation_time=result.integrated_autocorrelation_time,
-            truncated=result.truncated,
+            effective_sample_size=scatter_to_vertices(
+                result.effective_sample_size, used_vertex_indices, num_vertices
+            ),
+            integrated_autocorrelation_time=scatter_to_vertices(
+                result.integrated_autocorrelation_time, used_vertex_indices, num_vertices
+            ),
+            truncated=scatter_to_vertices(
+                result.truncated, used_vertex_indices, num_vertices, fill_value=False
+            ),
             component_indices=indices,
             component_traces=traces,
             component_autocorrelation=autocorrelation,

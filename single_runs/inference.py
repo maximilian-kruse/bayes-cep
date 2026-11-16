@@ -13,6 +13,7 @@ Classes:
 Functions:
     assemble_posterior: Load the mesh and the preprocessed data and build the posterior.
     assemble_posterior_components: The same, without composing the parts into a posterior.
+    load_used_vertex_mask: The vertices that enter the forward model, without building a posterior.
 """
 
 from dataclasses import dataclass
@@ -25,9 +26,11 @@ from ls_bayesian.posterior.posterior import LogPosterior
 from bayes_cep.mesh.interpolation import (
     LinearInterpolationStrategy,
     NearestNeighborInterpolationStrategy,
+    compute_used_vertex_mask,
 )
+from bayes_cep.mesh.topology import get_triangle_connectivity
 from bayes_cep.posterior.builder import PosteriorBuilder, PosteriorComponents, PosteriorSettings
-from bayes_cep.posterior.eikonal_map import EikonalSolverSettings
+from bayes_cep.posterior.eikonal_map import EikonalParameterToSolutionMap, EikonalSolverSettings
 from bayes_cep.posterior.likelihood import LikelihoodSettings
 from bayes_cep.posterior.prior import PriorParameters
 from bayes_cep.run.directories import resolve_repository_path
@@ -79,10 +82,13 @@ class AssembledPosterior:
         log_posterior (LogPosterior): The log posterior of the preprocessed data; its `prior` is
             the prior.
         data (PreprocessedData): The data the posterior was built from.
+        forward_map (EikonalParameterToSolutionMap): The forward map the posterior evaluates; its
+            `solver_statistics` summarize the forward solves of the run.
     """
 
     log_posterior: LogPosterior
     data: PreprocessedData
+    forward_map: EikonalParameterToSolutionMap
 
 
 # ==================================================================================================
@@ -125,8 +131,9 @@ def assemble_posterior(
     """
     builder, data = _load_posterior_builder(problem, steps, logger, observation_positions)
     with steps.step("Building the posterior"):
-        log_posterior = builder.build()
-    return AssembledPosterior(log_posterior, data)
+        components = builder.build_components()
+        log_posterior = components.to_log_posterior(builder.posterior_logger)
+    return AssembledPosterior(log_posterior, data, components.forward_map)
 
 
 # ==================================================================================================
@@ -209,3 +216,21 @@ def _load_posterior_builder(
         interpolation_strategy=problem.interpolation,
     )
     return builder, data
+
+
+# ==================================================================================================
+def load_used_vertex_mask(problem: InferenceProblemConfig) -> np.ndarray:
+    """The vertices that enter the forward model of the problem, shape `(num_vertices,)`.
+
+    The same mask as `EikonalParameterToSolutionMap.used_vertex_mask`, from the mesh and the
+    interpolation alone, for runs that post-process stored results without building a posterior.
+
+    Args:
+        problem (InferenceProblemConfig): Which mesh and which interpolation.
+
+    Returns:
+        np.ndarray: Boolean mask, true for the used vertices.
+    """
+    mesh = RawDataDirectory.from_configured_path(problem.raw_dir).load_mesh()
+    matrix = problem.interpolation.assemble_matrix(mesh.points, get_triangle_connectivity(mesh))
+    return compute_used_vertex_mask(matrix)

@@ -144,6 +144,7 @@ class StoredLaplaceMcmcRun(McmcRun):
         )
         return SamplingProblem(
             log_posterior=assembled.components.to_log_posterior(),
+            forward_map=assembled.components.forward_map,
             approximation=LowRankGaussianMeasure(gaussian),
             metrics={
                 "num_eigenpairs": int(eigenvalues.size),

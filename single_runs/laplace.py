@@ -92,8 +92,14 @@ class LaplaceResults(ArrayRecord):
             marginals, unlike `axial_variance`.
         axial_mean (np.ndarray): Axial mean angle [rad] of the samples in $(-\pi/2, \pi/2]$,
             shape `(num_vertices,)`.
+
+        The three variance and mean arrays are `nan` at the vertices that enter no simplex (see
+        `compute_used_vertex_mask`); the statistics are reported on the used vertices only.
         axial_variance (np.ndarray): Axial variance of the samples, shape `(num_vertices,)`; as
             `PosteriorSummary.axial_variance` of the MCMC run.
+
+        `pointwise_variance`, `axial_mean` and `axial_variance` are `nan` at the vertices that
+        enter no simplex (`compute_used_vertex_mask`): all statistics are on the used vertices.
     """
 
     FILE_NAMES: ClassVar[Mapping[str, str]] = {
@@ -186,8 +192,9 @@ class LaplaceRun(Run[LaplaceRunConfig]):
             plots_dir / SPECTRUM_PLOT_FILE_NAME,
             "eigenvalues of the misfit Hessian relative to the prior precision",
         )
+        pointwise_std_degrees = compute_standard_deviation_degrees(results.pointwise_variance)
         plot_histogram(
-            compute_standard_deviation_degrees(results.pointwise_variance),
+            pointwise_std_degrees[np.isfinite(pointwise_std_degrees)],
             plots_dir / STD_HISTOGRAM_PLOT_FILE_NAME,
             "pointwise standard deviation [deg]",
             "pointwise standard deviation of the angle (samples)",
@@ -223,10 +230,15 @@ class LaplaceRun(Run[LaplaceRunConfig]):
             )
             pointwise_variance = samples.var(axis=0, ddof=1)
             axial_mean, axial_variance = compute_axial_mean_and_variance(samples)
+        # Statistics are reported on the used vertices; the others are nan.
+        used = assembled.components.forward_map.used_vertex_mask
+        for field_values in (pointwise_variance, axial_mean, axial_variance):
+            field_values[~used] = np.nan
+        logger.info(f"      statistics on the {int(used.sum())} used vertices of {used.size}")
         pointwise_std_degrees = compute_standard_deviation_degrees(pointwise_variance)
         axial_std_degrees = compute_standard_deviation_degrees(axial_variance)
-        logger.info(f"      {describe_array('pointwise std [deg]', pointwise_std_degrees)}")
-        logger.info(f"      {describe_array('axial std [deg]', axial_std_degrees)}")
+        logger.info(f"      {describe_array('pointwise std [deg]', pointwise_std_degrees[used])}")
+        logger.info(f"      {describe_array('axial std [deg]', axial_std_degrees[used])}")
 
         LaplaceResults(
             eigenvalues=eigenpairs.eigenvalues,
@@ -241,9 +253,10 @@ class LaplaceRun(Run[LaplaceRunConfig]):
             "eigenvalue_min": float(eigenpairs.eigenvalues[-1]),
             "log_determinant_ratio": approximation.gaussian.compute_log_determinant_ratio(),
             "seconds_approximation": approximation_seconds,
-            "pointwise_std_mean_deg": float(np.mean(pointwise_std_degrees)),
-            "pointwise_std_min_deg": float(np.min(pointwise_std_degrees)),
-            "pointwise_std_max_deg": float(np.max(pointwise_std_degrees)),
-            "axial_std_mean_deg": float(np.mean(axial_std_degrees)),
-            "axial_std_max_deg": float(np.max(axial_std_degrees)),
+            "pointwise_std_mean_deg": float(np.nanmean(pointwise_std_degrees)),
+            "pointwise_std_min_deg": float(np.nanmin(pointwise_std_degrees)),
+            "pointwise_std_max_deg": float(np.nanmax(pointwise_std_degrees)),
+            "axial_std_mean_deg": float(np.nanmean(axial_std_degrees)),
+            "axial_std_max_deg": float(np.nanmax(axial_std_degrees)),
+            "num_used_vertices": int(used.sum()),
         }

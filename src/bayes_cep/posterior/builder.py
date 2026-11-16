@@ -118,6 +118,12 @@ class PosteriorBuilder:
         self._posterior_logger = posterior_logger
 
     # ----------------------------------------------------------------------------------------------
+    @property
+    def posterior_logger(self) -> BaseLogger | None:
+        """The logger of the composed `LogPosterior`, `None` if nothing is logged."""
+        return self._posterior_logger
+
+    # ----------------------------------------------------------------------------------------------
     def build(self) -> posterior.LogPosterior:
         """Build the prior, forward map, and likelihood, then compose a `LogPosterior`.
 

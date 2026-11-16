@@ -102,6 +102,7 @@ class CalibratedMcmcRun(PreconditionedMcmcRun):
         )
         return SamplingProblem(
             log_posterior=outcome.assembled.components.to_log_posterior(),
+            forward_map=outcome.assembled.components.forward_map,
             approximation=LowRankGaussianMeasure(outcome.calibrated.approximation.gaussian),
             metrics=calibration_metrics(outcome),
             results=calibration_results(outcome),

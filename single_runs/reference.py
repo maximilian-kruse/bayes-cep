@@ -128,9 +128,12 @@ MOMENT_FIT_SEED = 0
 MOMENT_FIT_KAPPAS = (0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.6, 0.8)
 MOMENT_FIT_TAUS = (0.3, 0.45, 0.6, 0.8, 1.0, 1.4, 2.0, 3.0)
 
-# MAP optimizer
+# MAP optimizer. The gradient norm is the Cameron-Martin norm of the gradient representer. The
+# single-precision adjoint has an error in this norm of about 3.6 at the nominal MAP (float64
+# reference, 261101 problem), and the nominal MAP stalled at 4.6, so the tolerance has to be above
+# that: 10.
 MAP_MAX_NUM_ITERATIONS = 2000
-MAP_GRADIENT_NORM_TOLERANCE = 1
+MAP_GRADIENT_NORM_TOLERANCE = 10
 
 # The reference MAP has two stages: L-BFGS gets close to the MAP estimate, Newton-CG polishes it
 MAP_LBFGS_STAGE_MAX_NUM_ITERATIONS = 1000
@@ -142,7 +145,7 @@ MAP_LBFGS_STAGE_MAX_NUM_ITERATIONS = 1000
 # when the decrease the quadratic model predicts for an iteration is below the noise of the cost
 # (the variance 1e-3 of the observation noise), as it cannot be told from float32 noise then.
 NEWTON_CG_MAX_NUM_ITERATIONS = 50
-NEWTON_CG_GRADIENT_NORM_TOLERANCE = 1
+NEWTON_CG_GRADIENT_NORM_TOLERANCE = 10
 NEWTON_CG_MINIMUM_PREDICTED_REDUCTION = 1e-3
 
 # Cross-validation of the prior parameters: the observations are split into folds, one is held out

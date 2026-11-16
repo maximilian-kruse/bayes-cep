@@ -6,6 +6,10 @@ Classes:
     NearestNeighborInterpolationStrategy: Take the value of the vertex closest to each triangle's
         centroid.
 
+Functions:
+    compute_used_vertex_mask: Which vertices enter the forward model through an interpolation
+        matrix.
+
 Note:
     The concrete strategies are (stateless) dataclasses on purpose: `tyro` only exposes a class as
     a selectable subcommand (e.g. `--config.problem.interpolation:linear-interpolation-strategy`)
@@ -98,3 +102,26 @@ class NearestNeighborInterpolationStrategy(InterpolationStrategy):
         col_inds = connectivity[row_inds, nearest_local_ind]
         data = np.ones(num_simplices)
         return sp.coo_array((data, (row_inds, col_inds)), shape=(num_simplices, num_vertices))
+
+
+# ==================================================================================================
+def compute_used_vertex_mask(
+    interpolation_matrix: sp.coo_array,
+) -> np.ndarray[tuple[int], np.dtype[np.bool_]]:
+    """Mark the vertices whose value enters at least one simplex.
+
+    The likelihood depends on a vertex parameter only through the per-simplex values
+    $y = Mx$, so a vertex whose column of the interpolation matrix $M$ is zero never changes the
+    data misfit: it is constrained by the prior alone. With the nearest-neighbor strategy these are
+    the vertices that are nearest to the centroid of no triangle; with the linear strategy only
+    vertices without a triangle. All statistics of the inference are reported on the used vertices.
+
+    Args:
+        interpolation_matrix (sp.coo_array): Vertex-to-simplex matrix, shape
+            `(num_simplices, num_vertices)`.
+
+    Returns:
+        np.ndarray: Boolean mask, shape `(num_vertices,)`, true for the used vertices.
+    """
+    column_has_entry = abs(interpolation_matrix).tocsc().sum(axis=0)
+    return np.asarray(column_has_entry).ravel() > 0.0

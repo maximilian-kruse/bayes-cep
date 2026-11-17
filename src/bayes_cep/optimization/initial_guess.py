@@ -4,6 +4,8 @@ Classes:
     InitialGuessStrategy: ABC interface for producing the initial guess from the prior.
     PriorMeanInitialGuess: Start at the prior mean.
     PriorSampleInitialGuess: Start at a draw from the prior, with the strategy's own seed.
+    ScaledPriorSampleInitialGuess: Start at the prior mean plus a scaled prior draw: a perturbation
+        of the prior mean of controlled size.
     FileInitialGuess: Start at a state stored in a `.npy` file, e.g. another run's estimate.
     ChainStateInitialGuess: Start at a state of a stored MCMC chain, e.g. the last one.
 """
@@ -75,6 +77,34 @@ class PriorSampleInitialGuess(InitialGuessStrategy):
     def build(self, prior: GaussianPrior) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
         random_vector = np.random.default_rng(self.seed).normal(size=prior.random_vector_size)
         return prior.mean_vector + prior.apply_covariance_factorization(random_vector)
+
+
+# ==================================================================================================
+@dataclass(frozen=True)
+class ScaledPriorSampleInitialGuess(InitialGuessStrategy):
+    r"""Start at the prior mean plus a scaled prior draw: $m_0 = \overline{m} + s\,\widehat{\mathcal{C}}\,\xi$.
+
+    A perturbation of the prior mean whose size is set by `scale`: `0` is the prior mean, `1` a
+    prior draw (`PriorSampleInitialGuess`). The standard normal vector $\xi$ is drawn from a
+    generator seeded with `seed`, so the initial guess is reproducible and varies with `seed` alone.
+
+    Attributes:
+        seed (int): Seed of the draw.
+        scale (float): Factor $s$ on the draw, in $(0, 1]$.
+    """
+
+    seed: int
+    scale: float
+
+    def __post_init__(self) -> None:
+        if not 0.0 < self.scale <= 1.0:
+            raise ValueError(f"scale must be in (0, 1], got {self.scale}.")
+
+    # ----------------------------------------------------------------------------------------------
+    @override
+    def build(self, prior: GaussianPrior) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
+        random_vector = np.random.default_rng(self.seed).normal(size=prior.random_vector_size)
+        return prior.mean_vector + self.scale * prior.apply_covariance_factorization(random_vector)
 
 
 # ==================================================================================================

@@ -28,6 +28,7 @@ from bayes_cep.optimization.initial_guess import (
     FileInitialGuess,
     PriorMeanInitialGuess,
     PriorSampleInitialGuess,
+    ScaledPriorSampleInitialGuess,
 )
 from bayes_cep.optimization.strategies import (
     CustomLBFGSStrategy,
@@ -86,13 +87,18 @@ class MapRunConfig(RunConfig):
             optimizer stages in order, each with its model. The first starts at the initial guess,
             every further stage at the estimate of the one before, e.g. L-BFGS followed by
             Newton-CG. At least one.
-        initial_guess (PriorMeanInitialGuess | PriorSampleInitialGuess | FileInitialGuess): Where
-            the optimization starts.
+        initial_guess (PriorMeanInitialGuess | PriorSampleInitialGuess |
+            ScaledPriorSampleInitialGuess | FileInitialGuess): Where the optimization starts.
     """
 
     problem: InferenceProblemConfig
     stages: tuple[CustomLBFGSStrategy | ScipyLBFGSBStrategy | NewtonCGStrategy, ...]
-    initial_guess: PriorMeanInitialGuess | PriorSampleInitialGuess | FileInitialGuess
+    initial_guess: (
+        PriorMeanInitialGuess
+        | PriorSampleInitialGuess
+        | ScaledPriorSampleInitialGuess
+        | FileInitialGuess
+    )
 
     # ----------------------------------------------------------------------------------------------
     def __post_init__(self) -> None:

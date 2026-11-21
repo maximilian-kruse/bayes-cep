@@ -25,7 +25,10 @@ from bayes_cep.postprocessing.curve_plots import (
     plot_correlation_curve,
     plot_correlation_histogram,
 )
-from bayes_cep.postprocessing.mesh_plots import render_axial_angle_field, render_point_field
+from bayes_cep.postprocessing.mesh_plots import (
+    render_axial_angle_field,
+    render_vertex_field_on_simplices,
+)
 from bayes_cep.run.config import RunConfig
 from bayes_cep.run.directories import METRICS_RECORD, PLOTS_DIR_NAME
 from bayes_cep.run.progress import StepReporter, describe_array
@@ -128,7 +131,7 @@ class PriorRun(Run[PriorRunConfig]):
             plots_dir / SAMPLE_PLOT_FILE_NAME,
             f"prior sample ({label})",
         )
-        render_point_field(
+        render_vertex_field_on_simplices(
             mesh,
             compute_standard_deviation_degrees(np.load(results_dir / POINTWISE_VARIANCE_FILE_NAME)),
             plots_dir / POINTWISE_STD_PLOT_FILE_NAME,

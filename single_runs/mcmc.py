@@ -47,7 +47,10 @@ from bayes_cep.postprocessing.curve_plots import (
     plot_histogram,
     plot_traces,
 )
-from bayes_cep.postprocessing.mesh_plots import render_axial_angle_field_pair, render_point_field
+from bayes_cep.postprocessing.mesh_plots import (
+    render_axial_angle_field_pair,
+    render_vertex_field_on_simplices,
+)
 from bayes_cep.run.config import RunConfig
 from bayes_cep.run.directories import (
     METRICS_RECORD,
@@ -311,7 +314,7 @@ class McmcRun(Run[McmcRunConfig]):
             "ground truth",
             "posterior mean",
         )
-        render_point_field(
+        render_vertex_field_on_simplices(
             mesh,
             compute_standard_deviation_degrees(summary.axial_variance),
             plots_dir / POSTERIOR_STD_PLOT_FILE_NAME,
@@ -319,7 +322,7 @@ class McmcRun(Run[McmcRunConfig]):
             "axial standard deviation [deg]",
             "viridis",
         )
-        render_point_field(
+        render_vertex_field_on_simplices(
             mesh,
             diagnostics.effective_sample_size,
             plots_dir / EFFECTIVE_SAMPLE_SIZE_MAP_PLOT_FILE_NAME,
@@ -337,7 +340,7 @@ class McmcRun(Run[McmcRunConfig]):
             "effective sample size",
             truncation_note,
         )
-        render_point_field(
+        render_vertex_field_on_simplices(
             mesh,
             diagnostics.integrated_autocorrelation_time,
             plots_dir / AUTOCORRELATION_TIME_MAP_PLOT_FILE_NAME,

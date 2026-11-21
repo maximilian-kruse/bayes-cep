@@ -44,7 +44,7 @@ from bayes_cep.postprocessing.curve_plots import (
 from bayes_cep.postprocessing.mesh_plots import (
     render_axial_angle_field_pair,
     render_cell_field,
-    render_point_field,
+    render_vertex_field_on_simplices,
 )
 from bayes_cep.run.config import RunConfig
 from bayes_cep.run.directories import (
@@ -220,7 +220,7 @@ class MapRun(Run[MapRunConfig]):
             data.observed_vertex_indices,
             min_over_sources=True,
         )
-        render_point_field(
+        render_vertex_field_on_simplices(
             mesh,
             vertex_distances,
             plots_dir / DISTANCE_PLOT_FILE_NAME,

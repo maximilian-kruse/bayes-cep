@@ -27,7 +27,10 @@ from ls_bayesian.common.logging import BaseLogger
 
 from bayes_cep.laplace.builder import LaplaceBuilder, LaplaceSettings
 from bayes_cep.postprocessing.curve_plots import plot_eigenvalue_spectrum, plot_histogram
-from bayes_cep.postprocessing.mesh_plots import render_axial_angle_field_pair, render_point_field
+from bayes_cep.postprocessing.mesh_plots import (
+    render_axial_angle_field_pair,
+    render_vertex_field_on_simplices,
+)
 from bayes_cep.run.config import RunConfig
 from bayes_cep.run.directories import (
     METRICS_RECORD,
@@ -171,7 +174,7 @@ class LaplaceRun(Run[LaplaceRunConfig]):
             "ground truth",
             "laplace mean (samples)",
         )
-        render_point_field(
+        render_vertex_field_on_simplices(
             mesh,
             compute_standard_deviation_degrees(results.pointwise_variance),
             plots_dir / POINTWISE_STANDARD_DEVIATION_PLOT_FILE_NAME,
@@ -179,7 +182,7 @@ class LaplaceRun(Run[LaplaceRunConfig]):
             "standard deviation [deg]",
             "viridis",
         )
-        render_point_field(
+        render_vertex_field_on_simplices(
             mesh,
             compute_standard_deviation_degrees(results.axial_variance),
             plots_dir / AXIAL_STANDARD_DEVIATION_PLOT_FILE_NAME,

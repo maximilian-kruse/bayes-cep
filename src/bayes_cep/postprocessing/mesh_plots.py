@@ -5,7 +5,6 @@ vector graphics (`VECTOR_SUFFIXES`, for publications), any other suffix (`.png`)
 
 Functions:
     render_cell_field: Render a field with one value per simplex.
-    render_point_field: Render a field with one value per vertex.
     render_vertex_field_on_simplices: Render a per-vertex field with one value per simplex.
     render_axial_angle_field: Render a per-vertex fiber-angle field.
     render_axial_angle_field_pair: Render two per-vertex fiber-angle fields side by side.
@@ -49,33 +48,6 @@ def render_cell_field(
     """
     plot_mesh = mesh.copy()
     plot_mesh.cell_data[name] = simplex_values
-    plot_mesh.set_active_scalars(name)
-    _render(plot_mesh, path, title, cmap, clim)
-
-
-# --------------------------------------------------------------------------------------------------
-def render_point_field(
-    mesh: pv.UnstructuredGrid,
-    vertex_values: np.ndarray[tuple[int], np.dtype[np.float64]],
-    path: Path,
-    title: str,
-    name: str,
-    cmap: str,
-    clim: tuple[float, float] | None = None,
-) -> None:
-    """Render a field with one value per vertex of `mesh` into an image file.
-
-    Args:
-        mesh (pv.UnstructuredGrid): Triangular surface mesh; not modified.
-        vertex_values (np.ndarray): Values, shape `(num_vertices,)`.
-        path (Path): Output file; see the module docstring for the formats.
-        title (str): Text in the corner of the image.
-        name (str): Name of the field, shown at the color bar.
-        cmap (str): Matplotlib color map name.
-        clim (tuple[float, float] | None): Color range. Defaults to the range of the values.
-    """
-    plot_mesh = mesh.copy()
-    plot_mesh.point_data[name] = vertex_values
     plot_mesh.set_active_scalars(name)
     _render(plot_mesh, path, title, cmap, clim)
 
